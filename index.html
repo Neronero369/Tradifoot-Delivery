@@ -2,7 +2,7 @@
 <html lang="fr" class="h-full bg-[#0b0d11] text-slate-100">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Tradifoot — Programme de Livraison & Calendrier</title>
   
   <!-- Tailwind CSS CDN -->
@@ -135,6 +135,53 @@
     .pulse-transit {
       animation: apple-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
+    /* ─── MOBILE-FIRST CRITICAL OVERRIDES ─── */
+    /* iOS auto-zoom prevention: inputs must be >= 16px font-size */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    input::placeholder, select::placeholder, textarea::placeholder {
+      font-size: 14px;
+    }
+
+    /* Safe area insets for notched iPhones (Dynamic Island, etc.) */
+    header {
+      padding-top: max(env(safe-area-inset-top), 10px);
+    }
+    #auth-modal > div {
+      margin-top: env(safe-area-inset-top);
+      margin-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Touch callout + select disable on all interactive buttons */
+    button, [role="button"] {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Momentum scrolling for scroll containers */
+    #manifest-cards-container,
+    #calendar-days-grid {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* Ensure the body/html never cause horizontal scroll on any device */
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+    /* Progress ring container sticky on mobile */
+    @media (max-width: 640px) {
+      #manifest-cards-container {
+        max-height: calc(100vh - 380px);
+        min-height: 200px;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-[#0b0d11] text-slate-100 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden lg:h-screen lg:overflow-hidden">
@@ -143,8 +190,8 @@
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center space-y-2 pointer-events-none transition-all duration-300"></div>
 
   <!-- AUTHENTICATION OVERLAY MODAL -->
-  <div id="auth-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-center justify-center p-4 transition-opacity duration-300 hidden">
-    <div class="glass-panel border border-white/10 rounded-3xl w-full max-w-md shadow-[0_25px_60px_rgba(0,0,0,0.7)] overflow-hidden transform transition-all duration-300">
+  <div id="auth-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-2xl flex items-end sm:items-center justify-center px-4 pt-4 pb-safe transition-opacity duration-300 hidden" style="padding-bottom: max(16px, env(safe-area-inset-bottom))">
+    <div class="glass-panel border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-[0_25px_60px_rgba(0,0,0,0.7)] overflow-y-auto max-h-[92vh] transform transition-all duration-300">
       
       <!-- Modal Header -->
       <div class="p-6 text-center border-b border-white/[0.08] bg-white/[0.02]">
@@ -171,7 +218,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nom d'utilisateur</label>
           <div class="relative">
             <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-            <input type="text" id="login-username" required placeholder="ex: admin ou mounir" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            <input type="text" id="login-username" required placeholder="ex: admin ou mounir" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-3 text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" style="font-size:16px">
           </div>
         </div>
 
@@ -179,11 +226,11 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1.5">Mot de passe</label>
           <div class="relative">
             <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-            <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-3 text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" style="font-size:16px">
           </div>
         </div>
 
-        <button type="submit" class="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/30 active:scale-95 transition duration-200 flex items-center justify-center space-x-2">
+        <button type="submit" class="w-full mt-2 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 active:scale-95 transition duration-200 flex items-center justify-center space-x-2 min-h-[52px]">
           <i class="fa-solid fa-right-to-bracket text-xs"></i>
           <span>Accéder au Dashboard</span>
         </button>
@@ -201,7 +248,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">Nom d'utilisateur</label>
           <div class="relative">
             <i class="fa-solid fa-user-plus absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-            <input type="text" id="signup-username" required placeholder="Identifiant unique" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            <input type="text" id="signup-username" required placeholder="Identifiant unique" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-3 text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" style="font-size:16px">
           </div>
         </div>
 
@@ -209,13 +256,13 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">Mot de passe</label>
           <div class="relative">
             <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-            <input type="password" id="signup-password" required placeholder="Créer un mot de passe" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            <input type="password" id="signup-password" required placeholder="Créer un mot de passe" class="w-full bg-slate-900/60 border border-slate-700/60 rounded-xl pl-9 pr-4 py-3 text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" style="font-size:16px">
           </div>
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Type de Compte</label>
-          <select id="signup-role" onchange="toggleChauffeurField()" class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <select id="signup-role" onchange="toggleChauffeurField()" class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl px-3 py-3 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none" style="font-size:16px">
             <option value="chauffeur" selected>Chauffeur / Livreur</option>
             <option value="admin">Administrateur / Superviseur</option>
           </select>
@@ -225,7 +272,7 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">Nom de Chauffeur (Affectation)</label>
           <div class="relative">
             <i class="fa-solid fa-id-card absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-            <select id="signup-chauffeur-name" class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <select id="signup-chauffeur-name" class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl pl-9 pr-4 py-3 text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none" style="font-size:16px">
               <option value="MOUNIR">MOUNIR</option>
               <option value="SAADI BILLEL">SAADI BILLEL</option>
               <option value="SNOUCI SEIF-EDDINE">SNOUCI SEIF-EDDINE</option>
@@ -239,7 +286,7 @@
           </div>
         </div>
 
-        <button type="submit" class="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/30 active:scale-95 transition duration-200 flex items-center justify-center space-x-2">
+        <button type="submit" class="w-full mt-2 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/30 active:scale-95 transition duration-200 flex items-center justify-center space-x-2 min-h-[52px]">
           <i class="fa-solid fa-check text-xs"></i>
           <span>Créer mon compte</span>
         </button>
@@ -273,13 +320,13 @@
       <div class="flex items-center space-x-2 sm:space-x-3 text-xs font-medium">
         
         <!-- Today Shortcut Button -->
-        <button onclick="goToToday()" class="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 sm:px-4 py-2 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-lg shadow-blue-600/25 active:scale-95 outline-none select-none border-2 border-transparent">
+        <button onclick="goToToday()" class="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 sm:px-4 py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-lg shadow-blue-600/25 active:scale-95 outline-none select-none border-2 border-transparent min-h-[44px]">
           <i class="fa-solid fa-calendar-day text-xs"></i>
           <span class="hidden sm:inline">Aujourd'hui</span>
         </button>
 
         <!-- User Logout Button -->
-        <button onclick="handleLogout()" title="Déconnexion" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl sm:rounded-2xl text-slate-300 bg-white/[0.04] hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 border border-white/[0.08] transition-all duration-200 active:scale-95 outline-none select-none">
+        <button onclick="handleLogout()" title="Déconnexion" class="flex items-center space-x-1.5 px-3 py-2.5 rounded-xl sm:rounded-2xl text-slate-300 bg-white/[0.04] hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 border border-white/[0.08] transition-all duration-200 active:scale-95 outline-none select-none min-h-[44px]">
           <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
           <span class="hidden md:inline">Déconnexion</span>
         </button>
@@ -308,13 +355,13 @@
 
         <!-- Month Navigation Arrows (iOS Segmented Controls) -->
         <div class="flex items-center space-x-1 bg-white/[0.04] p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-white/[0.08] backdrop-blur-xl shrink-0">
-          <button onclick="changeMonth(-1)" title="Mois précédent" class="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-95 outline-none select-none border border-transparent">
+          <button onclick="changeMonth(-1)" title="Mois précédent" class="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-95 outline-none select-none border border-transparent">
             <i class="fa-solid fa-chevron-left text-[11px] sm:text-xs"></i>
           </button>
           <button onclick="goToToday()" class="px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-lg sm:rounded-xl transition-all duration-150 active:scale-95 outline-none select-none border border-transparent">
             Ce mois
           </button>
-          <button onclick="changeMonth(1)" title="Mois suivant" class="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-95 outline-none select-none border border-transparent">
+          <button onclick="changeMonth(1)" title="Mois suivant" class="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-150 active:scale-95 outline-none select-none border border-transparent">
             <i class="fa-solid fa-chevron-right text-[11px] sm:text-xs"></i>
           </button>
         </div>
@@ -419,27 +466,27 @@
             <!-- Filter by Chauffeur -->
             <div class="relative">
               <i class="fa-solid fa-user-tie absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[11px]"></i>
-              <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-black/40 border border-white/[0.08] rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-400">
+              <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-black/40 border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-400" style="font-size:16px">
                 <option value="ALL">Tous les Chauffeurs</option>
               </select>
             </div>
             <!-- Search by Magasin -->
             <div class="relative">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[11px]"></i>
-              <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin / wilaya..." class="w-full bg-black/40 border border-white/[0.08] rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-400">
+              <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin / wilaya..." class="w-full bg-black/40 border border-white/[0.08] rounded-xl pl-8 pr-3 py-2.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-400" style="font-size:16px">
             </div>
           </div>
         </div>
 
         <!-- Filter tabs as Strict Grid (Locked Dimensions) -->
         <div class="grid grid-cols-3 gap-2 w-full mt-2 sm:mt-3 p-1 rounded-xl sm:rounded-2xl bg-black/40 border border-white/[0.06] text-xs sm:text-sm font-medium">
-          <button onclick="setManifestFilter('ALL')" id="filter-all" class="w-full flex items-center justify-center py-2 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 bg-blue-600 text-white shadow-sm outline-none select-none active:scale-95">
+          <button onclick="setManifestFilter('ALL')" id="filter-all" class="w-full flex items-center justify-center py-2.5 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 bg-blue-600 text-white shadow-sm outline-none select-none active:scale-95 min-h-[44px]">
             Tous (<span id="count-all">0</span>)
           </button>
-          <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="w-full flex items-center justify-center py-2 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95">
+          <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="w-full flex items-center justify-center py-2.5 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95 min-h-[44px]">
             Livré (<span id="count-delivered">0</span>)
           </button>
-          <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="w-full flex items-center justify-center py-2 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95">
+          <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="w-full flex items-center justify-center py-2.5 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95 min-h-[44px]">
             Non Livré (<span id="count-pending">0</span>)
           </button>
           <!-- Hidden count hooks for compatibility -->
@@ -545,13 +592,7 @@
     // ========================================================
     // 4. USER AUTHENTICATION & ROLE-BASED ACCESS CONTROL (RBAC)
     // ========================================================
-    const DEFAULT_USERS = [
-      { username: 'admin', password: '123', role: 'admin', chauffeurName: '' },
-      { username: 'mounir', password: '123', role: 'chauffeur', chauffeurName: 'MOUNIR' },
-      { username: 'saadi', password: '123', role: 'chauffeur', chauffeurName: 'SAADI BILLEL' },
-      { username: 'snouci', password: '123', role: 'chauffeur', chauffeurName: 'SNOUCI SEIF-EDDINE' },
-      { username: 'boukhalfa', password: '123', role: 'chauffeur', chauffeurName: 'BOUKHALFA ADEL' }
-    ];
+    // Demo accounts are seeded on first run via seedDemoAccounts()
 
     function getRegisteredUsers() {
       try {
@@ -713,19 +754,7 @@
     // ========================================================
     // 6. CONSOLIDATED APP STATE & DOM CACHING
     // ========================================================
-    const AppState = {
-      currentUser: null,
-      rawDeliveries: LOCAL_DELIVERY_DATA, // Master dataset
-      deliveries: [],                     // Role-filtered & searchable dataset
-      currentViewDate: new Date(2026, 9, 26),
-      selectedDateStr: "2026-10-26",
-      activeManifestFilter: "ALL",
-      adminChauffeurFilter: "ALL",
-      adminStoreFilter: "",
-      completedCount: 0,
-      totalCount: 0,
-      completedDeliveryIds: getDeliveredIds()
-    };
+    // AppState declared below
 
     // Backward-compatibility references for external bindings
     let DELIVERY_DATA = AppState.deliveries;
@@ -863,6 +892,297 @@
       DELIVERY_DATA = AppState.deliveries;
       renderCalendar();
       renderDailyManifest();
+    }
+
+    // ========================================================
+    // 3. APP STATE MANAGER
+    // ========================================================
+    // State variables initialized below in original declarations
+
+    // AppState declared in original code below
+
+    // ========================================================
+    // 4. DOM CACHE
+    // ========================================================
+    // DOM cache initialized by initDOMCache()
+    function initDOMCache() {
+      DOM = {
+        calendarDaysGrid:   document.getElementById('calendar-days-grid'),
+        calendarMonthYear:  document.getElementById('calendar-month-year'),
+        cardsContainer:     document.getElementById('manifest-cards-container'),
+        manifestDateTitle:  document.getElementById('manifest-date-title'),
+        manifestCountBadge: document.getElementById('manifest-count-badge'),
+        manifestTotalQty:   document.getElementById('manifest-total-qty'),
+        manifestFooter:     document.getElementById('manifest-footer'),
+        progressCircle:     document.getElementById('progress-circle'),
+        progressText:       document.getElementById('progress-text'),
+        progressPercent:    document.getElementById('progress-percent'),
+        progressRingIcon:   document.getElementById('progress-ring-icon'),
+        filterAll:          document.getElementById('filter-all'),
+        filterDelivered:    document.getElementById('filter-delivered'),
+        filterPending:      document.getElementById('filter-pending'),
+        countAll:           document.getElementById('count-all'),
+        countDelivered:     document.getElementById('count-delivered'),
+        countPending:       document.getElementById('count-pending'),
+        countTransit:       document.getElementById('count-transit'),
+        countScheduled:     document.getElementById('count-scheduled'),
+        monthTotalUnits:    document.getElementById('month-total-units'),
+        monthTotalDeliveries: document.getElementById('month-total-deliveries'),
+        detailModal:        document.getElementById('detail-modal'),
+        modalBody:          document.getElementById('modal-body'),
+        modalRouteName:     document.getElementById('modal-route-name'),
+        modalRouteSub:      document.getElementById('modal-route-sub'),
+        adminToolbar:       document.getElementById('admin-toolbar'),
+        adminKpiPackages:   document.getElementById('admin-kpi-packages'),
+        adminKpiDelivered:  document.getElementById('admin-kpi-delivered'),
+        adminKpiRate:       document.getElementById('admin-kpi-rate'),
+        adminFilterChauffeur: document.getElementById('admin-filter-chauffeur'),
+        adminFilterStore:   document.getElementById('admin-filter-store'),
+        userRoleBadge:      document.getElementById('user-role-badge'),
+        userRoleSubtitle:   document.getElementById('user-role-subtitle'),
+        toastContainer:     document.getElementById('toast-container'),
+        authModal:          document.getElementById('auth-modal')
+      };
+    }
+
+    // ========================================================
+    // 5. LOCALSTORAGE PERSISTENCE
+    // ========================================================
+    function getAuthSession() {
+      try {
+        const s = localStorage.getItem('auth_session');
+        return s ? JSON.parse(s) : null;
+      } catch { return null; }
+    }
+    function setAuthSession(user) {
+      localStorage.setItem('auth_session', JSON.stringify(user));
+    }
+    function clearAuthSession() {
+      localStorage.removeItem('auth_session');
+    }
+    function getRegisteredUsers() {
+      try {
+        const u = localStorage.getItem('registered_users');
+        return u ? JSON.parse(u) : [];
+      } catch { return []; }
+    }
+    function saveRegisteredUsers(users) {
+      localStorage.setItem('registered_users', JSON.stringify(users));
+    }
+    function loadDeliveredIds() {
+      try {
+        const raw = localStorage.getItem('delivered_ids');
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+      } catch { return new Set(); }
+    }
+    function saveDeliveredIds(idSet) {
+      localStorage.setItem('delivered_ids', JSON.stringify([...idSet]));
+    }
+
+    // ========================================================
+    // 6. TOAST NOTIFICATION SYSTEM
+    // ========================================================
+    function showNotification(msg, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const colors = {
+        success: 'bg-emerald-500/90 text-white border-emerald-400/50',
+        error:   'bg-rose-500/90 text-white border-rose-400/50',
+        info:    'bg-blue-500/90 text-white border-blue-400/50',
+        warning: 'bg-amber-500/90 text-white border-amber-400/50'
+      };
+      const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info', warning: 'fa-triangle-exclamation' };
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-md text-sm font-medium shadow-xl transition-all duration-300 translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} text-xs"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+      });
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-1');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // ========================================================
+    // 7. AUTH MODAL LOGIC
+    // ========================================================
+    // Seed default demo accounts on first load
+    function seedDemoAccounts() {
+      const existing = getRegisteredUsers();
+      const hasAdmin = existing.some(u => u.username === 'admin');
+      const hasMounir = existing.some(u => u.username === 'mounir');
+      if (!hasAdmin) existing.push({ username: 'admin', password: '123', role: 'admin', chauffeurName: '' });
+      if (!hasMounir) existing.push({ username: 'mounir', password: '123', role: 'chauffeur', chauffeurName: 'MOUNIR' });
+      saveRegisteredUsers(existing);
+    }
+
+    function switchAuthTab(tab) {
+      const loginForm  = document.getElementById('form-login');
+      const signupForm = document.getElementById('form-signup');
+      const tabLogin   = document.getElementById('tab-login');
+      const tabSignup  = document.getElementById('tab-signup');
+      const ACTIVE_TAB   = 'flex-1 py-2.5 rounded-xl font-semibold transition duration-200 bg-blue-600 text-white shadow-sm outline-none min-h-[44px]';
+      const INACTIVE_TAB = 'flex-1 py-2.5 rounded-xl font-semibold text-slate-400 hover:text-slate-200 transition duration-200 outline-none min-h-[44px]';
+      if (tab === 'login') {
+        if (loginForm)  loginForm.classList.remove('hidden');
+        if (signupForm) signupForm.classList.add('hidden');
+        if (tabLogin)   tabLogin.className = ACTIVE_TAB;
+        if (tabSignup)  tabSignup.className = INACTIVE_TAB;
+      } else {
+        if (loginForm)  loginForm.classList.add('hidden');
+        if (signupForm) signupForm.classList.remove('hidden');
+        if (tabLogin)   tabLogin.className = INACTIVE_TAB;
+        if (tabSignup)  tabSignup.className = ACTIVE_TAB;
+      }
+    }
+
+    function toggleChauffeurField() {
+      const role  = document.getElementById('signup-role');
+      const group = document.getElementById('chauffeur-name-group');
+      if (group) group.classList.toggle('hidden', role && role.value !== 'chauffeur');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const username = (document.getElementById('login-username')?.value || '').trim().toLowerCase();
+      const password = (document.getElementById('login-password')?.value || '').trim();
+      if (!username || !password) {
+        showNotification('Veuillez remplir tous les champs.', 'error');
+        return;
+      }
+      seedDemoAccounts();
+      const users = getRegisteredUsers();
+      const user = users.find(u => u.username.toLowerCase() === username && u.password === password);
+      if (!user) {
+        showNotification('Identifiants incorrects. Réessayez.', 'error');
+        return;
+      }
+      setAuthSession(user);
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+      showNotification(`Bienvenue, ${user.username}!`, 'success');
+      initAuthenticatedApp(user);
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      const username    = (document.getElementById('signup-username')?.value || '').trim().toLowerCase();
+      const password    = (document.getElementById('signup-password')?.value || '').trim();
+      const role        = (document.getElementById('signup-role')?.value || 'chauffeur');
+      const chauffeurEl = document.getElementById('signup-chauffeur-name');
+      const chauffeurName = (role === 'chauffeur' && chauffeurEl) ? chauffeurEl.value.trim() : '';
+
+      if (!username || !password) {
+        showNotification("Nom d'utilisateur et mot de passe requis.", 'error');
+        return;
+      }
+      seedDemoAccounts();
+      const users = getRegisteredUsers();
+      if (users.some(u => u.username.toLowerCase() === username)) {
+        showNotification("Ce nom d'utilisateur existe déjà.", 'warning');
+        return;
+      }
+      const newUser = { username, password, role, chauffeurName };
+      users.push(newUser);
+      saveRegisteredUsers(users);
+      setAuthSession(newUser);
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+      showNotification('Compte créé avec succès!', 'success');
+      initAuthenticatedApp(newUser);
+    }
+
+    function handleLogout() {
+      clearAuthSession();
+      AppState.currentUser = null;
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.remove('hidden');
+      if (DOM.userRoleBadge) DOM.userRoleBadge.classList.add('hidden');
+      if (DOM.adminToolbar) DOM.adminToolbar.classList.add('hidden');
+      if (DOM.userRoleSubtitle) DOM.userRoleSubtitle.textContent = 'Programme & Suivi des Tournées';
+      showNotification('Vous avez été déconnecté.', 'info');
+    }
+
+    // ========================================================
+    // ROLE-BASED DATA ENGINE
+    // ========================================================
+    function normalizeDriver(name) {
+      return String(name || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    }
+
+    function computeActiveDeliveries() {
+      const user = AppState.currentUser;
+      let list = AppState.rawDeliveries;
+
+      // Apply completed IDs from localStorage
+      AppState.completedDeliveryIds = loadDeliveredIds();
+      list = list.map(d => {
+        const isCompleted = AppState.completedDeliveryIds.has(String(d.id));
+        return { ...d, completed: isCompleted || d.completed, status: isCompleted ? 'Livré' : d.status };
+      });
+
+      if (!user || user.role === 'admin') {
+        // Admin: apply admin filter if set
+        const driverFilter = AppState.adminFilterChauffeur || 'ALL';
+        const storeFilter  = (AppState.adminFilterStore || '').toUpperCase().trim();
+        if (driverFilter !== 'ALL') {
+          list = list.filter(d => normalizeDriver(d.driver) === normalizeDriver(driverFilter));
+        }
+        if (storeFilter) {
+          list = list.filter(d =>
+            (d.destination || '').toUpperCase().includes(storeFilter) ||
+            (d.wilaya || '').toUpperCase().includes(storeFilter)
+          );
+        }
+        return list;
+      }
+
+      // Chauffeur: filter by assigned driver name
+      const norm = normalizeDriver(user.chauffeurName);
+      return list.filter(d => {
+        const driverNorm = normalizeDriver(d.driver);
+        return driverNorm.includes(norm) || norm.includes(driverNorm);
+      });
+    }
+
+    function populateAdminChauffeurs() {
+      const select = DOM.adminFilterChauffeur;
+      if (!select) return;
+      const drivers = [...new Set(AppState.rawDeliveries.map(d => normalizeDriver(d.driver)).filter(Boolean))].sort();
+      const currentVal = select.value;
+      select.innerHTML = '<option value="ALL">Tous les Chauffeurs</option>';
+      drivers.forEach(driver => {
+        const opt = document.createElement('option');
+        opt.value = driver;
+        opt.textContent = driver;
+        select.appendChild(opt);
+      });
+      select.value = currentVal || 'ALL';
+    }
+
+    function updateAdminKPIs() {
+      if (!AppState.currentUser || AppState.currentUser.role !== 'admin') return;
+      const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(d => d.date === AppState.selectedDateStr));
+      const totalPairs = dayDeliveries.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
+      const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === 'Livré' || AppState.completedDeliveryIds.has(String(x.id))).length;
+      const rate = dayDeliveries.length > 0 ? Math.round((deliveredCount / dayDeliveries.length) * 100) : 0;
+      if (DOM.adminKpiPackages) DOM.adminKpiPackages.textContent = totalPairs.toLocaleString() + ' Paires';
+      if (DOM.adminKpiDelivered) DOM.adminKpiDelivered.textContent = deliveredCount + ' / ' + dayDeliveries.length;
+      if (DOM.adminKpiRate) DOM.adminKpiRate.textContent = rate + '%';
+    }
+
+    function handleAdminFilterChange() {
+      AppState.adminFilterChauffeur = (DOM.adminFilterChauffeur?.value || 'ALL');
+      AppState.adminFilterStore = (DOM.adminFilterStore?.value || DOM.adminFilterStore?.value || '');
+      if (DOM.adminFilterStore) AppState.adminFilterStore = DOM.adminFilterStore.value || '';
+      AppState.deliveries = computeActiveDeliveries();
+      DELIVERY_DATA = AppState.deliveries;
+      renderCalendar();
+      renderDailyManifest();
+      updateAdminKPIs();
     }
 
     // ========================================================
@@ -1167,8 +1487,8 @@
         `;
 
         const btnClass = isCompleted 
-          ? "btn-complete-toggle flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-full bg-blue-500 text-white border-2 border-blue-500 shadow-lg shadow-blue-500/30 transition-all duration-300 outline-none select-none active:scale-95"
-          : "btn-complete-toggle flex items-center justify-center w-10 h-10 flex-shrink-0 rounded-full bg-slate-800 border-2 border-slate-700 text-slate-400 hover:text-blue-400 hover:border-blue-500/70 transition-all duration-300 outline-none select-none active:scale-95";
+          ? "btn-complete-toggle flex items-center justify-center w-11 h-11 flex-shrink-0 rounded-full bg-blue-500 text-white border-2 border-blue-500 shadow-lg shadow-blue-500/30 transition-all duration-300 outline-none select-none active:scale-95"
+          : "btn-complete-toggle flex items-center justify-center w-11 h-11 flex-shrink-0 rounded-full bg-slate-800 border-2 border-slate-700 text-slate-400 hover:text-blue-400 hover:border-blue-500/70 transition-all duration-300 outline-none select-none active:scale-95";
 
         card.innerHTML = `
           <!-- Card Header -->
@@ -1384,9 +1704,9 @@
       filters.forEach(f => {
         if (f.el) {
           if (f.key === status) {
-            f.el.className = "w-full flex items-center justify-center py-2 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 bg-blue-600 text-white shadow-sm outline-none select-none active:scale-95";
+            f.el.className = "w-full flex items-center justify-center py-2.5 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 bg-blue-600 text-white shadow-sm outline-none select-none active:scale-95 min-h-[44px]";
           } else {
-            f.el.className = "w-full flex items-center justify-center py-2 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95";
+            f.el.className = "w-full flex items-center justify-center py-2.5 px-1 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition duration-200 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] outline-none select-none active:scale-95 min-h-[44px]";
           }
         }
       });
