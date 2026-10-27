@@ -1028,19 +1028,12 @@ def update_calendar_app(db_data, index_path=None):
             all_routes.append({
                 "id": f"DEL-{route_counter:04d}",
                 "date": deliv_date,
-                "driver": driver,
-                "vehicle": vehicle,
-                "destination": d["store"],
-                "wilaya": d.get("wilaya") or "Alger",
-                "region": d.get("region") or "Centre",
-                "quantity": qty,
-                "colis": max(1, int(round(qty / 20))) if qty > 0 else 1,
+                "magasin": d["store"],
+                "chauffeur": driver,
+                "matricule": vehicle,
+                "quantite": qty,
                 "status": "Non Livr\u00e9",
-                "completed": False,
-                "priority": prio,
-                "time": time_str,
-                "notes": notes,
-                "brand": brand_str
+                "completed": False
             })
             route_counter += 1
 
