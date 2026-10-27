@@ -416,17 +416,15 @@
             </div>
           </div>
 
-          <!-- Strict 3-Column Status Filter Grid -->
-          <div class="grid grid-cols-3 gap-2 w-full p-1 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-semibold">
-            <button onclick="setManifestFilter('ALL')" id="filter-all" class="w-full flex items-center justify-center py-2.5 px-1 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]">
-              Tous (<span id="count-all">0</span>)
-            </button>
-            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="w-full flex items-center justify-center py-2.5 px-1 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
-              Livré (<span id="count-delivered">0</span>)
-            </button>
-            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="w-full flex items-center justify-center py-2.5 px-1 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
+          <!-- Segmented Control: 2 Tabs (Non Livré left / Livré right) -->
+          <div class="grid grid-cols-2 gap-1.5 w-full p-1 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-semibold">
+            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]">
               Non Livré (<span id="count-pending">0</span>)
             </button>
+            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
+              Livré (<span id="count-delivered">0</span>)
+            </button>
+            <span id="count-all" class="hidden">0</span>
             <span id="count-transit" class="hidden">0</span>
             <span id="count-scheduled" class="hidden">0</span>
           </div>
@@ -502,7 +500,7 @@
     let completedCount = 0;
     let totalCount = 0;
     let selectedDateStr = '2026-10-26';
-    let activeManifestFilter = 'ALL';
+    let activeManifestFilter = 'PENDING';
 
     const AppState = {
       currentUser: null,
@@ -511,7 +509,7 @@
       completedDeliveryIds: new Set(),
       selectedDateStr: '2026-10-26',
       currentViewDate: new Date(2026, 9, 1),
-      activeManifestFilter: 'ALL',
+      activeManifestFilter: 'PENDING',
       totalCount: 0,
       completedCount: 0,
       adminFilterChauffeur: 'ALL',
@@ -1064,11 +1062,10 @@
 
       updateProgressUI();
 
-      const filtered = AppState.activeManifestFilter === "ALL" 
-        ? dayDeliveries 
-        : (AppState.activeManifestFilter === "Delivered"
-            ? dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id)))
-            : dayDeliveries.filter(x => !x.completed && x.status !== "Livré" && !AppState.completedDeliveryIds.has(String(x.id))));
+      // Filter deliveries based on active segmented control tab (default: Non Livré)
+      const filtered = AppState.activeManifestFilter === "Delivered"
+        ? dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id)))
+        : dayDeliveries.filter(x => !x.completed && x.status !== "Livré" && !AppState.completedDeliveryIds.has(String(x.id)));
 
       const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
       if (DOM.manifestTotalQty) DOM.manifestTotalQty.textContent = totalUnits.toLocaleString();
@@ -1080,13 +1077,13 @@
               <i class="fa-solid fa-truck-ramp-box text-2xl"></i>
             </div>
             <div>
-              <h4 class="text-sm font-bold text-slate-700">Aucune livraison programmée</h4>
+              <h4 class="text-sm font-bold text-slate-700">Aucune livraison ${AppState.activeManifestFilter === 'Delivered' ? 'livrée' : 'en attente'}</h4>
               <p class="text-xs text-slate-500 max-w-xs mt-1">
-                ${AppState.activeManifestFilter !== 'ALL' 
-                  ? 'Aucune tournée ne correspond au filtre sélectionné pour cette date.' 
+                ${AppState.activeManifestFilter === 'Delivered' 
+                  ? 'Aucune tournée n\'a encore été marquée comme livrée pour cette date.' 
                   : (AppState.currentUser && AppState.currentUser.role === 'chauffeur' 
-                      ? 'Aucune livraison ne vous est assignée pour cette date.'
-                      : 'Aucun ordre de transfert ou rotation de camion n\'est prévu pour ce jour.')}
+                      ? 'Toutes vos livraisons pour cette date sont terminées !'
+                      : 'Toutes les tournées de cette date ont été livrées ou aucune expédition n\'est programmée.')}
               </p>
             </div>
             <button onclick="jumpToNextDelivery()" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
@@ -1252,7 +1249,7 @@
         // 1. Dual-Persistence: Local storage update
         saveDeliveredIds(AppState.completedDeliveryIds);
 
-        // Update counts
+        // Dynamically compute updated counts
         const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
         const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
         const pendingCount = Math.max(0, dayDeliveries.length - deliveredCount);
@@ -1260,11 +1257,27 @@
         AppState.completedCount = deliveredCount;
         completedCount = deliveredCount;
 
+        // Instant counter updates
         if (DOM.countDelivered) DOM.countDelivered.textContent = deliveredCount;
         if (DOM.countPending) DOM.countPending.textContent = pendingCount;
+        if (DOM.countAll) DOM.countAll.textContent = dayDeliveries.length;
 
         updateProgressUI();
         updateAdminKPIs();
+
+        // Smooth active view refresh: animate card out, then smoothly re-render list
+        if (parentCard) {
+          parentCard.style.transition = 'all 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+          parentCard.style.opacity = '0';
+          parentCard.style.transform = 'scale(0.96)';
+          setTimeout(() => {
+            renderDailyManifest();
+            renderCalendar();
+          }, 280);
+        } else {
+          renderDailyManifest();
+          renderCalendar();
+        }
 
         // 2. Dual-Persistence: Asynchronous Google Sheets Cloud Sync
         fetch(GOOGLE_APP_URL, {
@@ -1321,20 +1334,15 @@
       AppState.activeManifestFilter = status;
       activeManifestFilter = status;
 
-      const filters = [
-        { el: DOM.filterAll, key: 'ALL' },
-        { el: DOM.filterDelivered, key: 'Delivered' },
-        { el: DOM.filterPending, key: 'PENDING' }
-      ];
-      filters.forEach(f => {
-        if (f.el) {
-          if (f.key === status) {
-            f.el.className = "w-full flex items-center justify-center py-2.5 px-1 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]";
-          } else {
-            f.el.className = "w-full flex items-center justify-center py-2.5 px-1 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
-          }
-        }
-      });
+      const ACTIVE = "w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]";
+      const INACTIVE = "w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
+
+      if (DOM.filterPending) {
+        DOM.filterPending.className = (status === 'PENDING') ? ACTIVE : INACTIVE;
+      }
+      if (DOM.filterDelivered) {
+        DOM.filterDelivered.className = (status === 'Delivered') ? ACTIVE : INACTIVE;
+      }
 
       renderDailyManifest();
     }
