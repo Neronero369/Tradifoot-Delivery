@@ -156,7 +156,7 @@ def parse_delivery_file(fpath):
     col_driver = next((i for i, h in enumerate(headers) if 'chauffeur' in h), None)
     col_vehicle = next((i for i, h in enumerate(headers) if 'materiel' in h or 'vehicule' in h), None)
     col_prio = next((i for i, h in enumerate(headers) if h == 'p' or 'priorit' in h), None)
-    col_total = next((i for i, h in enumerate(headers) if any(k in h for k in ['globale', 'global', 'total', 'qt'])), None)
+    col_total = next((i for i, h in enumerate(headers) if any(k in h for k in ['globale', 'global', 'total', 'qt', 'quant', 'qte'])), None)
     col_ret = next((i for i, h in enumerate(headers) if 'retour' in h), None)
     col_rem = next((i for i, h in enumerate(headers) if 'remarque' in h), None)
     col_deliv_date = next((i for i, h in enumerate(headers) if 'livraison' in h), None)
@@ -322,10 +322,21 @@ def build_database():
 
     for fpath in all_files:
         fn = os.path.basename(fpath)
-        # Focus on delivery program workbooks
-        if not re.search(r'prog|poro|livr', fn, re.I):
+        # Filter out obvious non-program files
+        if re.search(r'manque|sachet|evenement|notation|inventaire', fn, re.I):
             continue
-        if re.search(r'partage|manque|sachet|evenement|notation|inventaire', fn, re.I) and not re.search(r'prog', fn, re.I):
+
+        # Check filename or sheets for delivery program content
+        is_prog = bool(re.search(r'prog|poro|livr', fn, re.I))
+        if not is_prog:
+            try:
+                wb_chk = openpyxl.load_workbook(fpath, read_only=True)
+                is_prog = any(re.search(r'prog|poro|livr', s, re.I) for s in wb_chk.sheetnames)
+                wb_chk.close()
+            except Exception:
+                is_prog = False
+
+        if not is_prog:
             continue
 
         res = parse_delivery_file(fpath)
@@ -1000,7 +1011,7 @@ def update_calendar_app(db_data, index_path=None):
             else:
                 status = "non_livre"
 
-            driver = d.get("driver") or "Non spécifié"
+            driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
             vehicle = d.get("vehicle") or "Camion Porteur"
             if not vehicle or vehicle == "/":
                 vehicle = "Camion Porteur"
@@ -1024,7 +1035,7 @@ def update_calendar_app(db_data, index_path=None):
                 "region": d.get("region") or "Centre",
                 "quantity": qty,
                 "colis": max(1, int(round(qty / 20))) if qty > 0 else 1,
-                "status": "non_livre",
+                "status": "Non Livr\u00e9",
                 "completed": False,
                 "priority": prio,
                 "time": time_str,
@@ -1044,6 +1055,15 @@ def update_calendar_app(db_data, index_path=None):
     json_routes = json.dumps(all_routes, ensure_ascii=False, indent=6)
 
     # Replacement 1: DELIVERY_DATA array via safe string slicing
+    var_loc_start = html_content.find("const LOCAL_DELIVERY_DATA =")
+    if var_loc_start != -1:
+        bracket_start = html_content.find("[", var_loc_start)
+        next_var = html_content.find("let DELIVERY_DATA =", bracket_start)
+        if next_var != -1:
+            semicolon_pos = html_content.rfind("];", bracket_start, next_var)
+            if bracket_start != -1 and semicolon_pos != -1:
+                html_content = html_content[:bracket_start] + json_routes + html_content[semicolon_pos + 1:]
+
     var_start = html_content.find("const DELIVERY_DATA =")
     if var_start != -1:
         bracket_start = html_content.find("[", var_start)
