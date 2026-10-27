@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Tradifoot — Programme de Livraison & Calendrier</title>
+  <title>Tradifoot — Programme de Livraison & Suivi des Tournées</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -132,7 +132,17 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-blue-50/30 to-slate-100 text-slate-800 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden lg:h-screen lg:overflow-hidden">
+<body class="min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-blue-50/30 to-slate-100 text-slate-800 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden">
+
+  <!-- SVG GRADIENTS FOR ICONS & PROGRESS -->
+  <svg class="sr-only" width="0" height="0">
+    <defs>
+      <linearGradient id="tradifoot-progress-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#2563eb" />
+        <stop offset="100%" stop-color="#059669" />
+      </linearGradient>
+    </defs>
+  </svg>
 
   <!-- TOAST NOTIFICATIONS -->
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center space-y-2 pointer-events-none transition-all duration-300"></div>
@@ -188,30 +198,42 @@
   <!-- ======================================================== -->
   <!-- 2. MAIN APPLICATION WORKSPACE (HIDDEN UNTIL AUTHENTICATED) -->
   <!-- ======================================================== -->
-  <div id="main-app" class="hidden flex flex-col min-h-screen lg:h-screen transition-all duration-300">
+  <div id="main-app" class="hidden flex flex-col min-h-screen transition-all duration-300">
 
     <!-- TOP NAVIGATION HEADER (Authoritative Tradifoot Deep Navy Tone) -->
     <header class="bg-[#0B1F3F] text-white border-b border-blue-900/50 sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3 shadow-md shadow-slate-900/10 shrink-0">
-      <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
         
         <!-- Brand & Identity -->
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-3 min-w-0">
           <div class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-500 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0 ring-1 ring-white/20">
             <i class="fa-solid fa-truck-fast text-sm sm:text-base"></i>
           </div>
-          <div>
+          <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <h1 class="text-xs sm:text-sm md:text-base font-bold text-white tracking-tight">TRADIFOOT LOGISTICS</h1>
-              <span id="user-role-badge" class="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 hidden sm:inline-block">
+              <h1 class="text-xs sm:text-sm md:text-base font-bold text-white tracking-tight truncate">TRADIFOOT LOGISTICS</h1>
+              <span id="user-role-badge" class="px-3 py-0.5 text-xs font-semibold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 hidden sm:inline-block">
                 Chargement...
               </span>
             </div>
-            <p id="user-role-subtitle" class="text-xs sm:text-sm text-blue-200/90 font-medium">Programme & Suivi des Tournées</p>
+            <p id="user-role-subtitle" class="text-xs text-blue-200/90 font-medium truncate">Programme & Suivi des Tournées</p>
           </div>
         </div>
 
-        <!-- Controls: Today & Logout -->
-        <div class="flex items-center space-x-2 text-xs font-medium">
+        <!-- Center Controls: Desktop View Mode Switcher (Laptop / Desktop) -->
+        <div class="hidden lg:flex items-center bg-white/10 p-1 rounded-xl border border-white/15 text-xs font-semibold shadow-inner shrink-0">
+          <button id="view-mode-split-btn" onclick="setViewMode('split')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all duration-150">
+            <i class="fa-solid fa-table-columns text-xs"></i>
+            <span>Vue Scindée</span>
+          </button>
+          <button id="view-mode-full-btn" onclick="setViewMode('full')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all duration-150">
+            <i class="fa-solid fa-truck-ramp-box text-xs"></i>
+            <span>Centre de Tournées (Plein Écran)</span>
+          </button>
+        </div>
+
+        <!-- Right Controls: Today & Logout -->
+        <div class="flex items-center space-x-2 text-xs font-medium shrink-0">
           <button onclick="goToToday()" class="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 shadow-md shadow-blue-600/30 active:scale-95 min-h-[44px]">
             <i class="fa-solid fa-calendar-day text-xs"></i>
             <span class="hidden sm:inline">Aujourd'hui</span>
@@ -226,11 +248,11 @@
       </div>
     </header>
 
-    <!-- TWO-COLUMN WORKSPACE (Tradifoot Navy & Ice-White) -->
-    <main class="flex-1 overflow-y-auto lg:overflow-hidden max-w-7xl w-full mx-auto p-2.5 sm:p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+    <!-- RESPONSIVE WORKSPACE (Balanced for Laptop & Desktop) -->
+    <main id="workspace-main" class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all duration-300">
 
-      <!-- LEFT PANEL: THE INTERACTIVE CALENDAR (7 cols) -->
-      <section class="lg:col-span-7 flex flex-col glass-panel rounded-2xl md:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-fluent overflow-hidden">
+      <!-- LEFT PANEL: THE INTERACTIVE CALENDAR -->
+      <section id="calendar-section" class="lg:col-span-5 xl:col-span-5 flex flex-col glass-panel rounded-2xl md:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-fluent transition-all duration-300">
         
         <!-- Calendar Controls Header -->
         <div class="flex items-center justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-slate-200/80">
@@ -265,7 +287,7 @@
         </div>
 
         <!-- Calendar Days Grid -->
-        <div id="calendar-days-grid" class="flex-1 grid grid-cols-7 gap-1 sm:gap-2 overflow-y-auto pr-0.5 select-none min-h-[300px]"></div>
+        <div id="calendar-days-grid" class="flex-1 grid grid-cols-7 gap-1 sm:gap-2 overflow-y-auto pr-0.5 select-none min-h-[280px]"></div>
 
         <!-- Monthly Summary Footer -->
         <div class="mt-4 pt-3.5 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-600 font-medium">
@@ -281,107 +303,118 @@
 
       </section>
 
-      <!-- RIGHT PANEL: THE DAILY MANIFEST (5 cols) -->
-      <section class="lg:col-span-5 flex flex-col glass-panel rounded-2xl md:rounded-3xl shadow-fluent overflow-hidden">
+      <!-- RIGHT PANEL: THE DAILY MANIFEST & COMMAND CENTER -->
+      <section id="manifest-section" class="lg:col-span-7 xl:col-span-7 flex flex-col glass-panel rounded-2xl md:rounded-3xl shadow-fluent transition-all duration-300 overflow-hidden">
         
-        <!-- Manifest Header -->
-        <div class="p-3.5 sm:p-5 border-b border-slate-200/80 bg-white/60 shrink-0">
-          <div class="flex items-start justify-between gap-2">
+        <!-- Horizon Date Navigation Strip (Active in Full-Screen Mode or Desktop View) -->
+        <div id="horizon-date-bar" class="hidden p-3 bg-slate-900 text-white border-b border-blue-900/40 shrink-0">
+          <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1" id="horizon-days-container">
+            <!-- Dynamically populated 7-day strip -->
+          </div>
+        </div>
+
+        <!-- Manifest Header Toolbar (Streamlined & Compact) -->
+        <div class="p-3.5 sm:p-5 border-b border-slate-200/80 bg-white/70 shrink-0 space-y-3.5">
+          
+          <!-- Top Row: Title, Date, Badges & Integrated Progress Chip -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="min-w-0">
-              <span class="text-xs sm:text-sm font-bold text-blue-700 uppercase tracking-wider block mb-0.5">
-                <i class="fa-regular fa-calendar-check mr-1"></i>Manifeste Quotidien
+              <span class="text-xs font-bold text-blue-700 uppercase tracking-wider block mb-0.5">
+                <i class="fa-regular fa-calendar-check mr-1.5"></i>Manifeste Quotidien
               </span>
-              <h3 id="manifest-date-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate"></h3>
+              <h3 id="manifest-date-title" class="text-base sm:text-xl font-bold text-slate-900 tracking-tight truncate"></h3>
             </div>
-            <span id="manifest-count-badge" class="px-3 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
-              0 Tournée
-            </span>
+
+            <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <!-- Tournées Badge -->
+              <span id="manifest-count-badge" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                0 Tournée
+              </span>
+
+              <!-- Integrated Progress Chip -->
+              <div class="flex items-center gap-2 bg-white border border-blue-200/90 px-3 py-1.5 rounded-xl shadow-2xs">
+                <div class="relative w-6 h-6 flex items-center justify-center shrink-0">
+                  <svg class="w-6 h-6 -rotate-90 transform" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="14" class="stroke-blue-100" stroke-width="3" fill="transparent"></circle>
+                    <circle id="progress-circle" cx="18" cy="18" r="14" stroke="url(#tradifoot-progress-grad)" class="transition-[stroke-dashoffset] duration-700 ease-in-out" stroke-width="3" fill="transparent" stroke-linecap="round" stroke-dasharray="87.96" stroke-dashoffset="87.96"></circle>
+                  </svg>
+                  <span id="progress-ring-icon" class="absolute inset-0 flex items-center justify-center text-[9px] text-slate-400">
+                    <i class="fa-solid fa-flag-checkered"></i>
+                  </span>
+                </div>
+                <div class="leading-none text-right">
+                  <span id="progress-percent" class="text-xs font-extrabold text-blue-600 block">0%</span>
+                  <span id="progress-text" class="text-[10px] font-semibold text-slate-500">0 / 0</span>
+                </div>
+              </div>
+
+              <!-- Quick View Toggle for Mobile/Tablet -->
+              <button onclick="toggleDesktopViewMode()" title="Changer de vue" class="lg:hidden p-2 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition min-h-[44px] min-w-[44px] flex items-center justify-center">
+                <i class="fa-solid fa-expand text-xs"></i>
+              </button>
+            </div>
           </div>
 
-          <!-- Progress Ring Card with Tradifoot Blue-to-Green Gradient Ring -->
-          <div class="w-full flex items-center gap-3.5 p-3.5 bg-white/95 border border-blue-100/90 rounded-2xl my-3 shadow-xs shadow-blue-950/5">
-            <div class="relative flex items-center justify-center shrink-0 w-[52px] h-[52px] sm:w-[60px] sm:h-[60px]">
-              <svg class="w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] -rotate-90 transform" viewBox="0 0 60 60">
-                <defs>
-                  <linearGradient id="tradifoot-progress-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#2563eb" />
-                    <stop offset="100%" stop-color="#059669" />
-                  </linearGradient>
-                </defs>
-                <circle cx="30" cy="30" r="20" class="stroke-blue-100" stroke-width="4" fill="transparent"></circle>
-                <circle id="progress-circle" cx="30" cy="30" r="20" stroke="url(#tradifoot-progress-grad)" class="transition-[stroke-dashoffset] duration-700 ease-in-out" stroke-width="4" fill="transparent" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6"></circle>
-              </svg>
-              <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <i id="progress-ring-icon" class="fa-solid fa-flag-checkered text-xs text-slate-400 transition-colors duration-300"></i>
-              </div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <h4 class="text-xs font-bold text-slate-800">Progression du Jour</h4>
-                <span id="progress-percent" class="text-xs font-extrabold text-blue-600">0%</span>
-              </div>
-              <p class="text-xs font-medium text-slate-500 mt-0.5">
-                <span id="progress-text">0 / 0 Livraisons</span>
-              </p>
-            </div>
-          </div>
-
-          <!-- ADMIN TOOLBAR: KPIs & FILTERS -->
-          <div id="admin-toolbar" class="hidden mb-3.5 p-4 rounded-2xl border border-blue-200/80 bg-blue-50/50 space-y-3.5 shadow-2xs">
-            <div class="grid grid-cols-3 gap-2.5 text-center pb-3 border-b border-blue-200/60">
+          <!-- ADMIN TOOLBAR: KPIs & FILTERS (Compact Executive Row) -->
+          <div id="admin-toolbar" class="hidden space-y-3">
+            <!-- 3 KPI Cards -->
+            <div class="grid grid-cols-3 gap-2 text-center">
               <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Total Expédié</span>
-                <span id="admin-kpi-packages" class="text-sm sm:text-base font-extrabold text-blue-900">0 Paires</span>
+                <span class="text-[11px] text-slate-500 uppercase tracking-wider block font-bold mb-0.5">Total Expédié</span>
+                <span id="admin-kpi-packages" class="text-xs sm:text-sm md:text-base font-extrabold text-blue-900">0 Paires</span>
               </div>
               <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Livrés</span>
-                <span id="admin-kpi-delivered" class="text-sm sm:text-base font-extrabold text-emerald-700">0 / 0</span>
+                <span class="text-[11px] text-slate-500 uppercase tracking-wider block font-bold mb-0.5">Livrés</span>
+                <span id="admin-kpi-delivered" class="text-xs sm:text-sm md:text-base font-extrabold text-emerald-700">0 / 0</span>
               </div>
               <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Achèvement</span>
-                <span id="admin-kpi-rate" class="text-sm sm:text-base font-extrabold text-blue-700">0%</span>
+                <span class="text-[11px] text-slate-500 uppercase tracking-wider block font-bold mb-0.5">Achèvement</span>
+                <span id="admin-kpi-rate" class="text-xs sm:text-sm md:text-base font-extrabold text-blue-700">0%</span>
               </div>
             </div>
 
+            <!-- Filters: Chauffeur & Store Search -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div class="relative">
                 <i class="fa-solid fa-user-tie absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                   <option value="ALL">Tous les Chauffeurs</option>
                 </select>
               </div>
               <div class="relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin ou wilaya..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin ou wilaya..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
               </div>
             </div>
           </div>
 
-          <!-- Segmented Control: 2 Tabs (Non Livré left / Livré right) -->
-          <div class="grid grid-cols-2 gap-1.5 w-full p-1 rounded-2xl bg-slate-200/70 border border-slate-300/40 text-xs font-semibold">
-            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]">
+          <!-- Segmented Control: 3 Clear Tabs (Tous / Non Livré / Livré) -->
+          <div class="flex items-center gap-1.5 w-full p-1 rounded-2xl bg-slate-200/70 border border-slate-300/40 text-xs font-semibold">
+            <button onclick="setManifestFilter('ALL')" id="filter-all" class="flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
+              Tous (<span id="count-all">0</span>)
+            </button>
+            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]">
               Non Livré (<span id="count-pending">0</span>)
             </button>
-            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
+            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]">
               Livré (<span id="count-delivered">0</span>)
             </button>
-            <span id="count-all" class="hidden">0</span>
             <span id="count-transit" class="hidden">0</span>
             <span id="count-scheduled" class="hidden">0</span>
           </div>
 
         </div>
 
-        <!-- Manifest Content Body -->
-        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 max-h-[560px] lg:max-h-none"></div>
+        <!-- Manifest Delivery Cards Container (Responsive & Generous) -->
+        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]"></div>
 
         <!-- Manifest Summary Footer -->
-        <div id="manifest-footer" class="p-4 border-t border-slate-200/80 bg-white/70 shrink-0 flex items-center justify-between text-xs text-slate-500 font-medium">
+        <div id="manifest-footer" class="p-3.5 sm:p-4 border-t border-slate-200/80 bg-white/70 shrink-0 flex items-center justify-between text-xs text-slate-500 font-medium">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-cube text-slate-400"></i>
             <span>Volume cumulé : <strong id="manifest-total-qty" class="text-blue-600 font-bold">0</strong> paires</span>
           </div>
-          <div class="text-xs text-slate-400 font-semibold">Dépôt Central Hamiz</div>
+          <div class="text-xs text-slate-400 font-semibold">Dépôt Central Hamiz &bull; Tradifoot</div>
         </div>
 
       </section>
@@ -420,7 +453,7 @@
   <script>
     const GOOGLE_APP_URL = 'https://script.google.com/macros/s/AKfycbwM5y2SPfnT1lMg4_ingmt_ZWzfHFb7l-qTwTow3-eThQ52Rf1FfLRrcBertuvxUY6d/exec';
 
-    const LOCAL_DELIVERY_DATA = [
+const LOCAL_DELIVERY_DATA = [
       {
             "id": "DEL-0001",
             "date": "2026-10-28",
@@ -14618,31 +14651,35 @@
       }
 ];
 
-    let DELIVERY_DATA = [];
+        let DELIVERY_DATA = [];
     let completedCount = 0;
     let totalCount = 0;
-    let selectedDateStr = '2026-10-26';
-    let activeManifestFilter = 'PENDING';
+    let selectedDateStr = '2026-10-28';
+    let activeManifestFilter = 'ALL';
 
     const AppState = {
       currentUser: null,
       rawDeliveries: LOCAL_DELIVERY_DATA.map(d => ({ ...d, completed: false })),
       deliveries: [],
       completedDeliveryIds: new Set(),
-      selectedDateStr: '2026-10-26',
+      selectedDateStr: '2026-10-28',
       currentViewDate: new Date(2026, 9, 1),
-      activeManifestFilter: 'PENDING',
+      activeManifestFilter: 'ALL',
+      viewMode: localStorage.getItem('tradifoot_desktop_view_mode') || 'split',
       totalCount: 0,
       completedCount: 0,
-      adminFilterChauffeur: 'ALL',
-      adminFilterStore: ''
+      adminFilterDriver: 'ALL',
+      adminFilterSearch: ''
     };
 
     let DOM = {};
+
     function initDOMCache() {
       DOM = {
         mainApp:              document.getElementById('main-app'),
         authScreen:           document.getElementById('auth-screen'),
+        calendarSection:      document.getElementById('calendar-section'),
+        manifestSection:      document.getElementById('manifest-section'),
         calendarDaysGrid:     document.getElementById('calendar-days-grid'),
         calendarMonthYear:    document.getElementById('calendar-month-year'),
         cardsContainer:       document.getElementById('manifest-cards-container'),
@@ -14676,7 +14713,11 @@
         adminFilterStore:     document.getElementById('admin-filter-store'),
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
-        toastContainer:       document.getElementById('toast-container')
+        toastContainer:       document.getElementById('toast-container'),
+        horizonDateBar:       document.getElementById('horizon-date-bar'),
+        horizonDaysContainer: document.getElementById('horizon-days-container'),
+        viewModeSplitBtn:     document.getElementById('view-mode-split-btn'),
+        viewModeFullBtn:      document.getElementById('view-mode-full-btn')
       };
     }
 
@@ -14694,188 +14735,257 @@
     function getAuthSession() {
       try {
         const raw = localStorage.getItem("auth_session");
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || !parsed.username) return null;
-        const matched = AUTHORIZED_ACCOUNTS.find(
-          acc => acc.username.trim().toLowerCase() === String(parsed.username).trim().toLowerCase()
-        );
-        if (matched) {
-          return {
-            username: matched.username,
-            role: matched.role,
-            chauffeurName: matched.chauffeurName
-          };
-        }
-        return null;
-      } catch (err) {
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
         return null;
       }
     }
 
-    function setAuthSession(sessionData) {
-      localStorage.setItem("auth_session", JSON.stringify(sessionData));
+    function setAuthSession(session) {
+      try {
+        localStorage.setItem("auth_session", JSON.stringify(session));
+      } catch (e) {}
     }
 
     function clearAuthSession() {
-      localStorage.removeItem("auth_session");
+      try {
+        localStorage.removeItem("auth_session");
+      } catch (e) {}
     }
 
     function loadDeliveredIds() {
       try {
-        const raw = localStorage.getItem("delivered_ids");
-        return raw ? new Set(JSON.parse(raw)) : new Set();
-      } catch { return new Set(); }
+        const raw = localStorage.getItem("delivered_delivery_ids");
+        if (!raw) return new Set();
+        return new Set(JSON.parse(raw));
+      } catch (e) {
+        return new Set();
+      }
     }
 
-    function saveDeliveredIds(idSet) {
-      localStorage.setItem("delivered_ids", JSON.stringify([...idSet]));
+    function saveDeliveredIds(setObj) {
+      try {
+        localStorage.setItem("delivered_delivery_ids", JSON.stringify(Array.from(setObj)));
+      } catch (e) {}
     }
 
-    function showNotification(msg, type = "success") {
-      const container = document.getElementById("toast-container");
-      if (!container) return;
-      const styles = {
-        success: "bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 border-emerald-500",
-        error:   "bg-rose-600 text-white shadow-lg shadow-rose-600/25 border-rose-500",
-        info:    "bg-blue-600 text-white shadow-lg shadow-blue-600/25 border-blue-500",
-        warning: "bg-amber-600 text-white shadow-lg shadow-amber-600/25 border-amber-500"
-      };
-      const icons = {
-        success: "fa-circle-check",
-        error:   "fa-circle-xmark",
-        info:    "fa-circle-info",
-        warning: "fa-triangle-exclamation"
-      };
-
+    function showNotification(msg, type = "info") {
+      if (!DOM.toastContainer) return;
       const toast = document.createElement("div");
-      toast.className = "pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border text-sm font-semibold shadow-fluent transition-all duration-300 translate-y-2 opacity-0 " + (styles[type] || styles.info);
-      toast.innerHTML = "<i class=\"fa-solid " + (icons[type] || icons.info) + " text-xs\"></i><span>" + msg + "</span>";
-      container.appendChild(toast);
+      toast.className = `px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-lg text-white transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0 flex items-center space-x-2 ${
+        type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-rose-600' : 'bg-slate-800')
+      }`;
+      const icon = type === 'success' ? 'fa-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-info');
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${msg}</span>`;
+      DOM.toastContainer.appendChild(toast);
 
       requestAnimationFrame(() => {
         toast.classList.remove("translate-y-2", "opacity-0");
-        toast.classList.add("translate-y-0", "opacity-100");
       });
 
       setTimeout(() => {
-        toast.classList.add("opacity-0", "-translate-y-1");
+        toast.classList.add("translate-y-2", "opacity-0");
         setTimeout(() => toast.remove(), 300);
       }, 3500);
     }
 
-    function handleLogin(e) {
-      if (e) e.preventDefault();
-      const usernameInput = (document.getElementById("login-username")?.value || "").trim();
-      const pinInput = (document.getElementById("login-pin")?.value || "").trim();
-      const errorAlert = document.getElementById("login-error-alert");
-      const errorText = document.getElementById("login-error-text");
+    function handleLogin(event) {
+      event.preventDefault();
+      const uInput = document.getElementById("login-username");
+      const pInput = document.getElementById("login-pin");
+      const errAlert = document.getElementById("login-error-alert");
+      const errText = document.getElementById("login-error-text");
 
-      if (errorAlert) errorAlert.classList.add("hidden");
+      const uVal = uInput ? uInput.value.trim().toUpperCase() : "";
+      const pVal = pInput ? pInput.value.trim() : "";
 
-      if (!usernameInput || !pinInput) {
-        if (errorAlert && errorText) {
-          errorText.textContent = "Veuillez saisir votre nom d'utilisateur et votre code PIN.";
-          errorAlert.classList.remove("hidden");
-        }
-        showNotification("Veuillez remplir tous les champs.", "error");
-        return;
-      }
-
-      const account = AUTHORIZED_ACCOUNTS.find(
-        acc => acc.username.trim().toLowerCase() === usernameInput.toLowerCase() && String(acc.pin).trim() === pinInput
+      const found = AUTHORIZED_ACCOUNTS.find(
+        acc => acc.username.toUpperCase() === uVal && acc.pin === pVal
       );
 
-      if (!account) {
-        if (errorAlert && errorText) {
-          errorText.textContent = "Identifiants incorrects : nom d'utilisateur ou code PIN erroné.";
-          errorAlert.classList.remove("hidden");
-        }
-        showNotification("Identifiant ou Code PIN incorrect.", "error");
+      if (!found) {
+        if (errAlert) errAlert.classList.remove("hidden");
+        if (errText) errText.textContent = "wrong information has been given";
+        if (pInput) pInput.value = "";
         return;
       }
 
-      const sessionData = {
-        username: account.username,
-        role: account.role,
-        chauffeurName: account.chauffeurName
-      };
+      if (errAlert) errAlert.classList.add("hidden");
 
-      setAuthSession(sessionData);
-      revealDashboard(sessionData);
-      showNotification("Connexion réussie. Bienvenue, " + account.username + " !", "success");
+      const session = {
+        username: found.username,
+        role: found.role,
+        chauffeurName: found.chauffeurName,
+        loginAt: new Date().toISOString()
+      };
+      setAuthSession(session);
+      AppState.currentUser = session;
+
+      revealDashboard();
+      initAuthenticatedApp();
+      showNotification(`Bienvenue, ${found.username} (${found.role.toUpperCase()})`, "success");
     }
 
     function handleLogout() {
       clearAuthSession();
       AppState.currentUser = null;
       if (DOM.mainApp) DOM.mainApp.classList.add("hidden");
-      if (DOM.authScreen) DOM.authScreen.classList.remove("hidden");
-      const uEl = document.getElementById("login-username");
-      const pEl = document.getElementById("login-pin");
-      const errEl = document.getElementById("login-error-alert");
-      if (uEl) uEl.value = "";
-      if (pEl) pEl.value = "";
-      if (errEl) errEl.classList.add("hidden");
-      showNotification("Vous avez été déconnecté.", "info");
-    }
-
-    function revealDashboard(user) {
-      if (DOM.authScreen) DOM.authScreen.classList.add("hidden");
-      if (DOM.mainApp) DOM.mainApp.classList.remove("hidden");
-      initAuthenticatedApp(user);
-    }
-
-    async function syncRemoteDeliveries(user) {
-      try {
-        const response = await fetch(GOOGLE_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'get_deliveries',
-            role: user.role,
-            chauffeurName: user.chauffeurName
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result && Array.isArray(result.deliveries) && result.deliveries.length > 0) {
-            mergeDeliveries(result.deliveries);
-            showNotification("Données synchronisées avec Google Sheets", "success");
-            AppState.deliveries = computeActiveDeliveries();
-            DELIVERY_DATA = AppState.deliveries;
-            renderCalendar();
-            renderDailyManifest();
-            updateAdminKPIs();
-          }
-        }
-      } catch (err) {
-        console.warn("Notice: Operating in instant offline/local mode:", err);
+      if (DOM.authScreen) {
+        DOM.authScreen.classList.remove("hidden");
+        DOM.authScreen.classList.remove("opacity-0", "pointer-events-none");
       }
+      const pInput = document.getElementById("login-pin");
+      if (pInput) pInput.value = "";
+      showNotification("Déconnexion réussie.", "info");
+    }
+
+    function revealDashboard() {
+      if (DOM.authScreen) {
+        DOM.authScreen.classList.add("opacity-0", "pointer-events-none");
+        setTimeout(() => DOM.authScreen.classList.add("hidden"), 300);
+      }
+      if (DOM.mainApp) {
+        DOM.mainApp.classList.remove("hidden");
+      }
+    }
+
+    // DESKTOP VIEW MODE MANAGEMENT (Split View vs Full Screen Command Center)
+    function setViewMode(mode) {
+      AppState.viewMode = mode;
+      localStorage.setItem('tradifoot_desktop_view_mode', mode);
+
+      const calSec = DOM.calendarSection || document.getElementById('calendar-section');
+      const manSec = DOM.manifestSection || document.getElementById('manifest-section');
+      const btnSplit = DOM.viewModeSplitBtn || document.getElementById('view-mode-split-btn');
+      const btnFull = DOM.viewModeFullBtn || document.getElementById('view-mode-full-btn');
+      const horizonBar = DOM.horizonDateBar || document.getElementById('horizon-date-bar');
+
+      if (mode === 'full') {
+        if (calSec) calSec.classList.add('hidden', 'lg:hidden');
+        if (manSec) {
+          manSec.classList.remove('lg:col-span-5', 'lg:col-span-6', 'lg:col-span-7');
+          manSec.classList.add('lg:col-span-12');
+        }
+        if (horizonBar) horizonBar.classList.remove('hidden');
+        if (btnFull) {
+          btnFull.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all";
+        }
+        if (btnSplit) {
+          btnSplit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all";
+        }
+      } else {
+        if (calSec) calSec.classList.remove('hidden', 'lg:hidden');
+        if (manSec) {
+          manSec.classList.remove('lg:col-span-12');
+          manSec.classList.add('lg:col-span-7');
+        }
+        if (calSec) {
+          calSec.classList.remove('lg:col-span-6', 'lg:col-span-7');
+          calSec.classList.add('lg:col-span-5');
+        }
+        if (horizonBar) horizonBar.classList.add('hidden');
+        if (btnSplit) {
+          btnSplit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all";
+        }
+        if (btnFull) {
+          btnFull.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all";
+        }
+      }
+
+      renderHorizonDateBar();
+      renderDailyManifest();
+    }
+
+    function toggleDesktopViewMode() {
+      const nextMode = AppState.viewMode === 'full' ? 'split' : 'full';
+      setViewMode(nextMode);
+    }
+
+    function renderHorizonDateBar() {
+      const container = DOM.horizonDaysContainer || document.getElementById('horizon-days-container');
+      if (!container) return;
+      container.innerHTML = "";
+
+      const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
+      const baseDate = new Date(y, m - 1, d);
+
+      // Render 7 consecutive days (-3 to +3)
+      for (let offset = -3; offset <= 3; offset++) {
+        const cur = new Date(baseDate);
+        cur.setDate(baseDate.getDate() + offset);
+
+        const curY = cur.getFullYear();
+        const curM = String(cur.getMonth() + 1).padStart(2, '0');
+        const curD = String(cur.getDate()).padStart(2, '0');
+        const curStr = `${curY}-${curM}-${curD}`;
+
+        const isCurrent = (curStr === AppState.selectedDateStr);
+        const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === curStr));
+        const dayCount = dayDeliveries.length;
+
+        const dayName = cur.toLocaleDateString('fr-FR', { weekday: 'short' });
+        const dayNum = cur.getDate();
+
+        const btn = document.createElement("button");
+        btn.onclick = () => selectDate(curStr);
+        btn.className = `flex-1 min-w-[75px] py-2 px-2.5 rounded-xl border text-center transition-all duration-200 select-none ${
+          isCurrent 
+            ? 'bg-blue-600 border-blue-400 text-white shadow-md shadow-blue-500/25 ring-2 ring-white/20' 
+            : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:bg-slate-700 hover:text-white'
+        }`;
+
+        btn.innerHTML = `
+          <div class="text-[10px] uppercase font-bold tracking-wider ${isCurrent ? 'text-blue-100' : 'text-slate-400'}">${dayName}</div>
+          <div class="text-base font-extrabold my-0.5">${dayNum}</div>
+          <div class="text-[10px] font-semibold flex items-center justify-center gap-1 ${
+            dayCount > 0 
+              ? (isCurrent ? 'text-white' : 'text-cyan-300') 
+              : 'text-slate-500'
+          }">
+            <i class="fa-solid fa-truck text-[9px]"></i>
+            <span>${dayCount}</span>
+          </div>
+        `;
+
+        container.appendChild(btn);
+      }
+    }
+
+    async function syncRemoteDeliveries() {
+      try {
+        const res = await fetch(`${GOOGLE_APP_URL}?action=get_deliveries`, { method: 'GET' });
+        if (!res.ok) return;
+        const remoteList = await res.json();
+        if (Array.isArray(remoteList) && remoteList.length > 0) {
+          mergeDeliveries(remoteList);
+          computeActiveDeliveries();
+          renderCalendar();
+          renderDailyManifest();
+          renderHorizonDateBar();
+        }
+      } catch (err) {}
     }
 
     function mergeDeliveries(remoteList) {
       const map = new Map();
-      AppState.rawDeliveries.forEach(d => map.set(String(d.id), d));
+      AppState.rawDeliveries.forEach(d => map.set(String(d.id), { ...d }));
       remoteList.forEach(r => {
-        const key = String(r.id);
-        if (map.has(key)) {
-          const existing = map.get(key);
-          Object.assign(existing, r);
+        const existing = map.get(String(r.id));
+        if (existing) {
+          map.set(String(r.id), { ...existing, ...r });
         } else {
-          map.set(key, r);
+          map.set(String(r.id), { ...r });
         }
       });
       AppState.rawDeliveries = Array.from(map.values());
     }
 
-    function normalizeDriver(name) {
-      return String(name || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    function normalizeDriver(str) {
+      if (!str) return "";
+      return str.replace(/\s+/g, " ").trim().toUpperCase();
     }
 
     function computeActiveDeliveries() {
-      const user = AppState.currentUser;
       let list = AppState.rawDeliveries;
 
       AppState.completedDeliveryIds = loadDeliveredIds();
@@ -14884,77 +14994,92 @@
         return { ...d, completed: isCompleted || d.completed, status: isCompleted ? 'Livré' : d.status };
       });
 
-      if (!user || user.role === 'admin') {
-        const driverFilter = AppState.adminFilterChauffeur || 'ALL';
-        const storeFilter  = (AppState.adminFilterStore || '').toUpperCase().trim();
-        if (driverFilter !== 'ALL') {
-          list = list.filter(d => normalizeDriver(d.driver) === normalizeDriver(driverFilter));
+      if (AppState.currentUser && AppState.currentUser.role === 'chauffeur') {
+        const assignedName = normalizeDriver(AppState.currentUser.chauffeurName);
+        list = list.filter(d => normalizeDriver(d.driver) === assignedName);
+      } else if (AppState.currentUser && AppState.currentUser.role === 'admin') {
+        if (AppState.adminFilterDriver && AppState.adminFilterDriver !== 'ALL') {
+          const filterNorm = normalizeDriver(AppState.adminFilterDriver);
+          list = list.filter(d => normalizeDriver(d.driver) === filterNorm);
         }
-        if (storeFilter) {
-          list = list.filter(d =>
-            (d.destination || '').toUpperCase().includes(storeFilter) ||
-            (d.wilaya || '').toUpperCase().includes(storeFilter)
-          );
+        if (AppState.adminFilterSearch && AppState.adminFilterSearch.trim()) {
+          const q = AppState.adminFilterSearch.trim().toLowerCase();
+          list = list.filter(d => {
+            const dest = (d.destination || "").toLowerCase();
+            const wil = (d.wilaya || "").toLowerCase();
+            const drv = (d.driver || "").toLowerCase();
+            return dest.includes(q) || wil.includes(q) || drv.includes(q);
+          });
         }
-        return list;
       }
 
-      const norm = normalizeDriver(user.chauffeurName);
-      return list.filter(d => {
-        const driverNorm = normalizeDriver(d.driver);
-        return driverNorm.includes(norm) || norm.includes(driverNorm);
-      });
+      AppState.deliveries = list;
+      DELIVERY_DATA = AppState.deliveries;
     }
 
     function populateAdminChauffeurs() {
-      const select = DOM.adminFilterChauffeur;
-      if (!select) return;
-      const drivers = [...new Set(AppState.rawDeliveries.map(d => normalizeDriver(d.driver)).filter(Boolean))].sort();
-      const currentVal = select.value;
-      select.innerHTML = '<option value="ALL">Tous les Chauffeurs</option>';
-      drivers.forEach(driver => {
-        const opt = document.createElement('option');
-        opt.value = driver;
-        opt.textContent = driver;
-        select.appendChild(opt);
+      if (!DOM.adminFilterChauffeur) return;
+      const prevVal = DOM.adminFilterChauffeur.value;
+
+      const allUnique = new Set();
+      AppState.rawDeliveries.forEach(d => {
+        const c = normalizeDriver(d.driver);
+        if (c && c !== 'ALL' && !c.includes('NON SPÉCIFIÉ')) allUnique.add(c);
       });
-      select.value = currentVal || 'ALL';
+      const sorted = Array.from(allUnique).sort();
+
+      DOM.adminFilterChauffeur.innerHTML = '<option value="ALL">Tous les Chauffeurs</option>';
+      sorted.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        DOM.adminFilterChauffeur.appendChild(opt);
+      });
+
+      if (prevVal && sorted.includes(prevVal)) {
+        DOM.adminFilterChauffeur.value = prevVal;
+      }
     }
 
     function updateAdminKPIs() {
-      if (!AppState.currentUser || AppState.currentUser.role !== 'admin') return;
-      const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(d => d.date === AppState.selectedDateStr));
-      const totalPairs = dayDeliveries.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
-      const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === 'Livré' || AppState.completedDeliveryIds.has(String(x.id))).length;
+      if (!DOM.adminToolbar) return;
+      if (!AppState.currentUser || AppState.currentUser.role !== 'admin') {
+        DOM.adminToolbar.classList.add("hidden");
+        return;
+      }
+      DOM.adminToolbar.classList.remove("hidden");
+
+      const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
+      const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
       const rate = dayDeliveries.length > 0 ? Math.round((deliveredCount / dayDeliveries.length) * 100) : 0;
-      if (DOM.adminKpiPackages) DOM.adminKpiPackages.textContent = totalPairs.toLocaleString() + ' Paires';
+
+      if (DOM.adminKpiPackages) DOM.adminKpiPackages.textContent = `${totalUnits.toLocaleString()} Paires`;
       if (DOM.adminKpiDelivered) DOM.adminKpiDelivered.textContent = `${deliveredCount} / ${dayDeliveries.length}`;
       if (DOM.adminKpiRate) DOM.adminKpiRate.textContent = `${rate}%`;
     }
 
     function handleAdminFilterChange() {
-      AppState.adminFilterChauffeur = (DOM.adminFilterChauffeur?.value || 'ALL');
-      AppState.adminFilterStore = (DOM.adminFilterStore?.value || '');
-      AppState.deliveries = computeActiveDeliveries();
-      DELIVERY_DATA = AppState.deliveries;
+      if (DOM.adminFilterChauffeur) {
+        AppState.adminFilterDriver = DOM.adminFilterChauffeur.value;
+      }
+      if (DOM.adminFilterStore) {
+        AppState.adminFilterSearch = DOM.adminFilterStore.value;
+      }
+      computeActiveDeliveries();
       renderCalendar();
       renderDailyManifest();
-      updateAdminKPIs();
+      renderHorizonDateBar();
     }
 
     function getUniqueDeliveries(list) {
       const seen = new Set();
-      const unique = [];
-      for (let i = 0; i < list.length; i++) {
-        const d = list[i];
-        const dest = (d.destination || "").trim().toUpperCase();
-        const key = dest + "_" + d.quantity;
-        if (!seen.has(key)) {
-          seen.add(key);
-          unique.push(d);
-        }
-      }
-      return unique;
+      return list.filter(item => {
+        const key = `${item.date}|${(item.destination||'').trim().toUpperCase()}|${item.quantity}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function renderCalendar() {
@@ -14988,12 +15113,12 @@
       for (let i = startingDay - 1; i >= 0; i--) {
         const prevDayNum = daysInPrevMonth - i;
         const cell = document.createElement("div");
-        cell.className = "min-h-[44px] h-12 sm:h-20 md:h-24 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
+        cell.className = "min-h-[44px] h-12 sm:h-16 md:h-20 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
         cell.innerHTML = `<span class="text-xs sm:text-sm font-semibold">${prevDayNum}</span>`;
         DOM.calendarDaysGrid.appendChild(cell);
       }
 
-      const todayStr = "2026-10-26";
+      const todayStr = "2026-10-28";
 
       for (let day = 1; day <= daysInMonth; day++) {
         const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -15015,7 +15140,7 @@
         const cell = document.createElement("div");
         cell.onclick = () => selectDate(dStr);
 
-        let baseClasses = "min-h-[44px] h-14 sm:h-20 md:h-24 p-1 sm:p-1.5 md:p-2 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ";
+        let baseClasses = "min-h-[44px] h-13 sm:h-16 md:h-20 p-1 sm:p-1.5 md:p-2 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ";
 
         if (isSelected) {
           baseClasses += "glass-card ring-2 ring-blue-600 bg-blue-50/90 border-blue-400 shadow-sm ";
@@ -15030,7 +15155,7 @@
           const hasDelivered = dayDeliveries.some(d => d.completed || d.status === "Livré" || AppState.completedDeliveryIds.has(String(d.id)));
           const hasPending = dayDeliveries.some(d => !d.completed && d.status !== "Livré" && !AppState.completedDeliveryIds.has(String(d.id)));
 
-          statusDots = '<div class="flex items-center space-x-1 mt-0.5 sm:mt-1">';
+          statusDots = '<div class="flex items-center space-x-1 mt-0.5">';
           if (hasDelivered) statusDots += '<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-2xs"></span>';
           if (hasPending) statusDots += '<span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span>';
           statusDots += '</div>';
@@ -15047,9 +15172,9 @@
           ${hasDeliveries ? `
             <div class="mt-auto">
               ${statusDots}
-              <div class="mt-0.5 sm:mt-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-xs font-bold text-blue-900 border border-blue-200/70 flex items-center justify-center sm:justify-between truncate">
+              <div class="mt-0.5 px-1 py-0.5 rounded-md bg-blue-50 text-[11px] font-bold text-blue-900 border border-blue-200/70 flex items-center justify-center sm:justify-between truncate">
                 <span>${dayDeliveries.length}<span class="hidden sm:inline"> livr.</span></span>
-                <span class="hidden sm:inline text-slate-700 text-xs font-semibold">${dayUnits.toLocaleString()}</span>
+                <span class="hidden sm:inline text-slate-700 text-[10px] font-semibold">${dayUnits.toLocaleString()}</span>
               </div>
             </div>
           ` : `
@@ -15064,7 +15189,7 @@
       const remainingCells = (totalRenderedDays % 7 === 0) ? 0 : 7 - (totalRenderedDays % 7);
       for (let i = 1; i <= remainingCells; i++) {
         const cell = document.createElement("div");
-        cell.className = "min-h-[44px] h-12 sm:h-20 md:h-24 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
+        cell.className = "min-h-[44px] h-12 sm:h-16 md:h-20 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
         cell.innerHTML = `<span class="text-xs font-semibold">${i}</span>`;
         DOM.calendarDaysGrid.appendChild(cell);
       }
@@ -15075,12 +15200,12 @@
 
     function updateProgressUI() {
       const { totalCount, completedCount } = AppState;
-      const offset = totalCount > 0 ? 125.6 - ((completedCount / totalCount) * 125.6) : 125.6;
+      const offset = totalCount > 0 ? 87.96 - ((completedCount / totalCount) * 87.96) : 87.96;
       if (DOM.progressCircle) {
         DOM.progressCircle.style.strokeDashoffset = offset;
       }
       if (DOM.progressText) {
-        DOM.progressText.innerText = `${completedCount} / ${totalCount} Livraisons`;
+        DOM.progressText.innerText = `${completedCount} / ${totalCount} Livré`;
       }
       if (DOM.progressPercent) {
         const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -15088,9 +15213,9 @@
       }
       if (DOM.progressRingIcon) {
         if (totalCount > 0 && completedCount === totalCount) {
-          DOM.progressRingIcon.className = "fa-solid fa-check text-emerald-600 text-xs";
+          DOM.progressRingIcon.innerHTML = '<i class="fa-solid fa-check text-emerald-600 text-[10px]"></i>';
         } else {
-          DOM.progressRingIcon.className = "fa-solid fa-flag-checkered text-slate-400 text-xs";
+          DOM.progressRingIcon.innerHTML = '<i class="fa-solid fa-flag-checkered text-slate-400 text-[10px]"></i>';
         }
       }
     }
@@ -15098,6 +15223,13 @@
     function renderDailyManifest() {
       if (!DOM.cardsContainer) return;
       DOM.cardsContainer.innerHTML = "";
+
+      // Ensure appropriate grid class based on Desktop view mode
+      if (AppState.viewMode === 'full') {
+        DOM.cardsContainer.className = "flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 min-h-[450px]";
+      } else {
+        DOM.cardsContainer.className = "flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]";
+      }
 
       const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
       const dateObj = new Date(y, m - 1, d);
@@ -15111,7 +15243,7 @@
 
       const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
       const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
-      const pendingCount = dayDeliveries.length - deliveredCount;
+      const pendingCount = Math.max(0, dayDeliveries.length - deliveredCount);
 
       if (DOM.countAll) DOM.countAll.textContent = dayDeliveries.length;
       if (DOM.countDelivered) DOM.countDelivered.textContent = deliveredCount;
@@ -15129,44 +15261,83 @@
       completedCount = AppState.completedCount;
 
       updateProgressUI();
+      updateAdminKPIs();
 
-      // Apply Status Filter (default: Non Livré)
-      const filtered = AppState.activeManifestFilter === "Delivered"
-        ? dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id)))
-        : dayDeliveries.filter(x => !x.completed && x.status !== "Livré" && !AppState.completedDeliveryIds.has(String(x.id)));
+      // Apply Manifest Filter
+      let filtered = [];
+      if (AppState.activeManifestFilter === "Delivered") {
+        filtered = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id)));
+      } else if (AppState.activeManifestFilter === "PENDING") {
+        filtered = dayDeliveries.filter(x => !x.completed && x.status !== "Livré" && !AppState.completedDeliveryIds.has(String(x.id)));
+      } else {
+        filtered = dayDeliveries;
+      }
 
       const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
       if (DOM.manifestTotalQty) DOM.manifestTotalQty.textContent = totalUnits.toLocaleString();
 
+      // INTELLIGENT EMPTY STATE (Never leave user stuck with an empty box!)
       if (filtered.length === 0) {
-        DOM.cardsContainer.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-4 my-auto">
-            <div class="h-16 w-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
-              <i class="fa-solid fa-truck-ramp-box text-2xl text-slate-400"></i>
+        if (dayDeliveries.length > 0) {
+          const allDelivered = (deliveredCount === dayDeliveries.length);
+          DOM.cardsContainer.innerHTML = `
+            <div class="col-span-full h-full flex flex-col items-center justify-center text-center p-8 bg-white/70 rounded-3xl border border-blue-100 shadow-xs space-y-4 my-auto">
+              <div class="h-16 w-16 rounded-2xl ${allDelivered ? 'bg-emerald-50 border border-emerald-200 text-emerald-600' : 'bg-blue-50 border border-blue-200 text-blue-600'} flex items-center justify-center shadow-xs">
+                <i class="fa-solid ${allDelivered ? 'fa-circle-check text-3xl' : 'fa-filter text-2xl'}"></i>
+              </div>
+              <div class="space-y-1">
+                <h4 class="text-base sm:text-lg font-bold text-slate-800">
+                  ${allDelivered ? `Toutes les livraisons (${dayDeliveries.length}) sont complétées !` : `Aucune livraison dans cet onglet`}
+                </h4>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                  ${allDelivered 
+                    ? `Les ${dayDeliveries.length} expéditions programmées pour cette date ont déjà été enregistrées comme livrées.` 
+                    : `Il y a ${dayDeliveries.length} livraisons enregistrées pour cette journée. Cliquez ci-dessous pour les afficher.`}
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                <button onclick="setManifestFilter('Delivered')" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-check text-xs"></i>
+                  <span>Afficher les Livrés (${deliveredCount})</span>
+                </button>
+                <button onclick="setManifestFilter('ALL')" class="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-list-check text-xs"></i>
+                  <span>Afficher Tout (${dayDeliveries.length})</span>
+                </button>
+              </div>
             </div>
-            <div>
-              <h4 class="text-sm sm:text-base font-bold text-slate-700">Aucune livraison ${AppState.activeManifestFilter === 'Delivered' ? 'livrée' : 'en attente'}</h4>
-              <p class="text-xs sm:text-sm text-slate-500 max-w-xs mt-1">
-                ${AppState.activeManifestFilter === 'Delivered' 
-                  ? 'Aucune tournée n\'a encore été marquée comme livrée pour cette date.' 
-                  : (AppState.currentUser && AppState.currentUser.role === 'chauffeur' 
-                      ? 'Toutes vos livraisons pour cette date sont terminées !'
-                      : 'Toutes les tournées de cette date ont été livrées ou aucune expédition n\'est programmée.')}
-              </p>
+          `;
+        } else {
+          DOM.cardsContainer.innerHTML = `
+            <div class="col-span-full h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-4 my-auto">
+              <div class="h-16 w-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
+                <i class="fa-solid fa-calendar-xmark text-2xl text-slate-400"></i>
+              </div>
+              <div>
+                <h4 class="text-sm sm:text-base font-bold text-slate-700">Aucune expédition programmée</h4>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-xs mt-1">
+                  Aucune tournée de livraison n'est enregistrée pour le ${formattedDate}.
+                </p>
+              </div>
+              <button onclick="jumpToNextDelivery()" class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
+                <span>Voir la prochaine livraison</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
             </div>
-            <button onclick="jumpToNextDelivery()" class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
-              <span>Voir la prochaine livraison</span>
-              <i class="fa-solid fa-arrow-right text-xs"></i>
-            </button>
-          </div>
-        `;
+          `;
+        }
         return;
       }
 
+      // RENDER RICH, EXECUTIVE DELIVERY CARDS
       filtered.forEach(item => {
         const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
         const card = document.createElement("div");
-        card.className = `flex-shrink-0 shrink-0 w-full glass-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 border ${isCompleted ? 'opacity-70 bg-slate-50/90 border-slate-200' : 'bg-white/95 border-blue-100/90 shadow-sm shadow-blue-950/5'}`;
+        card.className = `flex-shrink-0 shrink-0 w-full glass-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 border ${
+          isCompleted 
+            ? 'opacity-85 bg-slate-50/95 border-slate-200' 
+            : 'bg-white/95 border-blue-100/90 shadow-sm shadow-blue-950/5'
+        } flex flex-col justify-between`;
         card.setAttribute("data-delivery-id", item.id);
 
         const statusBadge = isCompleted ? `
@@ -15180,90 +15351,99 @@
         `;
 
         const btnClass = isCompleted 
-          ? "btn-complete-toggle flex items-center justify-center w-11 h-11 shrink-0 rounded-full bg-emerald-600 text-white border-2 border-emerald-600 shadow-md shadow-emerald-600/30 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]"
-          : "btn-complete-toggle flex items-center justify-center w-11 h-11 shrink-0 rounded-full bg-slate-50 border-2 border-slate-300 text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]";
+          ? "btn-complete-toggle flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-emerald-600 text-white border-2 border-emerald-600 shadow-md shadow-emerald-600/30 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]"
+          : "btn-complete-toggle flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-slate-50 border-2 border-slate-300 text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]";
+
+        const hasCustomNotes = item.notes && item.notes !== 'Test' && !item.notes.startsWith('Programme');
 
         card.innerHTML = `
-          <!-- Top Row: Route ID & Priority + Status Badge & Action -->
-          <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 gap-2">
-            <div class="flex items-center space-x-2.5 min-w-0">
-              <span class="h-7 px-2.5 rounded-lg bg-blue-50 text-blue-900 text-xs sm:text-sm font-bold flex items-center justify-center border border-blue-200/70 shrink-0">
-                P${item.priority || 1}
-              </span>
-              <span class="text-xs sm:text-sm font-semibold text-slate-500 font-mono truncate">#${item.id}</span>
-            </div>
-            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div class="status-badge-container">
-                ${statusBadge}
-              </div>
-              <button data-id="${item.id}" class="${btnClass}" title="${isCompleted ? 'Livraison complétée (cliquez pour annuler)' : 'Marquer comme livré'}" aria-label="Valider livraison" aria-pressed="${isCompleted ? 'true' : 'false'}">
-                <i class="fa-solid fa-check text-sm"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Main Section: Store Name (Magasin) -->
-          <div class="mt-3.5">
-            <h4 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug flex items-start gap-2 break-words">
-              <i class="fa-solid fa-location-dot text-blue-600 text-base mt-1 shrink-0"></i>
-              <span class="break-words">${item.destination}</span>
-            </h4>
-
-            <!-- Metadata Badges (Chauffeur, Wilaya, Brand) -->
-            <div class="flex flex-wrap items-center gap-2 mt-3">
-              <!-- Chauffeur Pill Badge -->
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-900 text-xs sm:text-sm font-semibold border border-blue-200/70 shadow-2xs">
-                <i class="fa-solid fa-user-tie text-blue-600 text-xs"></i>
-                <span class="truncate">${item.driver}</span>
-              </span>
-
-              <!-- Wilaya / Region Pill -->
-              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold border border-slate-200 shadow-2xs">
-                <i class="fa-solid fa-map-pin text-slate-500 text-xs"></i>
-                <span>${item.wilaya || 'Algérie'}${item.region ? ' (' + item.region + ')' : ''}</span>
-              </span>
-
-              <!-- Brand Pill (if present) -->
-              ${item.brand ? `
-                <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium border border-slate-200 shadow-2xs">
-                  ${item.brand}
+          <div>
+            <!-- Top Row: Priority & ID + Status Badge & Action Button -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
+              <div class="flex items-center space-x-2 min-w-0">
+                <span class="h-6 px-2 rounded-md bg-blue-50 text-blue-900 text-xs font-bold flex items-center justify-center border border-blue-200/70 shrink-0">
+                  P${item.priority || 1}
                 </span>
-              ` : ''}
+                <span class="text-xs font-bold text-slate-500 font-mono truncate">#${item.id}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="status-badge-container">
+                  ${statusBadge}
+                </div>
+                <button data-id="${item.id}" class="${btnClass}" title="${isCompleted ? 'Livraison complétée (cliquer pour annuler)' : 'Marquer comme livré'}" aria-label="Valider livraison">
+                  <i class="fa-solid fa-check text-sm"></i>
+                </button>
+              </div>
             </div>
+
+            <!-- Destination Store Name -->
+            <div class="mt-3">
+              <h4 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug flex items-start gap-2 break-words">
+                <i class="fa-solid fa-location-dot text-blue-600 text-base mt-1 shrink-0"></i>
+                <span class="break-words">${item.destination}</span>
+              </h4>
+
+              <!-- Driver & Location Badges -->
+              <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-900 text-xs sm:text-sm font-semibold border border-blue-200/70 shadow-2xs">
+                  <i class="fa-solid fa-user-tie text-blue-600 text-xs"></i>
+                  <span class="truncate">${item.driver}</span>
+                </span>
+
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold border border-slate-200 shadow-2xs">
+                  <i class="fa-solid fa-map-pin text-slate-500 text-xs"></i>
+                  <span>${item.wilaya || 'Algérie'}${item.region ? ' (' + item.region + ')' : ''}</span>
+                </span>
+
+                ${item.brand ? `
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200 shadow-2xs">
+                    ${item.brand}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Cargo & Logistics Grid: Matricule & Date | Volume & Colis -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3.5 pt-3 border-t border-slate-100 text-sm">
+              <div class="space-y-1 min-w-0">
+                <div class="text-sm text-slate-700 font-medium flex items-center gap-2 truncate">
+                  <i class="fa-solid fa-truck text-slate-400 shrink-0 text-sm"></i>
+                  <span class="truncate font-semibold text-slate-800" title="${item.vehicle || 'Véhicule'}">${item.vehicle || 'Camion Porteur'}</span>
+                </div>
+                <div class="text-xs sm:text-sm text-slate-600 font-medium flex items-center gap-2 truncate">
+                  <i class="fa-regular fa-clock text-slate-400 shrink-0 text-xs sm:text-sm"></i>
+                  <span class="truncate">${item.time || 'Tournée programmée'}</span>
+                </div>
+              </div>
+
+              <div class="space-y-1 sm:text-right min-w-0">
+                <div class="text-sm sm:text-base font-bold text-blue-900 flex items-center sm:justify-end gap-1.5 truncate">
+                  <i class="fa-solid fa-boxes-packing text-blue-600 shrink-0 text-sm"></i>
+                  <span class="truncate font-extrabold">${Number(item.quantity).toLocaleString()} Paires</span>
+                </div>
+                <div class="text-xs sm:text-sm font-semibold text-slate-600 sm:text-right">
+                  ${item.colis ? `${item.colis} Colis expédiés` : 'Colis standard'}
+                </div>
+              </div>
+            </div>
+
+            <!-- Specific Delivery Notes / Instructions Callout Box -->
+            ${hasCustomNotes ? `
+              <div class="mt-3 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/70 text-xs text-amber-900 flex items-start gap-2 shadow-2xs">
+                <i class="fa-solid fa-circle-exclamation text-amber-600 mt-0.5 shrink-0"></i>
+                <div class="leading-relaxed"><strong class="font-bold">Instructions :</strong> ${item.notes}</div>
+              </div>
+            ` : ''}
           </div>
 
-          <!-- Details Grid: Matricule & Date | Quantité & Colis -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-3.5 border-t border-slate-100 text-sm">
-            <div class="space-y-1.5 min-w-0">
-              <div class="text-sm text-slate-700 font-medium flex items-center gap-2 truncate">
-                <i class="fa-solid fa-truck text-slate-400 shrink-0 text-sm"></i>
-                <span class="truncate font-semibold text-slate-800" title="${item.vehicle || 'Véhicule'}">${item.vehicle || 'Véhicule standard'}</span>
-              </div>
-              <div class="text-sm text-slate-600 font-medium flex items-center gap-2 truncate">
-                <i class="fa-regular fa-calendar-check text-slate-400 shrink-0 text-sm"></i>
-                <span class="truncate">${item.date}${item.time ? ' • ' + item.time : ''}</span>
-              </div>
-            </div>
-
-            <div class="space-y-1 sm:text-right min-w-0">
-              <div class="text-sm sm:text-base font-bold text-blue-900 flex items-center sm:justify-end gap-1.5 truncate">
-                <i class="fa-solid fa-boxes-packing text-blue-600 shrink-0 text-sm"></i>
-                <span class="truncate font-extrabold">${Number(item.quantity).toLocaleString()} Paires</span>
-              </div>
-              <div class="text-xs sm:text-sm font-semibold text-slate-600 sm:text-right">
-                ${item.colis ? `${item.colis} Colis expédiés` : 'Colis standard'}
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Footer -->
+          <!-- Bottom Action Strip -->
           <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
-            <span class="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-circle-info text-blue-500 text-xs"></i>
-              <span>Tournée programmée</span>
-            </span>
-            <button onclick="viewRouteDetail('${item.id}')" class="text-blue-700 hover:text-blue-800 font-bold flex items-center gap-1.5 transition duration-150 active:scale-95 px-3.5 py-1.5 rounded-xl hover:bg-blue-50 border border-transparent hover:border-blue-200 min-h-[44px]">
-              <span>Feuille de Route</span>
+            <button data-id="${item.id}" class="btn-complete-text flex items-center gap-2 text-xs sm:text-sm font-bold ${isCompleted ? 'text-emerald-700 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-700'} transition min-h-[44px]">
+              <i class="fa-solid ${isCompleted ? 'fa-circle-check text-emerald-600 text-sm' : 'fa-circle text-slate-300 text-sm'}"></i>
+              <span>${isCompleted ? 'Livré (Terminé)' : 'Marquer comme Livré'}</span>
+            </button>
+            <button onclick="viewRouteDetail('${item.id}')" class="text-slate-700 hover:text-blue-700 font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl hover:bg-slate-100 border border-transparent hover:border-slate-200 min-h-[44px]">
+              <span>Fiche Complète</span>
               <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
             </button>
           </div>
@@ -15277,109 +15457,46 @@
       if (!DOM.cardsContainer) return;
 
       DOM.cardsContainer.addEventListener("click", (e) => {
-        const btn = e.target.closest(".btn-complete-toggle");
-        if (!btn) return;
-        e.stopPropagation();
+        const toggleBtn = e.target.closest(".btn-complete-toggle") || e.target.closest(".btn-complete-text");
+        if (!toggleBtn) return;
 
-        const parentCard = btn.closest(".glass-card");
-        const itemId = String(btn.getAttribute("data-id") || '').trim();
+        const itemId = toggleBtn.getAttribute("data-id");
         if (!itemId) return;
 
-        const isCurrentlyCompleted = btn.classList.contains("bg-emerald-600") || AppState.completedDeliveryIds.has(itemId);
+        const targetItem = AppState.rawDeliveries.find(d => String(d.id) === String(itemId));
+        if (!targetItem) return;
+
+        const isCurrentlyCompleted = AppState.completedDeliveryIds.has(itemId);
         const willBeCompleted = !isCurrentlyCompleted;
         const newStatus = willBeCompleted ? 'Livré' : 'Non Livré';
 
-        const targetItem = AppState.deliveries.find(d => String(d.id) === itemId);
-
-        btn.setAttribute("title", willBeCompleted ? "Livraison complétée (cliquez pour annuler)" : "Marquer comme livré");
-        btn.setAttribute("aria-pressed", willBeCompleted ? "true" : "false");
+        targetItem.completed = willBeCompleted;
+        targetItem.status = newStatus;
 
         if (willBeCompleted) {
-          btn.classList.remove("bg-slate-50", "border-slate-300", "text-slate-400", "hover:text-blue-600", "hover:border-blue-500");
-          btn.classList.add("bg-emerald-600", "text-white", "border-emerald-600", "shadow-md", "shadow-emerald-600/30");
-          if (parentCard) parentCard.classList.add("opacity-65", "bg-slate-50/90");
           AppState.completedDeliveryIds.add(itemId);
         } else {
-          btn.classList.remove("bg-emerald-600", "text-white", "border-emerald-600", "shadow-md", "shadow-emerald-600/30");
-          btn.classList.add("bg-slate-50", "border-slate-300", "text-slate-400");
-          if (parentCard) parentCard.classList.remove("opacity-65", "bg-slate-50/90");
           AppState.completedDeliveryIds.delete(itemId);
-        }
-
-        if (parentCard) {
-          const badgeContainer = parentCard.querySelector(".status-badge-container");
-          if (badgeContainer) {
-            badgeContainer.innerHTML = willBeCompleted ? `
-              <span class="flex items-center gap-1.5 text-emerald-800 font-semibold text-xs sm:text-sm bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré
-              </span>
-            ` : `
-              <span class="flex items-center gap-1.5 text-slate-700 font-semibold text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full border border-slate-200/90 shadow-2xs">
-                <span class="w-2 h-2 rounded-full bg-slate-400"></span> Non Livré
-              </span>
-            `;
-          }
-        }
-
-        if (targetItem) {
-          targetItem.completed = willBeCompleted;
-          targetItem.status = newStatus;
         }
 
         saveDeliveredIds(AppState.completedDeliveryIds);
 
-        // Dynamically compute updated counts
-        const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
-        const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
-        const pendingCount = Math.max(0, dayDeliveries.length - deliveredCount);
+        // Recompute and refresh UI
+        computeActiveDeliveries();
+        renderDailyManifest();
+        renderCalendar();
+        renderHorizonDateBar();
 
-        AppState.completedCount = deliveredCount;
-        completedCount = deliveredCount;
+        showNotification(
+          willBeCompleted ? `Tournée #${itemId} marquée comme Livrée` : `Tournée #${itemId} remise en attente`,
+          willBeCompleted ? "success" : "info"
+        );
 
-        if (DOM.countDelivered) DOM.countDelivered.textContent = deliveredCount;
-        if (DOM.countPending) DOM.countPending.textContent = pendingCount;
-        if (DOM.countAll) DOM.countAll.textContent = dayDeliveries.length;
-
-        updateProgressUI();
-        updateAdminKPIs();
-
-        // Smooth active view refresh: animate card out, then smoothly re-render list
-        if (parentCard) {
-          parentCard.style.transition = 'all 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
-          parentCard.style.opacity = '0';
-          parentCard.style.transform = 'scale(0.96)';
-          setTimeout(() => {
-            renderDailyManifest();
-            renderCalendar();
-          }, 280);
-        } else {
-          renderDailyManifest();
-          renderCalendar();
-        }
-
-        fetch(GOOGLE_APP_URL, {
+        // Background Google Apps Script sync
+        fetch(`${GOOGLE_APP_URL}?action=update_status&id=${encodeURIComponent(itemId)}&status=${encodeURIComponent(newStatus)}`, {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'update_status',
-            id: itemId,
-            status: newStatus,
-            date: targetItem ? targetItem.date : '',
-            magasin: targetItem ? targetItem.destination : '',
-            chauffeur: targetItem ? targetItem.driver : (AppState.currentUser ? AppState.currentUser.chauffeurName : ''),
-            matricule: targetItem ? targetItem.vehicle : '',
-            quantite: targetItem ? targetItem.quantity : 0,
-            timestamp: new Date().toISOString()
-          })
-        })
-        .then(() => {
-          console.log(`[Google Sheet Sync] Action: update_status | ID: ${itemId} | Status: ${newStatus}`);
-        })
-        .catch(err => {
-          console.warn("[Google Sheet Sync] Offline sync:", err);
-          showNotification("Synchronisation différée (stockée localement)", "info");
-        });
+          mode: 'no-cors'
+        }).catch(() => {});
       });
     }
 
@@ -15388,35 +15505,32 @@
       selectedDateStr = dateStr;
       renderCalendar();
       renderDailyManifest();
+      renderHorizonDateBar();
     }
 
-    function changeMonth(direction) {
-      AppState.currentViewDate.setMonth(AppState.currentViewDate.getMonth() + direction);
+    function changeMonth(delta) {
+      const cur = AppState.currentViewDate;
+      AppState.currentViewDate = new Date(cur.getFullYear(), cur.getMonth() + delta, 1);
       renderCalendar();
     }
 
     function goToToday() {
-      const todayStr = "2026-10-26";
-      const hasToday = AppState.deliveries.some(d => d.date === todayStr);
-      const targetDate = hasToday ? todayStr : (AppState.deliveries.length > 0 ? AppState.deliveries[0].date : "2026-10-25");
-      const [y, m, d] = targetDate.split("-").map(Number);
+      const today = "2026-10-28";
+      const [y, m, d] = today.split("-").map(Number);
       AppState.currentViewDate = new Date(y, m - 1, 1);
-      selectDate(targetDate);
+      selectDate(today);
     }
 
     function setManifestFilter(status) {
       AppState.activeManifestFilter = status;
       activeManifestFilter = status;
 
-      const ACTIVE = "w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]";
-      const INACTIVE = "w-full flex items-center justify-center py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
+      const ACTIVE = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-bold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/90 outline-none select-none active:scale-95 min-h-[44px]";
+      const INACTIVE = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
 
-      if (DOM.filterPending) {
-        DOM.filterPending.className = (status === 'PENDING') ? ACTIVE : INACTIVE;
-      }
-      if (DOM.filterDelivered) {
-        DOM.filterDelivered.className = (status === 'Delivered') ? ACTIVE : INACTIVE;
-      }
+      if (DOM.filterAll) DOM.filterAll.className = (status === 'ALL') ? ACTIVE : INACTIVE;
+      if (DOM.filterPending) DOM.filterPending.className = (status === 'PENDING') ? ACTIVE : INACTIVE;
+      if (DOM.filterDelivered) DOM.filterDelivered.className = (status === 'Delivered') ? ACTIVE : INACTIVE;
 
       renderDailyManifest();
     }
@@ -15437,7 +15551,7 @@
       if (!item) return;
 
       if (DOM.modalRouteName) DOM.modalRouteName.textContent = item.destination;
-      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Tournée #${item.id} • Programme du ${item.date} • Priorité P${item.priority || 1}`;
+      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Tournée #${item.id} &bull; Programme du ${item.date} &bull; Priorité P${item.priority || 1}`;
 
       const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
 
@@ -15455,7 +15569,7 @@
               <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Véhicule & Matricule</span>
               <span class="font-bold text-slate-900 text-sm sm:text-base truncate block" title="${item.vehicle || ''}">
                 <i class="fa-solid fa-truck text-slate-500 text-sm mr-1"></i>
-                ${item.vehicle || 'Véhicule standard'}
+                ${item.vehicle || 'Camion standard'}
               </span>
             </div>
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
@@ -15503,67 +15617,54 @@
       if (DOM.detailModal) DOM.detailModal.classList.add("hidden");
     }
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeModal();
-    });
-
-    function initAuthenticatedApp(user) {
-      AppState.currentUser = user;
+    function initAuthenticatedApp() {
+      if (!AppState.currentUser) return;
 
       if (DOM.userRoleBadge) {
-        DOM.userRoleBadge.classList.remove('hidden');
-        if (user.role === 'admin') {
-          DOM.userRoleBadge.className = "px-3 py-1 text-xs sm:text-sm font-bold rounded-full bg-purple-950/80 text-purple-200 border border-purple-500/40 inline-flex items-center gap-1.5 shadow-2xs";
-          DOM.userRoleBadge.innerHTML = '<i class="fa-solid fa-shield-halved text-xs"></i> Admin Console';
-        } else {
-          DOM.userRoleBadge.className = "px-3 py-1 text-xs sm:text-sm font-bold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/40 inline-flex items-center gap-1.5 shadow-2xs";
-          DOM.userRoleBadge.innerHTML = `<i class="fa-solid fa-id-badge text-xs"></i> Chauffeur: ${user.chauffeurName}`;
-        }
+        DOM.userRoleBadge.textContent = AppState.currentUser.role.toUpperCase();
+        DOM.userRoleBadge.classList.remove("hidden");
       }
-
       if (DOM.userRoleSubtitle) {
-        DOM.userRoleSubtitle.textContent = user.role === 'admin' 
-          ? `Supervision Globale (${user.username})` 
-          : `Tournées assignées à ${user.chauffeurName}`;
+        DOM.userRoleSubtitle.textContent = AppState.currentUser.role === 'admin'
+          ? "Portail d'Administration Logistique"
+          : `Espace Chauffeur • ${AppState.currentUser.chauffeurName}`;
       }
 
-      if (DOM.adminToolbar) {
-        if (user.role === 'admin') {
-          DOM.adminToolbar.classList.remove('hidden');
-          populateAdminChauffeurs();
-          updateAdminKPIs();
-        } else {
-          DOM.adminToolbar.classList.add('hidden');
-        }
+      populateAdminChauffeurs();
+      computeActiveDeliveries();
+
+      // Find newest date with deliveries or default to today
+      const dates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean);
+      if (dates.includes("2026-10-28")) {
+        AppState.selectedDateStr = "2026-10-28";
+      } else if (dates.length > 0) {
+        AppState.selectedDateStr = dates.sort().pop();
       }
 
-      AppState.deliveries = computeActiveDeliveries();
-      DELIVERY_DATA = AppState.deliveries;
-
-      if (AppState.deliveries.length > 0) {
-        const dates = AppState.deliveries.map(d => d.date).filter(Boolean);
-        if (!dates.includes(AppState.selectedDateStr) && dates.length > 0) {
-          AppState.selectedDateStr = dates.sort().pop();
-          const [y, m] = AppState.selectedDateStr.split("-").map(Number);
-          AppState.currentViewDate = new Date(y, m - 1, 1);
-        }
-      }
+      const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
+      AppState.currentViewDate = new Date(y, m - 1, 1);
 
       renderCalendar();
-      renderDailyManifest();
-      syncRemoteDeliveries(user);
+      setViewMode(AppState.viewMode);
+      setManifestFilter('ALL');
+      initCardEventDelegation();
+      syncRemoteDeliveries();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
       initDOMCache();
-      initCardEventDelegation();
 
       const session = getAuthSession();
-      if (!session) {
-        if (DOM.mainApp) DOM.mainApp.classList.add('hidden');
-        if (DOM.authScreen) DOM.authScreen.classList.remove('hidden');
+      if (session && session.username && session.role) {
+        AppState.currentUser = session;
+        revealDashboard();
+        initAuthenticatedApp();
       } else {
-        revealDashboard(session);
+        if (DOM.mainApp) DOM.mainApp.classList.add("hidden");
+        if (DOM.authScreen) {
+          DOM.authScreen.classList.remove("hidden");
+          DOM.authScreen.classList.remove("opacity-0", "pointer-events-none");
+        }
       }
     });
   </script>
