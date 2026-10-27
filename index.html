@@ -220,17 +220,7 @@
           </div>
         </div>
 
-        <!-- Center Controls: Desktop View Mode Switcher (Laptop / Desktop) -->
-        <div class="hidden lg:flex items-center bg-white/10 p-1 rounded-xl border border-white/15 text-xs font-semibold shadow-inner shrink-0">
-          <button id="view-mode-split-btn" onclick="setViewMode('split')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all duration-150">
-            <i class="fa-solid fa-table-columns text-xs"></i>
-            <span>Vue Scindée</span>
-          </button>
-          <button id="view-mode-full-btn" onclick="setViewMode('full')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all duration-150">
-            <i class="fa-solid fa-truck-ramp-box text-xs"></i>
-            <span>Centre de Tournées (Plein Écran)</span>
-          </button>
-        </div>
+
 
         <!-- Right Controls: Today & Logout -->
         <div class="flex items-center space-x-2 text-xs font-medium shrink-0">
@@ -306,12 +296,7 @@
       <!-- RIGHT PANEL: THE DAILY MANIFEST & COMMAND CENTER -->
       <section id="manifest-section" class="lg:col-span-7 xl:col-span-7 flex flex-col glass-panel rounded-2xl md:rounded-3xl shadow-fluent transition-all duration-300 overflow-hidden">
         
-        <!-- Horizon Date Navigation Strip (Active in Full-Screen Mode or Desktop View) -->
-        <div id="horizon-date-bar" class="hidden p-3 bg-slate-900 text-white border-b border-blue-900/40 shrink-0">
-          <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1" id="horizon-days-container">
-            <!-- Dynamically populated 7-day strip -->
-          </div>
-        </div>
+
 
         <!-- Manifest Header Toolbar (Streamlined & Compact) -->
         <div class="p-3.5 sm:p-5 border-b border-slate-200/80 bg-white/70 shrink-0 space-y-3.5">
@@ -348,10 +333,7 @@
                 </div>
               </div>
 
-              <!-- Quick View Toggle for Mobile/Tablet -->
-              <button onclick="toggleDesktopViewMode()" title="Changer de vue" class="lg:hidden p-2 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition min-h-[44px] min-w-[44px] flex items-center justify-center">
-                <i class="fa-solid fa-expand text-xs"></i>
-              </button>
+
             </div>
           </div>
 
@@ -14665,7 +14647,6 @@ const LOCAL_DELIVERY_DATA = [
       selectedDateStr: '2026-10-28',
       currentViewDate: new Date(2026, 9, 1),
       activeManifestFilter: 'ALL',
-      viewMode: localStorage.getItem('tradifoot_desktop_view_mode') || 'split',
       totalCount: 0,
       completedCount: 0,
       adminFilterDriver: 'ALL',
@@ -14713,11 +14694,7 @@ const LOCAL_DELIVERY_DATA = [
         adminFilterStore:     document.getElementById('admin-filter-store'),
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
-        toastContainer:       document.getElementById('toast-container'),
-        horizonDateBar:       document.getElementById('horizon-date-bar'),
-        horizonDaysContainer: document.getElementById('horizon-days-container'),
-        viewModeSplitBtn:     document.getElementById('view-mode-split-btn'),
-        viewModeFullBtn:      document.getElementById('view-mode-full-btn')
+        toastContainer:       document.getElementById('toast-container')
       };
     }
 
@@ -14849,108 +14826,6 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
-    // DESKTOP VIEW MODE MANAGEMENT (Split View vs Full Screen Command Center)
-    function setViewMode(mode) {
-      AppState.viewMode = mode;
-      localStorage.setItem('tradifoot_desktop_view_mode', mode);
-
-      const calSec = DOM.calendarSection || document.getElementById('calendar-section');
-      const manSec = DOM.manifestSection || document.getElementById('manifest-section');
-      const btnSplit = DOM.viewModeSplitBtn || document.getElementById('view-mode-split-btn');
-      const btnFull = DOM.viewModeFullBtn || document.getElementById('view-mode-full-btn');
-      const horizonBar = DOM.horizonDateBar || document.getElementById('horizon-date-bar');
-
-      if (mode === 'full') {
-        if (calSec) calSec.classList.add('hidden', 'lg:hidden');
-        if (manSec) {
-          manSec.classList.remove('lg:col-span-5', 'lg:col-span-6', 'lg:col-span-7');
-          manSec.classList.add('lg:col-span-12');
-        }
-        if (horizonBar) horizonBar.classList.remove('hidden');
-        if (btnFull) {
-          btnFull.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all";
-        }
-        if (btnSplit) {
-          btnSplit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all";
-        }
-      } else {
-        if (calSec) calSec.classList.remove('hidden', 'lg:hidden');
-        if (manSec) {
-          manSec.classList.remove('lg:col-span-12');
-          manSec.classList.add('lg:col-span-7');
-        }
-        if (calSec) {
-          calSec.classList.remove('lg:col-span-6', 'lg:col-span-7');
-          calSec.classList.add('lg:col-span-5');
-        }
-        if (horizonBar) horizonBar.classList.add('hidden');
-        if (btnSplit) {
-          btnSplit.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-[#0B1F3F] font-bold shadow-sm transition-all";
-        }
-        if (btnFull) {
-          btnFull.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-blue-100 hover:text-white font-medium transition-all";
-        }
-      }
-
-      renderHorizonDateBar();
-      renderDailyManifest();
-    }
-
-    function toggleDesktopViewMode() {
-      const nextMode = AppState.viewMode === 'full' ? 'split' : 'full';
-      setViewMode(nextMode);
-    }
-
-    function renderHorizonDateBar() {
-      const container = DOM.horizonDaysContainer || document.getElementById('horizon-days-container');
-      if (!container) return;
-      container.innerHTML = "";
-
-      const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
-      const baseDate = new Date(y, m - 1, d);
-
-      // Render 7 consecutive days (-3 to +3)
-      for (let offset = -3; offset <= 3; offset++) {
-        const cur = new Date(baseDate);
-        cur.setDate(baseDate.getDate() + offset);
-
-        const curY = cur.getFullYear();
-        const curM = String(cur.getMonth() + 1).padStart(2, '0');
-        const curD = String(cur.getDate()).padStart(2, '0');
-        const curStr = `${curY}-${curM}-${curD}`;
-
-        const isCurrent = (curStr === AppState.selectedDateStr);
-        const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === curStr));
-        const dayCount = dayDeliveries.length;
-
-        const dayName = cur.toLocaleDateString('fr-FR', { weekday: 'short' });
-        const dayNum = cur.getDate();
-
-        const btn = document.createElement("button");
-        btn.onclick = () => selectDate(curStr);
-        btn.className = `flex-1 min-w-[75px] py-2 px-2.5 rounded-xl border text-center transition-all duration-200 select-none ${
-          isCurrent 
-            ? 'bg-blue-600 border-blue-400 text-white shadow-md shadow-blue-500/25 ring-2 ring-white/20' 
-            : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:bg-slate-700 hover:text-white'
-        }`;
-
-        btn.innerHTML = `
-          <div class="text-[10px] uppercase font-bold tracking-wider ${isCurrent ? 'text-blue-100' : 'text-slate-400'}">${dayName}</div>
-          <div class="text-base font-extrabold my-0.5">${dayNum}</div>
-          <div class="text-[10px] font-semibold flex items-center justify-center gap-1 ${
-            dayCount > 0 
-              ? (isCurrent ? 'text-white' : 'text-cyan-300') 
-              : 'text-slate-500'
-          }">
-            <i class="fa-solid fa-truck text-[9px]"></i>
-            <span>${dayCount}</span>
-          </div>
-        `;
-
-        container.appendChild(btn);
-      }
-    }
-
     async function syncRemoteDeliveries() {
       try {
         const res = await fetch(`${GOOGLE_APP_URL}?action=get_deliveries`, { method: 'GET' });
@@ -14961,7 +14836,7 @@ const LOCAL_DELIVERY_DATA = [
           computeActiveDeliveries();
           renderCalendar();
           renderDailyManifest();
-          renderHorizonDateBar();
+          
         }
       } catch (err) {}
     }
@@ -15069,7 +14944,7 @@ const LOCAL_DELIVERY_DATA = [
       computeActiveDeliveries();
       renderCalendar();
       renderDailyManifest();
-      renderHorizonDateBar();
+      
     }
 
     function getUniqueDeliveries(list) {
@@ -15224,12 +15099,7 @@ const LOCAL_DELIVERY_DATA = [
       if (!DOM.cardsContainer) return;
       DOM.cardsContainer.innerHTML = "";
 
-      // Ensure appropriate grid class based on Desktop view mode
-      if (AppState.viewMode === 'full') {
-        DOM.cardsContainer.className = "flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 min-h-[450px]";
-      } else {
-        DOM.cardsContainer.className = "flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]";
-      }
+      DOM.cardsContainer.className = "flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]";
 
       const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
       const dateObj = new Date(y, m - 1, d);
@@ -15485,7 +15355,7 @@ const LOCAL_DELIVERY_DATA = [
         computeActiveDeliveries();
         renderDailyManifest();
         renderCalendar();
-        renderHorizonDateBar();
+        
 
         showNotification(
           willBeCompleted ? `Tournée #${itemId} marquée comme Livrée` : `Tournée #${itemId} remise en attente`,
@@ -15505,7 +15375,7 @@ const LOCAL_DELIVERY_DATA = [
       selectedDateStr = dateStr;
       renderCalendar();
       renderDailyManifest();
-      renderHorizonDateBar();
+      
     }
 
     function changeMonth(delta) {
@@ -15645,7 +15515,7 @@ const LOCAL_DELIVERY_DATA = [
       AppState.currentViewDate = new Date(y, m - 1, 1);
 
       renderCalendar();
-      setViewMode(AppState.viewMode);
+      
       setManifestFilter('ALL');
       initCardEventDelegation();
       syncRemoteDeliveries();
