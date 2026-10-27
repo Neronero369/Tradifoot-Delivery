@@ -355,18 +355,29 @@
               </div>
             </div>
 
-            <!-- Filters: Chauffeur & Store Search -->
+            <!-- Admin Filters: Chauffeur (Only Chauffeurs) & Boutique -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Filter by Chauffeur (Strictly Chauffeurs only) -->
               <div class="relative">
-                <i class="fa-solid fa-user-tie absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                <i class="fa-solid fa-user-tie absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-600 text-sm"></i>
+                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                   <option value="ALL">Tous les Chauffeurs</option>
                 </select>
               </div>
+
+              <!-- Filter by Boutique -->
               <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin ou wilaya..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                <i class="fa-solid fa-store absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-600 text-sm"></i>
+                <select id="admin-filter-boutique" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                  <option value="ALL">Toutes les Boutiques</option>
+                </select>
               </div>
+            </div>
+
+            <!-- Quick Text Search (Wilaya, Note, Reference) -->
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Rechercher wilaya, note, référence..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
             </div>
           </div>
 
@@ -14650,6 +14661,7 @@ const LOCAL_DELIVERY_DATA = [
       totalCount: 0,
       completedCount: 0,
       adminFilterDriver: 'ALL',
+      adminFilterBoutique: 'ALL',
       adminFilterSearch: ''
     };
 
@@ -14691,6 +14703,7 @@ const LOCAL_DELIVERY_DATA = [
         adminKpiDelivered:    document.getElementById('admin-kpi-delivered'),
         adminKpiRate:         document.getElementById('admin-kpi-rate'),
         adminFilterChauffeur: document.getElementById('admin-filter-chauffeur'),
+        adminFilterBoutique:  document.getElementById('admin-filter-boutique'),
         adminFilterStore:     document.getElementById('admin-filter-store'),
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
@@ -14833,6 +14846,8 @@ const LOCAL_DELIVERY_DATA = [
         const remoteList = await res.json();
         if (Array.isArray(remoteList) && remoteList.length > 0) {
           mergeDeliveries(remoteList);
+          populateAdminChauffeurs();
+          populateAdminBoutiques();
           computeActiveDeliveries();
           renderCalendar();
           renderDailyManifest();
@@ -14873,17 +14888,25 @@ const LOCAL_DELIVERY_DATA = [
         const assignedName = normalizeDriver(AppState.currentUser.chauffeurName);
         list = list.filter(d => normalizeDriver(d.driver) === assignedName);
       } else if (AppState.currentUser && AppState.currentUser.role === 'admin') {
+        // 1. Filter by Chauffeur (Strictly authorized chauffeurs)
         if (AppState.adminFilterDriver && AppState.adminFilterDriver !== 'ALL') {
           const filterNorm = normalizeDriver(AppState.adminFilterDriver);
           list = list.filter(d => normalizeDriver(d.driver) === filterNorm);
         }
+        // 2. Filter by Boutique
+        if (AppState.adminFilterBoutique && AppState.adminFilterBoutique !== 'ALL') {
+          const bNorm = AppState.adminFilterBoutique.trim().toUpperCase();
+          list = list.filter(d => (d.destination || "").trim().toUpperCase() === bNorm);
+        }
+        // 3. Optional Free Text Search
         if (AppState.adminFilterSearch && AppState.adminFilterSearch.trim()) {
           const q = AppState.adminFilterSearch.trim().toLowerCase();
           list = list.filter(d => {
             const dest = (d.destination || "").toLowerCase();
             const wil = (d.wilaya || "").toLowerCase();
             const drv = (d.driver || "").toLowerCase();
-            return dest.includes(q) || wil.includes(q) || drv.includes(q);
+            const notes = (d.notes || "").toLowerCase();
+            return dest.includes(q) || wil.includes(q) || drv.includes(q) || notes.includes(q);
           });
         }
       }
@@ -14896,23 +14919,50 @@ const LOCAL_DELIVERY_DATA = [
       if (!DOM.adminFilterChauffeur) return;
       const prevVal = DOM.adminFilterChauffeur.value;
 
-      const allUnique = new Set();
-      AppState.rawDeliveries.forEach(d => {
-        const c = normalizeDriver(d.driver);
-        if (c && c !== 'ALL' && !c.includes('NON SPÉCIFIÉ')) allUnique.add(c);
-      });
-      const sorted = Array.from(allUnique).sort();
+      // STRICT REQUIREMENT: Include ONLY authorized chauffeurs (role === 'chauffeur')
+      const authorizedChauffeurs = AUTHORIZED_ACCOUNTS
+        .filter(acc => acc.role === 'chauffeur')
+        .map(acc => normalizeDriver(acc.chauffeurName))
+        .filter(Boolean);
+
+      const sortedChauffeurs = Array.from(new Set(authorizedChauffeurs)).sort();
 
       DOM.adminFilterChauffeur.innerHTML = '<option value="ALL">Tous les Chauffeurs</option>';
-      sorted.forEach(name => {
+      sortedChauffeurs.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
         opt.textContent = name;
         DOM.adminFilterChauffeur.appendChild(opt);
       });
 
-      if (prevVal && sorted.includes(prevVal)) {
+      if (prevVal && sortedChauffeurs.includes(prevVal)) {
         DOM.adminFilterChauffeur.value = prevVal;
+      }
+    }
+
+    function populateAdminBoutiques() {
+      if (!DOM.adminFilterBoutique) return;
+      const prevVal = DOM.adminFilterBoutique.value;
+
+      const boutiqueSet = new Set();
+      AppState.rawDeliveries.forEach(d => {
+        const dest = (d.destination || "").trim();
+        if (dest && !dest.toUpperCase().startsWith("TOTAL") && dest.toUpperCase() !== "NONE") {
+          boutiqueSet.add(dest.toUpperCase());
+        }
+      });
+      const sortedBoutiques = Array.from(boutiqueSet).sort((a, b) => a.localeCompare(b, 'fr'));
+
+      DOM.adminFilterBoutique.innerHTML = '<option value="ALL">Toutes les Boutiques</option>';
+      sortedBoutiques.forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b;
+        opt.textContent = b;
+        DOM.adminFilterBoutique.appendChild(opt);
+      });
+
+      if (prevVal && sortedBoutiques.includes(prevVal)) {
+        DOM.adminFilterBoutique.value = prevVal;
       }
     }
 
@@ -14938,13 +14988,15 @@ const LOCAL_DELIVERY_DATA = [
       if (DOM.adminFilterChauffeur) {
         AppState.adminFilterDriver = DOM.adminFilterChauffeur.value;
       }
+      if (DOM.adminFilterBoutique) {
+        AppState.adminFilterBoutique = DOM.adminFilterBoutique.value;
+      }
       if (DOM.adminFilterStore) {
         AppState.adminFilterSearch = DOM.adminFilterStore.value;
       }
       computeActiveDeliveries();
       renderCalendar();
       renderDailyManifest();
-      
     }
 
     function getUniqueDeliveries(list) {
@@ -15501,6 +15553,7 @@ const LOCAL_DELIVERY_DATA = [
       }
 
       populateAdminChauffeurs();
+      populateAdminBoutiques();
       computeActiveDeliveries();
 
       // Find newest date with deliveries or default to today
