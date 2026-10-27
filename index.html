@@ -202,11 +202,11 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-xs sm:text-sm md:text-base font-bold text-white tracking-tight">TRADIFOOT LOGISTICS</h1>
-              <span id="user-role-badge" class="px-2.5 py-0.5 text-[10px] font-semibold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 hidden sm:inline-block">
+              <span id="user-role-badge" class="px-3 py-1 text-xs sm:text-sm font-semibold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 hidden sm:inline-block">
                 Chargement...
               </span>
             </div>
-            <p id="user-role-subtitle" class="text-[10px] sm:text-xs text-blue-200/80 font-medium">Programme & Suivi des Tournées</p>
+            <p id="user-role-subtitle" class="text-xs sm:text-sm text-blue-200/90 font-medium">Programme & Suivi des Tournées</p>
           </div>
         </div>
 
@@ -236,7 +236,7 @@
         <div class="flex items-center justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-slate-200/80">
           <div>
             <h2 id="calendar-month-year" class="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2"></h2>
-            <p class="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">Sélectionnez une date pour consulter les tournées</p>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">Sélectionnez une date pour consulter les tournées</p>
           </div>
 
           <!-- Month Navigation Controls -->
@@ -244,7 +244,7 @@
             <button onclick="changeMonth(-1)" title="Mois précédent" class="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition-all duration-150 active:scale-95 min-h-[44px] min-w-[44px]">
               <i class="fa-solid fa-chevron-left text-xs"></i>
             </button>
-            <button onclick="goToToday()" class="px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-white rounded-lg transition-all duration-150 active:scale-95 min-h-[44px]">
+            <button onclick="goToToday()" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-white rounded-lg transition-all duration-150 active:scale-95 min-h-[44px]">
               Ce mois
             </button>
             <button onclick="changeMonth(1)" title="Mois suivant" class="h-9 w-9 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-white transition-all duration-150 active:scale-95 min-h-[44px] min-w-[44px]">
@@ -254,7 +254,7 @@
         </div>
 
         <!-- Days of Week Header -->
-        <div class="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-[10px] sm:text-xs font-bold text-slate-500 tracking-wider">
+        <div class="grid grid-cols-7 gap-1 sm:gap-2 mb-2 text-center text-xs sm:text-sm font-bold text-slate-500 tracking-wider">
           <div class="py-1">Lun</div>
           <div class="py-1">Mar</div>
           <div class="py-1">Mer</div>
@@ -288,7 +288,7 @@
         <div class="p-3.5 sm:p-5 border-b border-slate-200/80 bg-white/60 shrink-0">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
-              <span class="text-[10px] sm:text-[11px] font-bold text-blue-600 uppercase tracking-wider block mb-0.5">
+              <span class="text-xs sm:text-sm font-bold text-blue-700 uppercase tracking-wider block mb-0.5">
                 <i class="fa-regular fa-calendar-check mr-1"></i>Manifeste Quotidien
               </span>
               <h3 id="manifest-date-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate"></h3>
@@ -327,32 +327,32 @@
           </div>
 
           <!-- ADMIN TOOLBAR: KPIs & FILTERS -->
-          <div id="admin-toolbar" class="hidden mb-3 p-3.5 rounded-2xl border border-blue-200/80 bg-blue-50/50 space-y-3">
-            <div class="grid grid-cols-3 gap-2 text-center pb-2.5 border-b border-blue-200/60">
-              <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-[9px] text-slate-500 uppercase tracking-wider block font-bold">Total Expédié</span>
-                <span id="admin-kpi-packages" class="text-xs font-bold text-slate-900">0 Paires</span>
+          <div id="admin-toolbar" class="hidden mb-3.5 p-4 rounded-2xl border border-blue-200/80 bg-blue-50/50 space-y-3.5 shadow-2xs">
+            <div class="grid grid-cols-3 gap-2.5 text-center pb-3 border-b border-blue-200/60">
+              <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
+                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Total Expédié</span>
+                <span id="admin-kpi-packages" class="text-sm sm:text-base font-extrabold text-blue-900">0 Paires</span>
               </div>
-              <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-[9px] text-slate-500 uppercase tracking-wider block font-bold">Livrés</span>
-                <span id="admin-kpi-delivered" class="text-xs font-bold text-emerald-600">0 / 0</span>
+              <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
+                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Livrés</span>
+                <span id="admin-kpi-delivered" class="text-sm sm:text-base font-extrabold text-emerald-700">0 / 0</span>
               </div>
-              <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-2xs">
-                <span class="text-[9px] text-slate-500 uppercase tracking-wider block font-bold">Achèvement</span>
-                <span id="admin-kpi-rate" class="text-xs font-bold text-blue-600">0%</span>
+              <div class="bg-white p-2.5 rounded-xl border border-blue-100 shadow-2xs">
+                <span class="text-xs text-slate-500 uppercase tracking-wider block font-bold mb-1">Achèvement</span>
+                <span id="admin-kpi-rate" class="text-sm sm:text-base font-extrabold text-blue-700">0%</span>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div class="relative">
-                <i class="fa-solid fa-user-tie absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs" style="font-size:16px">
+                <i class="fa-solid fa-user-tie absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                   <option value="ALL">Tous les Chauffeurs</option>
                 </select>
               </div>
               <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin / wilaya..." class="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs" style="font-size:16px">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Filtrer magasin ou wilaya..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
               </div>
             </div>
           </div>
@@ -373,7 +373,7 @@
         </div>
 
         <!-- Manifest Content Body -->
-        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 max-h-[520px] lg:max-h-none"></div>
+        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 max-h-[560px] lg:max-h-none"></div>
 
         <!-- Manifest Summary Footer -->
         <div id="manifest-footer" class="p-4 border-t border-slate-200/80 bg-white/70 shrink-0 flex items-center justify-between text-xs text-slate-500 font-medium">
@@ -381,7 +381,7 @@
             <i class="fa-solid fa-cube text-slate-400"></i>
             <span>Volume cumulé : <strong id="manifest-total-qty" class="text-blue-600 font-bold">0</strong> paires</span>
           </div>
-          <div class="text-[11px] text-slate-400 font-semibold">Dépôt Central Hamiz</div>
+          <div class="text-xs text-slate-400 font-semibold">Dépôt Central Hamiz</div>
         </div>
 
       </section>
@@ -407,7 +407,7 @@
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
-      <div class="p-6 space-y-4 text-xs overflow-y-auto" id="modal-body"></div>
+      <div class="p-5 sm:p-6 space-y-4 text-sm sm:text-base overflow-y-auto" id="modal-body"></div>
       <div class="px-6 py-4 border-t border-slate-200/80 bg-slate-50/50 flex justify-end">
         <button onclick="closeModal()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl transition duration-150 active:scale-95 min-h-[44px]">
           Fermer
@@ -851,13 +851,13 @@
           ${hasDeliveries ? `
             <div class="mt-auto">
               ${statusDots}
-              <div class="mt-0.5 sm:mt-1 px-1 py-0.5 rounded-md bg-blue-50 text-[9px] sm:text-[10px] font-bold text-blue-800 border border-blue-200/70 flex items-center justify-center sm:justify-between truncate">
+              <div class="mt-0.5 sm:mt-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-xs font-bold text-blue-900 border border-blue-200/70 flex items-center justify-center sm:justify-between truncate">
                 <span>${dayDeliveries.length}<span class="hidden sm:inline"> livr.</span></span>
-                <span class="hidden sm:inline text-slate-700 text-[9px]">${dayUnits.toLocaleString()}</span>
+                <span class="hidden sm:inline text-slate-700 text-xs font-semibold">${dayUnits.toLocaleString()}</span>
               </div>
             </div>
           ` : `
-            <div class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-slate-300 text-right">-</div>
+            <div class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-300 text-right">-</div>
           `}
         `;
 
@@ -949,8 +949,8 @@
               <i class="fa-solid fa-truck-ramp-box text-2xl text-slate-400"></i>
             </div>
             <div>
-              <h4 class="text-sm font-bold text-slate-700">Aucune livraison ${AppState.activeManifestFilter === 'Delivered' ? 'livrée' : 'en attente'}</h4>
-              <p class="text-xs text-slate-500 max-w-xs mt-1">
+              <h4 class="text-sm sm:text-base font-bold text-slate-700">Aucune livraison ${AppState.activeManifestFilter === 'Delivered' ? 'livrée' : 'en attente'}</h4>
+              <p class="text-xs sm:text-sm text-slate-500 max-w-xs mt-1">
                 ${AppState.activeManifestFilter === 'Delivered' 
                   ? 'Aucune tournée n\'a encore été marquée comme livrée pour cette date.' 
                   : (AppState.currentUser && AppState.currentUser.role === 'chauffeur' 
@@ -958,9 +958,9 @@
                       : 'Toutes les tournées de cette date ont été livrées ou aucune expédition n\'est programmée.')}
               </p>
             </div>
-            <button onclick="jumpToNextDelivery()" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
+            <button onclick="jumpToNextDelivery()" class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
               <span>Voir la prochaine livraison</span>
-              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+              <i class="fa-solid fa-arrow-right text-xs"></i>
             </button>
           </div>
         `;
@@ -970,86 +970,105 @@
       filtered.forEach(item => {
         const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
         const card = document.createElement("div");
-        card.className = `glass-card rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 ${isCompleted ? 'opacity-65 bg-slate-50/90 border-slate-200' : 'bg-white/95 border-blue-100/90 shadow-sm shadow-blue-950/5'}`;
+        card.className = `flex-shrink-0 shrink-0 w-full glass-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 border ${isCompleted ? 'opacity-70 bg-slate-50/90 border-slate-200' : 'bg-white/95 border-blue-100/90 shadow-sm shadow-blue-950/5'}`;
         card.setAttribute("data-delivery-id", item.id);
 
         const statusBadge = isCompleted ? `
-          <span class="flex items-center gap-1.5 text-emerald-700 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+          <span class="flex items-center gap-1.5 text-emerald-800 font-semibold text-xs sm:text-sm bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré
           </span>
         ` : `
-          <span class="flex items-center gap-1.5 text-slate-500 font-medium text-xs bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+          <span class="flex items-center gap-1.5 text-slate-700 font-semibold text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full border border-slate-200/90 shadow-2xs">
             <span class="w-2 h-2 rounded-full bg-slate-400"></span> Non Livré
           </span>
         `;
 
         const btnClass = isCompleted 
-          ? "btn-complete-toggle flex items-center justify-center w-11 h-11 flex-shrink-0 rounded-full bg-emerald-600 text-white border-2 border-emerald-600 shadow-md shadow-emerald-600/30 transition-all duration-300 outline-none select-none active:scale-95"
-          : "btn-complete-toggle flex items-center justify-center w-11 h-11 flex-shrink-0 rounded-full bg-slate-50 border-2 border-slate-300 text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-all duration-300 outline-none select-none active:scale-95";
+          ? "btn-complete-toggle flex items-center justify-center w-11 h-11 shrink-0 rounded-full bg-emerald-600 text-white border-2 border-emerald-600 shadow-md shadow-emerald-600/30 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]"
+          : "btn-complete-toggle flex items-center justify-center w-11 h-11 shrink-0 rounded-full bg-slate-50 border-2 border-slate-300 text-slate-400 hover:text-blue-600 hover:border-blue-500 transition-all duration-300 outline-none select-none active:scale-95 min-h-[44px] min-w-[44px]";
 
         card.innerHTML = `
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
-            <div class="flex items-center space-x-2 min-w-0">
-              <span class="h-6 w-6 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center border border-slate-200 shrink-0">
-                P${item.priority}
+          <!-- Top Row: Route ID & Priority + Status Badge & Action -->
+          <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 gap-2">
+            <div class="flex items-center space-x-2.5 min-w-0">
+              <span class="h-7 px-2.5 rounded-lg bg-blue-50 text-blue-900 text-xs sm:text-sm font-bold flex items-center justify-center border border-blue-200/70 shrink-0">
+                P${item.priority || 1}
               </span>
-              <span class="text-xs font-semibold text-slate-500 font-mono truncate">${item.id}</span>
+              <span class="text-xs sm:text-sm font-semibold text-slate-500 font-mono truncate">#${item.id}</span>
             </div>
-            <div class="flex items-center gap-2.5 shrink-0">
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
               <div class="status-badge-container">
                 ${statusBadge}
               </div>
               <button data-id="${item.id}" class="${btnClass}" title="${isCompleted ? 'Livraison complétée (cliquez pour annuler)' : 'Marquer comme livré'}" aria-label="Valider livraison" aria-pressed="${isCompleted ? 'true' : 'false'}">
-                <i class="fa-solid fa-check"></i>
+                <i class="fa-solid fa-check text-sm"></i>
               </button>
             </div>
           </div>
 
-          <div class="mt-3">
-            <h4 class="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-start gap-1.5 break-words">
-              <i class="fa-solid fa-location-dot text-blue-600 text-xs mt-0.5 shrink-0"></i>
+          <!-- Main Section: Store Name (Magasin) -->
+          <div class="mt-3.5">
+            <h4 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug flex items-start gap-2 break-words">
+              <i class="fa-solid fa-location-dot text-blue-600 text-base mt-1 shrink-0"></i>
               <span class="break-words">${item.destination}</span>
             </h4>
-            <div class="flex flex-wrap items-center gap-1.5 mt-2">
-              <span class="px-2 py-0.5 rounded-md bg-blue-50 text-[10px] text-blue-800 font-bold border border-blue-200/60 truncate max-w-[170px]">
-                ${item.wilaya} (${item.region})
+
+            <!-- Metadata Badges (Chauffeur, Wilaya, Brand) -->
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <!-- Chauffeur Pill Badge -->
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-900 text-xs sm:text-sm font-semibold border border-blue-200/70 shadow-2xs">
+                <i class="fa-solid fa-user-tie text-blue-600 text-xs"></i>
+                <span class="truncate">${item.driver}</span>
               </span>
-              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] text-slate-700 font-semibold border border-slate-200/80 truncate max-w-[140px]">
-                ${item.brand}
+
+              <!-- Wilaya / Region Pill -->
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold border border-slate-200 shadow-2xs">
+                <i class="fa-solid fa-map-pin text-slate-500 text-xs"></i>
+                <span>${item.wilaya || 'Algérie'}${item.region ? ' (' + item.region + ')' : ''}</span>
               </span>
+
+              <!-- Brand Pill (if present) -->
+              ${item.brand ? `
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium border border-slate-200 shadow-2xs">
+                  ${item.brand}
+                </span>
+              ` : ''}
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 mt-3.5 pt-3 border-t border-slate-100 text-xs">
-            <div class="space-y-1 min-w-0">
-              <div class="text-[11px] text-slate-600 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-user-tie text-blue-600 shrink-0"></i>
-                <span class="font-bold text-slate-800 truncate">${item.driver}</span>
+          <!-- Details Grid: Matricule & Date | Quantité & Colis -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-3.5 border-t border-slate-100 text-sm">
+            <div class="space-y-1.5 min-w-0">
+              <div class="text-sm text-slate-700 font-medium flex items-center gap-2 truncate">
+                <i class="fa-solid fa-truck text-slate-400 shrink-0 text-sm"></i>
+                <span class="truncate font-semibold text-slate-800" title="${item.vehicle || 'Véhicule'}">${item.vehicle || 'Véhicule standard'}</span>
               </div>
-              <div class="text-[10px] text-slate-500 flex items-center gap-1.5 truncate">
-                <i class="fa-solid fa-truck text-slate-400 shrink-0"></i>
-                <span class="truncate" title="${item.vehicle}">${item.vehicle}</span>
+              <div class="text-sm text-slate-600 font-medium flex items-center gap-2 truncate">
+                <i class="fa-regular fa-calendar-check text-slate-400 shrink-0 text-sm"></i>
+                <span class="truncate">${item.date}${item.time ? ' • ' + item.time : ''}</span>
               </div>
             </div>
-            <div class="space-y-1 text-right min-w-0">
-              <div class="text-xs font-bold text-emerald-700 flex items-center justify-end gap-1.5 truncate">
-                <span class="truncate">${Number(item.quantity).toLocaleString()} Paires</span>
-                <i class="fa-solid fa-boxes-packing text-slate-400 shrink-0"></i>
+
+            <div class="space-y-1 sm:text-right min-w-0">
+              <div class="text-sm sm:text-base font-bold text-blue-900 flex items-center sm:justify-end gap-1.5 truncate">
+                <i class="fa-solid fa-boxes-packing text-blue-600 shrink-0 text-sm"></i>
+                <span class="truncate font-extrabold">${Number(item.quantity).toLocaleString()} Paires</span>
               </div>
-              <div class="text-[10px] text-slate-500 font-medium truncate">
-                ${item.colis} Colis
+              <div class="text-xs sm:text-sm font-semibold text-slate-600 sm:text-right">
+                ${item.colis ? `${item.colis} Colis expédiés` : 'Colis standard'}
               </div>
             </div>
           </div>
 
-          <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span class="flex items-center gap-1 truncate max-w-[150px]">
-              <i class="fa-regular fa-clock text-[10px] shrink-0 text-slate-400"></i>
-              <span class="truncate">${item.time}</span>
+          <!-- Action Footer -->
+          <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
+            <span class="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-info text-blue-500 text-xs"></i>
+              <span>Tournée programmée</span>
             </span>
-            <button onclick="viewRouteDetail('${item.id}')" class="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 transition duration-150 active:scale-95 px-2 py-1 rounded-lg hover:bg-blue-50 min-h-[36px]">
+            <button onclick="viewRouteDetail('${item.id}')" class="text-blue-700 hover:text-blue-800 font-bold flex items-center gap-1.5 transition duration-150 active:scale-95 px-3.5 py-1.5 rounded-xl hover:bg-blue-50 border border-transparent hover:border-blue-200 min-h-[44px]">
               <span>Feuille de Route</span>
-              <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+              <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
             </button>
           </div>
         `;
@@ -1095,11 +1114,11 @@
           const badgeContainer = parentCard.querySelector(".status-badge-container");
           if (badgeContainer) {
             badgeContainer.innerHTML = willBeCompleted ? `
-              <span class="flex items-center gap-1.5 text-emerald-700 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span class="flex items-center gap-1.5 text-emerald-800 font-semibold text-xs sm:text-sm bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré
               </span>
             ` : `
-              <span class="flex items-center gap-1.5 text-slate-500 font-medium text-xs bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+              <span class="flex items-center gap-1.5 text-slate-700 font-semibold text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full border border-slate-200/90 shadow-2xs">
                 <span class="w-2 h-2 rounded-full bg-slate-400"></span> Non Livré
               </span>
             `;
@@ -1221,47 +1240,61 @@
       const item = AppState.deliveries.find(d => String(d.id) === String(deliveryId));
       if (!item) return;
 
-      if (DOM.modalRouteName) DOM.modalRouteName.textContent = `${item.destination} (${item.id})`;
-      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Programme du ${item.date} &bull; Priorité P${item.priority}`;
+      if (DOM.modalRouteName) DOM.modalRouteName.textContent = item.destination;
+      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Tournée #${item.id} • Programme du ${item.date} • Priorité P${item.priority || 1}`;
 
       const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
 
       if (DOM.modalBody) {
         DOM.modalBody.innerHTML = `
-          <div class="grid grid-cols-2 gap-3">
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-500 block mb-1 font-medium">Chauffeur</span>
-              <span class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                <i class="fa-solid fa-id-card text-blue-600"></i>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Chauffeur assigné</span>
+              <span class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-blue-600 text-sm"></i>
                 ${item.driver}
               </span>
             </div>
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-500 block mb-1 font-medium">Véhicule</span>
-              <span class="font-bold text-slate-900 text-xs truncate block" title="${item.vehicle}">
-                ${item.vehicle}
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Véhicule & Matricule</span>
+              <span class="font-bold text-slate-900 text-sm sm:text-base truncate block" title="${item.vehicle || ''}">
+                <i class="fa-solid fa-truck text-slate-500 text-sm mr-1"></i>
+                ${item.vehicle || 'Véhicule standard'}
               </span>
             </div>
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-500 block mb-1 font-medium">Volume Expédié</span>
-              <span class="font-extrabold text-emerald-700 text-sm">
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Volume d'expédition</span>
+              <span class="font-extrabold text-blue-900 text-base sm:text-lg flex items-center gap-2">
+                <i class="fa-solid fa-boxes-packing text-blue-600 text-base"></i>
                 ${Number(item.quantity).toLocaleString()} Paires
               </span>
+              <span class="text-xs sm:text-sm font-semibold text-slate-600 block mt-1">${item.colis ? `${item.colis} Colis expédiés` : 'Colis standard'}</span>
             </div>
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <span class="text-slate-500 block mb-1 font-medium">Statut Logistique</span>
-              <span class="font-bold text-xs ${isCompleted ? 'text-emerald-700' : 'text-slate-500'}">
-                ${isCompleted ? '✓ Livré' : '⏳ Non Livré'}
-              </span>
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Statut Logistique</span>
+              <div class="mt-1">
+                ${isCompleted ? `
+                  <span class="inline-flex items-center gap-1.5 text-emerald-800 font-bold text-sm bg-emerald-100/80 px-3.5 py-1.5 rounded-full border border-emerald-300 shadow-2xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Livré
+                  </span>
+                ` : `
+                  <span class="inline-flex items-center gap-1.5 text-slate-700 font-bold text-sm bg-slate-200/80 px-3.5 py-1.5 rounded-full border border-slate-300 shadow-2xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Non Livré
+                  </span>
+                `}
+              </div>
             </div>
           </div>
 
-          <div class="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200 space-y-2">
-            <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Instructions de Déchargement</span>
-            <p class="text-slate-700 text-xs">${item.notes || 'Aucune consigne spécifique.'}</p>
-            <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-slate-500 text-[11px]">
-              <span>Planning horaire :</span>
-              <strong class="text-blue-700">${item.time || 'Non spécifié'}</strong>
+          <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-list text-blue-600"></i>
+              Consignes & Déchargement
+            </span>
+            <p class="text-sm sm:text-base text-slate-700 leading-relaxed">${item.notes || 'Aucune consigne spécifique enregistrée pour ce point de vente.'}</p>
+            <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between text-sm text-slate-600 gap-2">
+              <span>Créneau horaire estimé :</span>
+              <strong class="text-blue-900 font-bold text-sm sm:text-base">${item.time || 'Non spécifié'}</strong>
             </div>
           </div>
         `;
@@ -1284,11 +1317,11 @@
       if (DOM.userRoleBadge) {
         DOM.userRoleBadge.classList.remove('hidden');
         if (user.role === 'admin') {
-          DOM.userRoleBadge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-purple-950/80 text-purple-200 border border-purple-500/30 inline-flex items-center gap-1.5";
-          DOM.userRoleBadge.innerHTML = '<i class="fa-solid fa-shield-halved text-[9px]"></i> Admin Console';
+          DOM.userRoleBadge.className = "px-3 py-1 text-xs sm:text-sm font-bold rounded-full bg-purple-950/80 text-purple-200 border border-purple-500/40 inline-flex items-center gap-1.5 shadow-2xs";
+          DOM.userRoleBadge.innerHTML = '<i class="fa-solid fa-shield-halved text-xs"></i> Admin Console';
         } else {
-          DOM.userRoleBadge.className = "px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 inline-flex items-center gap-1.5";
-          DOM.userRoleBadge.innerHTML = `<i class="fa-solid fa-id-badge text-[9px]"></i> Chauffeur: ${user.chauffeurName}`;
+          DOM.userRoleBadge.className = "px-3 py-1 text-xs sm:text-sm font-bold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/40 inline-flex items-center gap-1.5 shadow-2xs";
+          DOM.userRoleBadge.innerHTML = `<i class="fa-solid fa-id-badge text-xs"></i> Chauffeur: ${user.chauffeurName}`;
         }
       }
 
