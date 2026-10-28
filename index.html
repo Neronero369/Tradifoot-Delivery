@@ -450,6 +450,7 @@
   <!-- JAVASCRIPT LOGIC ENGINE -->
   <script>
     const GOOGLE_APP_URL = 'https://script.google.com/macros/s/AKfycbwM5y2SPfnT1lMg4_ingmt_ZWzfHFb7l-qTwTow3-eThQ52Rf1FfLRrcBertuvxUY6d/exec';
+    const SCRIPT_URL = GOOGLE_APP_URL;
 
 const LOCAL_DELIVERY_DATA = [
   {"id": "DEL-0001", "date": "2026-10-28", "magasin": "CLARKS BAB EZZOUAR", "chauffeur": "SNOUCI SEIF-EDDINE", "matricule": "MERCEDES", "quantite": 428, "status": "Non Livré", "completed": false},
@@ -1342,9 +1343,22 @@ const LOCAL_DELIVERY_DATA = [
     ];
     const ACCOUNTS = AUTHORIZED_ACCOUNTS;
 
+    function loadStoredDeliveries() {
+      try {
+        const raw = localStorage.getItem("tradifoot_deliveries");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map(normalizeDeliveryRecord).filter(Boolean);
+          }
+        }
+      } catch (e) {}
+      return LOCAL_DELIVERY_DATA.map(normalizeDeliveryRecord).filter(Boolean);
+    }
+
     const AppState = {
       currentUser: null,
-      rawDeliveries: LOCAL_DELIVERY_DATA.map(normalizeDeliveryRecord).filter(Boolean),
+      rawDeliveries: loadStoredDeliveries(),
       deliveries: [],
       completedDeliveryIds: new Set(),
       selectedDateStr: '2026-10-28',
@@ -1515,92 +1529,54 @@ const LOCAL_DELIVERY_DATA = [
      * If the server says a delivery is "Non Livré", the frontend strictly obeys,
      * killing any local state or localStorage conflicts.
      */
+    /**
+     * STRICT DATA OVERWRITE (HARD REFRESH - ZERO MERGING):
+     * The server response (Google Sheets Source of Truth) completely DESTROYS
+     * the old delivery array in localStorage and in memory.
+     * Never merges. If the server says a delivery is "Non Livré", it becomes "Non Livré".
+     * If the server says "Livré", it becomes "Livré".
+     */
     function applyServerSourceOfTruth(remoteDeliveries) {
       if (!Array.isArray(remoteDeliveries) || remoteDeliveries.length === 0) return;
 
-      const remoteById = new Map();
-      const remoteByComposite = new Map();
+      // 1. Normalize every fresh record strictly from the server payload
+      const freshDeliveries = remoteDeliveries.map(r => normalizeDeliveryRecord(r)).filter(Boolean);
+      if (freshDeliveries.length === 0) return;
 
-      remoteDeliveries.forEach(r => {
-        if (!r) return;
-        const norm = normalizeDeliveryRecord(r);
-        if (!norm) return;
-        const rId = String(norm.id || '').trim();
-        const rDate = String(norm.date || '').trim();
-        const rStore = normalizeDriver(norm.magasin || norm.destination || '');
-        const rDriver = normalizeDriver(norm.chauffeur || norm.driver || '');
+      // 2. Hard Overwrite: completely DESTROY the old delivery array in localStorage
+      try {
+        localStorage.removeItem("tradifoot_deliveries");
+        localStorage.removeItem("delivered_delivery_ids");
+      } catch (e) {}
 
-        if (rId) remoteById.set(rId.toUpperCase(), norm);
-        if (rDate && rStore) {
-          remoteByComposite.set(`${rDate}|||${rStore}|||${rDriver}`, norm);
-        }
-      });
+      // 3. Save the new array from the server into localStorage
+      try {
+        localStorage.setItem("tradifoot_deliveries", JSON.stringify(freshDeliveries));
+      } catch (e) {}
 
-      // Strict server overwrite: 100% overwrite local delivery records
-      AppState.rawDeliveries.forEach(localItem => {
-        const localId = String(localItem.id || '').trim().toUpperCase();
-        const localDate = String(localItem.date || '').trim();
-        const localStore = normalizeDriver(localItem.magasin || localItem.destination || '');
-        const localDriver = normalizeDriver(localItem.chauffeur || localItem.driver || '');
-        const compKey = `${localDate}|||${localStore}|||${localDriver}`;
+      // 4. Overwrite in-memory AppState.rawDeliveries with the fresh server array (Zero Merging)
+      AppState.rawDeliveries = freshDeliveries;
 
-        const remoteMatch = (localId && remoteById.get(localId)) || remoteByComposite.get(compKey);
-
-        if (remoteMatch) {
-          const serverIsLivre = Boolean(remoteMatch.completed);
-
-          // In-place mutation strictly overwriting local status (no merging)
-          localItem.status = serverIsLivre ? 'Livré' : 'Non Livré';
-          localItem.completed = serverIsLivre;
-
-          if (remoteMatch.magasin) {
-            localItem.magasin = remoteMatch.magasin;
-            localItem.destination = remoteMatch.magasin;
-          }
-          if (remoteMatch.chauffeur) {
-            localItem.chauffeur = remoteMatch.chauffeur;
-            localItem.driver = remoteMatch.chauffeur;
-          }
-          if (remoteMatch.matricule) {
-            localItem.matricule = remoteMatch.matricule;
-            localItem.vehicle = remoteMatch.matricule;
-          }
-          if (remoteMatch.quantite) {
-            localItem.quantite = remoteMatch.quantite;
-            localItem.quantity = remoteMatch.quantite;
-          }
-        }
-      });
-
-      // Append any newly discovered routes from server
-      remoteDeliveries.forEach(r => {
-        const rId = String(r.id || '').trim();
-        if (!rId) return;
-        const exists = AppState.rawDeliveries.some(d => String(d.id).trim().toUpperCase() === rId.toUpperCase());
-        if (!exists) {
-          const norm = normalizeDeliveryRecord(r);
-          if (norm) {
-            AppState.rawDeliveries.push(norm);
-          }
-        }
-      });
-
-      // Strict Rebuild: Rebuild completedDeliveryIds strictly from the active state (NO local merging with old cache)
-      AppState.completedDeliveryIds = new Set();
-      AppState.rawDeliveries.forEach(d => {
+      // 5. Strictly rebuild completedDeliveryIds from the server data ONLY
+      const serverCompletedIds = new Set();
+      freshDeliveries.forEach(d => {
         if (d.completed === true || d.status === 'Livré') {
-          AppState.completedDeliveryIds.add(String(d.id).trim());
+          serverCompletedIds.add(String(d.id).trim());
         }
       });
+      AppState.completedDeliveryIds = serverCompletedIds;
+      saveDeliveredIds(serverCompletedIds);
 
-      // Overwrite persistent localStorage cache to strictly match the server source of truth
-      saveDeliveredIds(AppState.completedDeliveryIds);
-
-      // Refresh view
+      // 6. Instantly re-run render, filter, and badge recalculations
       computeActiveDeliveries();
       renderCalendar();
       renderDailyManifest();
       updateAdminKPIs();
+
+      if (AppState.currentUser && AppState.currentUser.role === 'admin') {
+        populateAdminChauffeurs();
+        populateAdminBoutiques();
+      }
     }
 
     /**
@@ -1610,10 +1586,22 @@ const LOCAL_DELIVERY_DATA = [
       if (AppState.isFetchingRemote) return;
       AppState.isFetchingRemote = true;
 
-      const syncIcon = document.getElementById('sync-refresh-icon');
-      const syncBtn = document.getElementById('btn-sync-refresh');
-      if (syncIcon) syncIcon.classList.add('animate-spin');
-      if (syncBtn) syncBtn.classList.add('opacity-75', 'cursor-wait');
+      const syncIcon = document.getElementById('sync-refresh-icon') || DOM.syncRefreshIcon;
+      const syncBtn = document.getElementById('btn-sync-refresh') || DOM.btnSyncRefresh;
+      const syncText = document.getElementById('sync-refresh-text');
+
+      // Visual feedback: spin icon, disable button to prevent spam-clicking
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.setAttribute('disabled', 'true');
+        syncBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+      }
+      if (syncIcon) {
+        syncIcon.classList.add('animate-spin');
+      }
+      if (syncText) {
+        syncText.textContent = "Sync...";
+      }
 
       updateSheetSyncBadge('syncing', 'Actualisation depuis Google Sheets...');
 
@@ -1623,12 +1611,12 @@ const LOCAL_DELIVERY_DATA = [
         const chauffeurName = user ? (user.chauffeurName || '') : '';
 
         let remoteDeliveries = null;
-        const timestamp = new Date().getTime();
-        const postUrl = `${GOOGLE_APP_URL}?t=${timestamp}`;
+        const cacheBustTimestamp = new Date().getTime();
+        const cacheBustUrl = SCRIPT_URL + "?t=" + cacheBustTimestamp;
 
-        // Primary Fetch Method: POST with aggressive cache-busting and no-store
+        // 1. Primary Method: POST with aggressive cache-busting and no-store
         try {
-          const res = await fetch(postUrl, {
+          const res = await fetch(cacheBustUrl, {
             method: 'POST',
             cache: 'no-store',
             headers: {
@@ -1641,7 +1629,7 @@ const LOCAL_DELIVERY_DATA = [
               action: 'get_deliveries',
               role: role,
               chauffeurName: chauffeurName,
-              t: timestamp
+              t: cacheBustTimestamp
             })
           });
 
@@ -1660,10 +1648,10 @@ const LOCAL_DELIVERY_DATA = [
           }
         } catch (postErr) {}
 
-        // Fallback Fetch Method: GET query with timestamp parameter and cache: 'no-store'
+        // 2. Fallback Method: GET with action parameter, cache-busting and cache: 'no-store'
         if (!remoteDeliveries) {
           try {
-            const getUrl = `${GOOGLE_APP_URL}?action=get_deliveries&role=${encodeURIComponent(role)}&chauffeurName=${encodeURIComponent(chauffeurName)}&t=${new Date().getTime()}`;
+            const getUrl = SCRIPT_URL + "?action=get_deliveries&role=" + encodeURIComponent(role) + "&chauffeurName=" + encodeURIComponent(chauffeurName) + "&t=" + new Date().getTime();
             const getRes = await fetch(getUrl, {
               method: 'GET',
               cache: 'no-store',
@@ -1691,6 +1679,7 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         if (remoteDeliveries && Array.isArray(remoteDeliveries) && remoteDeliveries.length > 0) {
+          // Hard Overwrite: completely destroy old localStorage array and replace with fresh Google Sheet data
           applyServerSourceOfTruth(remoteDeliveries);
           updateSheetSyncBadge('success', 'Google Sheets Synchronisé ✓');
           if (isManual) {
@@ -1711,8 +1700,17 @@ const LOCAL_DELIVERY_DATA = [
         }
       } finally {
         AppState.isFetchingRemote = false;
-        if (syncIcon) syncIcon.classList.remove('animate-spin');
-        if (syncBtn) syncBtn.classList.remove('opacity-75', 'cursor-wait');
+        if (syncBtn) {
+          syncBtn.disabled = false;
+          syncBtn.removeAttribute('disabled');
+          syncBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+        }
+        if (syncIcon) {
+          syncIcon.classList.remove('animate-spin');
+        }
+        if (syncText) {
+          syncText.textContent = "Sync";
+        }
       }
     }
 
@@ -2044,6 +2042,11 @@ const LOCAL_DELIVERY_DATA = [
           return isChauffeurMatch(rowDriver, assignedName);
         });
       }
+
+      // Verification Logging (Chrome DevTools console verification)
+      console.log('Current User Role:', currentUser ? currentUser.role : 'unauthenticated');
+      console.log('Total Deliveries Fetched:', allData.length);
+      console.log('Deliveries Displayed for User:', displayData.length);
 
       AppState.deliveries = displayData;
       DELIVERY_DATA = displayData;
