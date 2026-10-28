@@ -956,6 +956,42 @@ def update_calendar_app(db_data, index_path=None):
     seen_route_keys = set()
     route_counter = 1
 
+    # Status Preservation: Read existing index.html to retain completed deliveries
+    existing_statuses_by_composite = {}
+    existing_statuses_by_id = {}
+    with open(index_path, "r", encoding="utf-8", newline="") as f:
+        html_content = f.read()
+
+    var_loc_start = html_content.find("const LOCAL_DELIVERY_DATA =")
+    if var_loc_start != -1:
+        bracket_start = html_content.find("[", var_loc_start)
+        next_var = html_content.find("let DELIVERY_DATA =", bracket_start)
+        if next_var != -1:
+            semicolon_pos = html_content.rfind("];", bracket_start, next_var)
+            if bracket_start != -1 and semicolon_pos != -1:
+                try:
+                    raw_existing_json = html_content[bracket_start:semicolon_pos + 1]
+                    existing_list = json.loads(raw_existing_json)
+                    for item in existing_list:
+                        i_id = str(item.get("id") or "").strip()
+                        i_date = str(item.get("date") or "").strip()
+                        i_mag = " ".join(str(item.get("magasin") or item.get("destination") or "").strip().upper().split())
+                        i_drv = " ".join(str(item.get("chauffeur") or item.get("driver") or "").strip().upper().split())
+                        i_status = str(item.get("status") or "")
+                        i_completed = bool(item.get("completed") or ("livr" in i_status.lower() and "non" not in i_status.lower()))
+                        rec_info = {
+                            "id": i_id,
+                            "status": "Livré" if i_completed else "Non Livré",
+                            "completed": i_completed
+                        }
+                        if i_id:
+                            existing_statuses_by_id[i_id.upper()] = rec_info
+                        if i_date and i_mag:
+                            existing_statuses_by_composite[(i_date, i_mag, i_drv)] = rec_info
+                except Exception:
+                    pass
+
+
     for p in db_data.get("programs", []):
         # Identify brand label
         b_list = [b for b in p.get("brands", {}).keys() if "SACHET" not in b and "PAPIER" not in b]
@@ -1025,27 +1061,43 @@ def update_calendar_app(db_data, index_path=None):
             notes = d.get("remark") or d.get("retour") or f"Programme {p_title}"
             time_str = f"Tournée {p_title}"
 
+            route_comp_key = (deliv_date, store_clean, driver)
+            matched_rec = existing_statuses_by_composite.get(route_comp_key) or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
+
+            if matched_rec and (matched_rec.get("status") == "Livré" or matched_rec.get("completed") is True):
+                final_status = "Livré"
+                final_completed = True
+                route_id = matched_rec.get("id") or f"DEL-{route_counter:04d}"
+            else:
+                final_status = "Non Livré"
+                final_completed = False
+                route_id = f"DEL-{route_counter:04d}"
+
             all_routes.append({
-                "id": f"DEL-{route_counter:04d}",
+                "id": route_id,
                 "date": deliv_date,
                 "magasin": d["store"],
+                "destination": d["store"],
                 "chauffeur": driver,
+                "driver": driver,
                 "matricule": vehicle,
+                "vehicle": vehicle,
                 "quantite": qty,
-                "status": "Non Livr\u00e9",
-                "completed": False
+                "quantity": qty,
+                "status": final_status,
+                "completed": final_completed
             })
             route_counter += 1
 
     # Read existing index.html
-    with open(index_path, "r", encoding="utf-8") as f:
+    with open(index_path, "r", encoding="utf-8", newline="") as f:
         html_content = f.read()
 
     # Always default calendar to today (current month & day)
     active_date = today_str
     y_sel, m_sel, d_sel = [int(x) for x in active_date.split("-")]
 
-    json_routes = json.dumps(all_routes, ensure_ascii=False, indent=6)
+    json_routes = json.dumps(all_routes, ensure_ascii=False, indent=2)
 
     # Replacement 1: DELIVERY_DATA array via safe string slicing
     var_loc_start = html_content.find("const LOCAL_DELIVERY_DATA =")
@@ -1071,7 +1123,7 @@ def update_calendar_app(db_data, index_path=None):
     replacement_state = f'let currentViewDate = new Date({y_sel}, {m_sel - 1}, {d_sel});\\1let selectedDateStr = "{active_date}";'
     new_html = re.sub(pattern_state, replacement_state, html_content)
 
-    with open(index_path, "w", encoding="utf-8") as f:
+    with open(index_path, "w", encoding="utf-8", newline="") as f:
         f.write(new_html)
 
     print(f"[+] Calendar App (index.html) synchronized with {len(all_routes)} live delivery routes (Active Date: {active_date}).")

@@ -222,6 +222,16 @@
 
 
 
+        <!-- Live Google Sheets Connection Status Badge -->
+        <div id="google-sheets-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          </span>
+          <i class="fa-solid fa-file-spreadsheet text-emerald-400"></i>
+          <span id="google-sheets-status-text">Google Sheets Connecté</span>
+        </div>
+
         <!-- Right Controls: Today & Logout -->
         <div class="flex items-center space-x-2 text-xs font-medium shrink-0">
           <button onclick="goToToday()" class="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 shadow-md shadow-blue-600/30 active:scale-95 min-h-[44px]">
@@ -482,7 +492,7 @@ const LOCAL_DELIVERY_DATA = [
     "date": "2026-10-18",
     "magasin": "FOOTLAND DJELFA",
     "chauffeur": "SAADI BILLEL",
-    "matricule": "CAMION PORTEUR",
+    "matricule": "Camion Porteur",
     "quantite": 35,
     "status": "Non Livré",
     "completed": false
@@ -530,7 +540,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0009",
     "date": "2026-10-19",
-    "magasin": "GHEDJATI ADEL",
+    "magasin": "Ghedjati Adel",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 261,
@@ -640,7 +650,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0020",
     "date": "2026-10-20",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 40,
@@ -1010,7 +1020,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0057",
     "date": "2026-10-14",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "AUTER",
     "matricule": "AUTER",
     "quantite": 55,
@@ -1020,7 +1030,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0058",
     "date": "2026-10-15",
-    "magasin": "MEBARKI MOHAMED",
+    "magasin": "Mebarki Mohamed",
     "chauffeur": "AUTER",
     "matricule": "AUTER",
     "quantite": 32,
@@ -1310,7 +1320,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0087",
     "date": "2026-10-14",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "AUTER",
     "matricule": "AUTER",
     "quantite": 0,
@@ -1320,7 +1330,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0088",
     "date": "2026-10-15",
-    "magasin": "MEBARKI MOHAMED",
+    "magasin": "Mebarki Mohamed",
     "chauffeur": "AUTER",
     "matricule": "AUTER",
     "quantite": 0,
@@ -1410,7 +1420,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0097",
     "date": "2026-10-05",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "SNOUCI SEIF-EDDINE",
     "matricule": "NISSAN",
     "quantite": 76,
@@ -1560,7 +1570,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0112",
     "date": "2026-10-07",
-    "magasin": "LATAMNA ZOHIR",
+    "magasin": "Latamna Zohir",
     "chauffeur": "SNOUCI SEIF-EDDINE",
     "matricule": "NISSAN",
     "quantite": 66,
@@ -1630,7 +1640,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0119",
     "date": "2026-10-08",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "BOUKHALFA ADEL",
     "matricule": "MERCEDES 2",
     "quantite": 263,
@@ -2100,7 +2110,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0166",
     "date": "2025-08-31",
-    "magasin": "STORE AN GROS",
+    "magasin": "STORE an GROS",
     "chauffeur": "SNOUCI SEIF-EDDINE",
     "matricule": "HYUNDAI",
     "quantite": 0,
@@ -2110,7 +2120,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0167",
     "date": "2025-08-31",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -2292,7 +2302,7 @@ const LOCAL_DELIVERY_DATA = [
     "date": "2025-12-30",
     "magasin": "FOOTLAND ARDIS",
     "chauffeur": "NON SPÉCIFIÉ",
-    "matricule": "CAMION PORTEUR",
+    "matricule": "Camion Porteur",
     "quantite": 0,
     "status": "Non Livré",
     "completed": false
@@ -2900,7 +2910,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0246",
     "date": "2025-08-25",
-    "magasin": "EURL STAR WEAR",
+    "magasin": "Eurl Star Wear",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -3010,7 +3020,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0257",
     "date": "2025-08-25",
-    "magasin": "HAZOURLI ABDELHALIM",
+    "magasin": "Hazourli Abdelhalim",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -3070,7 +3080,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0263",
     "date": "2025-08-25",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -3200,7 +3210,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0276",
     "date": "2025-08-27",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "SNOUCI SEIF-EDINE",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -3230,7 +3240,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0279",
     "date": "2025-08-27",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "BOUKHALFA ADEL",
     "matricule": "HYUNDAI",
     "quantite": 0,
@@ -3870,7 +3880,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0343",
     "date": "2025-08-12",
-    "magasin": "EURL STAR WEAR",
+    "magasin": "Eurl Star Wear",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 130,
@@ -4030,7 +4040,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0359",
     "date": "2025-03-20",
-    "magasin": "EURL STAR WEAR",
+    "magasin": "Eurl Star Wear",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 95,
@@ -4070,7 +4080,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0363",
     "date": "2025-03-20",
-    "magasin": "HABILLEMENT EL SALAM",
+    "magasin": "HABILLEMENT El SALAM",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 92,
@@ -4270,7 +4280,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0383",
     "date": "2025-03-20",
-    "magasin": "AMOR HAMADA",
+    "magasin": "Amor Hamada",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 75,
@@ -4360,7 +4370,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0392",
     "date": "2025-03-20",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "BOUKHALFA ADEL",
     "matricule": "MERCEDES",
     "quantite": 107,
@@ -4500,7 +4510,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0406",
     "date": "2025-03-20",
-    "magasin": "AIROUCHE BOUALEM",
+    "magasin": "Airouche Boualem",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -4540,7 +4550,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0410",
     "date": "2025-03-20",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "BALLA YOUCEF",
     "matricule": "HYUNDAI",
     "quantite": 0,
@@ -4710,7 +4720,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0427",
     "date": "2025-07-25",
-    "magasin": "LATAMNA ZOHIR",
+    "magasin": "Latamna Zohir",
     "chauffeur": "BALLA YOUCEF",
     "matricule": "MERCEDES",
     "quantite": 32,
@@ -5480,7 +5490,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0504",
     "date": "2025-06-16",
-    "magasin": "GHEDJATI ADEL",
+    "magasin": "Ghedjati Adel",
     "chauffeur": "BALLA YOUCEF",
     "matricule": "MERCEDES",
     "quantite": 51,
@@ -5660,7 +5670,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0522",
     "date": "2025-06-16",
-    "magasin": "HABILLEMENT EL SALAM",
+    "magasin": "HABILLEMENT El SALAM",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 374,
@@ -5692,7 +5702,7 @@ const LOCAL_DELIVERY_DATA = [
     "date": "2025-12-14",
     "magasin": "FOOTLAND TLEMCEN",
     "chauffeur": "ATT PARTAGE SENIA",
-    "matricule": "CAMION PORTEUR",
+    "matricule": "Camion Porteur",
     "quantite": 258,
     "status": "Non Livré",
     "completed": false
@@ -5900,7 +5910,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0546",
     "date": "2025-06-03",
-    "magasin": "AIROUCHE BOUALEM",
+    "magasin": "Airouche Boualem",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 30,
@@ -5990,7 +6000,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0555",
     "date": "2025-06-04",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "BOUKHALFA ADEL",
     "matricule": "NISSAN",
     "quantite": 315,
@@ -6030,7 +6040,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0559",
     "date": "2025-06-04",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "BALLA YOUCEF",
     "matricule": "MERCEDES",
     "quantite": 86,
@@ -6120,7 +6130,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0568",
     "date": "2025-06-04",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 15,
@@ -6140,7 +6150,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0570",
     "date": "2025-05-20",
-    "magasin": "GHEDJATI ADEL",
+    "magasin": "Ghedjati Adel",
     "chauffeur": "SAADI BILLEL",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -6260,7 +6270,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0582",
     "date": "2025-05-21",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "BALLA YOUCEF",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -6470,7 +6480,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0603",
     "date": "2025-05-22",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "SNOUCI SEIF-EDDINE",
     "matricule": "NISSAN",
     "quantite": 0,
@@ -6530,7 +6540,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0609",
     "date": "2025-05-21",
-    "magasin": "EURL STAR WEAR",
+    "magasin": "Eurl Star Wear",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -6630,7 +6640,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0619",
     "date": "2025-05-21",
-    "magasin": "STORE AN GROS",
+    "magasin": "STORE an GROS",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -6700,7 +6710,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0626",
     "date": "2025-05-22",
-    "magasin": "AMOR HAMADA",
+    "magasin": "Amor Hamada",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -6710,7 +6720,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0627",
     "date": "2025-05-22",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -6720,7 +6730,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0628",
     "date": "2025-05-22",
-    "magasin": "HAZOURLI ABDELHALIM",
+    "magasin": "Hazourli Abdelhalim",
     "chauffeur": "CLIENT",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -7202,7 +7212,7 @@ const LOCAL_DELIVERY_DATA = [
     "date": "2025-01-14",
     "magasin": "FOOTLAND GARDEN CITY",
     "chauffeur": "NON SPÉCIFIÉ",
-    "matricule": "CAMION PORTEUR",
+    "matricule": "Camion Porteur",
     "quantite": 237,
     "status": "Non Livré",
     "completed": false
@@ -7550,7 +7560,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0711",
     "date": "2025-05-07",
-    "magasin": "EURL STAR WEAR",
+    "magasin": "Eurl Star Wear",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -7800,7 +7810,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0736",
     "date": "2025-05-08",
-    "magasin": "BAKI",
+    "magasin": "Baki",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "AUTRE",
     "quantite": 0,
@@ -7920,7 +7930,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0748",
     "date": "2025-05-09",
-    "magasin": "GHEDJATI ADEL",
+    "magasin": "Ghedjati Adel",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "NISSAN",
     "quantite": 0,
@@ -8010,7 +8020,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0757",
     "date": "2025-05-09",
-    "magasin": "MOUSSAOUI AMMAR",
+    "magasin": "Moussaoui Ammar",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -8150,7 +8160,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0771",
     "date": "2025-05-10",
-    "magasin": "BENADDOU SALIH",
+    "magasin": "Benaddou Salih",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "MERCEDES",
     "quantite": 0,
@@ -8250,7 +8260,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0781",
     "date": "2025-05-05",
-    "magasin": "SKECHERS BAB EZZOUAR",
+    "magasin": "Skechers Bab Ezzouar",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "MERCEDES",
     "quantite": 2399,
@@ -8280,7 +8290,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0784",
     "date": "2025-05-05",
-    "magasin": "SKECHERS BEN MHIDI",
+    "magasin": "Skechers Ben Mhidi",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "MERCEDES",
     "quantite": 1373,
@@ -8350,7 +8360,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0791",
     "date": "2025-05-05",
-    "magasin": "E-COMMERCE FOOTLAND",
+    "magasin": "e-COMMERCE FOOTLAND",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "NISSAN",
     "quantite": 707,
@@ -8410,7 +8420,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0797",
     "date": "2025-05-07",
-    "magasin": "SKECHERS SETIF",
+    "magasin": "Skechers Setif",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "NISSAN",
     "quantite": 1392,
@@ -8510,7 +8520,7 @@ const LOCAL_DELIVERY_DATA = [
   {
     "id": "DEL-0807",
     "date": "2025-05-07",
-    "magasin": "SKECHERS ESSENIA",
+    "magasin": "Skechers Essenia",
     "chauffeur": "NON SPÉCIFIÉ",
     "matricule": "MERCEDES",
     "quantite": 2398,
@@ -8799,15 +8809,49 @@ const LOCAL_DELIVERY_DATA = [
   }
 ];
 
+    // Global application state variables
     let DELIVERY_DATA = [];
     let completedCount = 0;
     let totalCount = 0;
     let selectedDateStr = '2026-10-28';
     let activeManifestFilter = 'ALL';
 
+    /**
+     * Canonical delivery record normalizer.
+     * Guarantees all expected properties are present with proper defaults.
+     */
+    function normalizeDeliveryRecord(d) {
+      if (!d) return null;
+      const store = String(d.magasin || d.destination || "").trim();
+      const driver = String(d.Chauffeur || d.chauffeur || d.driver || "").trim();
+      const vehicle = String(d.matricule || d.vehicle || "").trim();
+      const qty = Number(d.quantite !== undefined ? d.quantite : (d.quantity !== undefined ? d.quantity : 0)) || 0;
+      const isLivre = (d.status === "Livré" || d.completed === true);
+      const status = isLivre ? "Livré" : "Non Livré";
+      const id = String(d.id || "").trim();
+      const date = String(d.date || "").trim();
+
+      return {
+        ...d,
+        id: id,
+        date: date,
+        magasin: store,
+        destination: store,
+        chauffeur: driver,
+        Chauffeur: driver,
+        driver: driver,
+        matricule: vehicle,
+        vehicle: vehicle,
+        quantite: qty,
+        quantity: qty,
+        status: status,
+        completed: isLivre
+      };
+    }
+
     const AppState = {
       currentUser: null,
-      rawDeliveries: LOCAL_DELIVERY_DATA.map(d => ({ ...d, completed: false })),
+      rawDeliveries: LOCAL_DELIVERY_DATA.map(normalizeDeliveryRecord).filter(Boolean),
       deliveries: [],
       completedDeliveryIds: new Set(),
       selectedDateStr: '2026-10-28',
@@ -8817,7 +8861,8 @@ const LOCAL_DELIVERY_DATA = [
       completedCount: 0,
       adminFilterDriver: 'ALL',
       adminFilterBoutique: 'ALL',
-      adminFilterSearch: ''
+      adminFilterSearch: '',
+      isSyncingSheet: false
     };
 
     let DOM = {};
@@ -8862,7 +8907,9 @@ const LOCAL_DELIVERY_DATA = [
         adminFilterStore:     document.getElementById('admin-filter-store'),
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
-        toastContainer:       document.getElementById('toast-container')
+        toastContainer:       document.getElementById('toast-container'),
+        googleSheetsBadge:    document.getElementById('google-sheets-badge'),
+        googleSheetsStatusText: document.getElementById('google-sheets-status-text')
       };
     }
 
@@ -8934,6 +8981,134 @@ const LOCAL_DELIVERY_DATA = [
       }, 3500);
     }
 
+    /**
+     * Updates the UI status pill for the live Google Sheets integration
+     */
+    function updateSheetSyncBadge(status, customText) {
+      if (!DOM.googleSheetsStatusText) return;
+      if (status === 'syncing') {
+        DOM.googleSheetsStatusText.textContent = customText || "Enregistrement Google Sheets...";
+        if (DOM.googleSheetsBadge) {
+          DOM.googleSheetsBadge.className = "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold shadow-2xs";
+        }
+      } else if (status === 'success') {
+        DOM.googleSheetsStatusText.textContent = customText || "Google Sheets Synchronisé ✓";
+        if (DOM.googleSheetsBadge) {
+          DOM.googleSheetsBadge.className = "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs";
+        }
+      } else if (status === 'error') {
+        DOM.googleSheetsStatusText.textContent = customText || "Google Sheets (Hors ligne - En file)";
+        if (DOM.googleSheetsBadge) {
+          DOM.googleSheetsBadge.className = "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-2xs";
+        }
+      }
+    }
+
+    /**
+     * Rebuilt Google Sheets Connection & Real-Time Mutation Engine.
+     * Sends delivery updates directly to Google Apps Script Web App receiver
+     * using CORS-safelisted plain text POST with robust offline queuing.
+     */
+    async function syncDeliveryStatusToSheet(item, newStatus) {
+      if (!item) return;
+
+      const payload = {
+        action: 'update_status',
+        id: String(item.id || '').trim(),
+        status: newStatus,
+        date: String(item.date || AppState.selectedDateStr || '').trim(),
+        magasin: String(item.magasin || item.destination || '').trim(),
+        chauffeur: String(item.chauffeur || item.driver || '').trim(),
+        matricule: String(item.matricule || item.vehicle || '').trim(),
+        quantite: item.quantite !== undefined ? item.quantite : (item.quantity !== undefined ? item.quantity : 0),
+        timestamp: new Date().toISOString()
+      };
+
+      console.log(`[Google Sheets Connection] Transmitting tournée #${payload.id} (${newStatus}) to Google Sheets...`, payload);
+      updateSheetSyncBadge('syncing', `Envoi #${payload.id} vers Google Sheets...`);
+
+      const jsonString = JSON.stringify(payload);
+
+      try {
+        // Bulletproof fetch: CORS-safelisted text/plain with no-cors avoids browser preflight blockage
+        await fetch(GOOGLE_APP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: jsonString
+        });
+
+        console.log(`[Google Sheets Connection] Successfully recorded #${payload.id} in Google Sheets.`);
+        updateSheetSyncBadge('success', 'Google Sheets Synchronisé ✓');
+        return true;
+
+      } catch (fetchErr) {
+        console.warn(`[Google Sheets Connection] Primary fetch failed for #${payload.id}, trying Beacon API fallback...`, fetchErr);
+
+        // Fallback: navigator.sendBeacon
+        try {
+          if (navigator.sendBeacon) {
+            const blob = new Blob([jsonString], { type: 'text/plain;charset=utf-8' });
+            const beaconQueued = navigator.sendBeacon(GOOGLE_APP_URL, blob);
+            if (beaconQueued) {
+              console.log(`[Google Sheets Connection] Beacon delivered update for #${payload.id}.`);
+              updateSheetSyncBadge('success', 'Google Sheets Synchronisé ✓');
+              return true;
+            }
+          }
+        } catch (bErr) {
+          console.error('[Google Sheets Connection] Beacon fallback error:', bErr);
+        }
+
+        // Offline resilience: queue in localStorage
+        queueOfflineSync(payload);
+        updateSheetSyncBadge('error', 'Google Sheets En attente (Hors-ligne)');
+        return false;
+      }
+    }
+
+    function queueOfflineSync(payload) {
+      try {
+        const raw = localStorage.getItem("pending_sheet_sync_queue");
+        const queue = raw ? JSON.parse(raw) : [];
+        queue.push(payload);
+        localStorage.setItem("pending_sheet_sync_queue", JSON.stringify(queue));
+      } catch (e) {}
+    }
+
+    async function flushOfflineSyncQueue() {
+      try {
+        const raw = localStorage.getItem("pending_sheet_sync_queue");
+        if (!raw) return;
+        const queue = JSON.parse(raw);
+        if (!Array.isArray(queue) || queue.length === 0) return;
+
+        console.log(`[Google Sheets Connection] Flushing ${queue.length} offline updates to Google Sheets...`);
+        localStorage.removeItem("pending_sheet_sync_queue");
+
+        for (const item of queue) {
+          await fetch(GOOGLE_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(item)
+          });
+        }
+        updateSheetSyncBadge('success', 'Google Sheets Synchronisé ✓');
+      } catch (e) {
+        console.warn('[Google Sheets Connection] Offline flush error:', e);
+      }
+    }
+
+    window.addEventListener('online', () => {
+      console.log('[Google Sheets Connection] Network connection restored. Flushing queue...');
+      flushOfflineSyncQueue();
+    });
+
     function handleLogin(event) {
       event.preventDefault();
       const uInput = document.getElementById("login-username");
@@ -8941,16 +9116,22 @@ const LOCAL_DELIVERY_DATA = [
       const errAlert = document.getElementById("login-error-alert");
       const errText = document.getElementById("login-error-text");
 
-      const uVal = uInput ? uInput.value.trim().toUpperCase() : "";
+      const uVal = uInput ? uInput.value.trim().toUpperCase().replace(/\s+/g, " ") : "";
       const pVal = pInput ? pInput.value.trim() : "";
 
-      const found = AUTHORIZED_ACCOUNTS.find(
-        acc => acc.username.toUpperCase() === uVal && acc.pin === pVal
-      );
+      const found = AUTHORIZED_ACCOUNTS.find(acc => {
+        if (acc.pin !== pVal) return false;
+        const aName = acc.username.toUpperCase().replace(/\s+/g, " ");
+        if (aName === uVal) return true;
+        // Flexible punctuation/phonetic match (e.g., SNOUCI SEIF EDDINE vs SNOUCI SEIF-EDDINE)
+        const cleanA = aName.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+        const cleanU = uVal.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+        return cleanA === cleanU;
+      });
 
       if (!found) {
         if (errAlert) errAlert.classList.remove("hidden");
-        if (errText) errText.textContent = "wrong information has been given";
+        if (errText) errText.textContent = "Identifiants invalides. Veuillez vérifier le nom d'utilisateur et le code PIN.";
         if (pInput) pInput.value = "";
         return;
       }
@@ -8994,89 +9175,120 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
-    async function syncRemoteDeliveries() {
-      try {
-        const res = await fetch(`${GOOGLE_APP_URL}?action=get_deliveries`, { method: 'GET' });
-        if (!res.ok) return;
-        const remoteList = await res.json();
-        if (Array.isArray(remoteList) && remoteList.length > 0) {
-          mergeDeliveries(remoteList);
-          populateAdminChauffeurs();
-          populateAdminBoutiques();
-          computeActiveDeliveries();
-          renderCalendar();
-          renderDailyManifest();
-          
-        }
-      } catch (err) {}
-    }
-
-    function mergeDeliveries(remoteList) {
-      const map = new Map();
-      AppState.rawDeliveries.forEach(d => map.set(String(d.id), { ...d }));
-      remoteList.forEach(r => {
-        const existing = map.get(String(r.id));
-        if (existing) {
-          map.set(String(r.id), { ...existing, ...r });
-        } else {
-          map.set(String(r.id), { ...r });
-        }
-      });
-      AppState.rawDeliveries = Array.from(map.values());
-    }
-
     function normalizeDriver(str) {
       if (!str) return "";
       return str.replace(/\s+/g, " ").trim().toUpperCase();
     }
 
-    function computeActiveDeliveries() {
-      let list = AppState.rawDeliveries;
+    /**
+     * Robust Chauffeur Assignment Matcher:
+     * Supports exact name matching, joint delivery co-assignments (e.g. "ADEL + BILLEL"),
+     * and common phonetic/spelling variations (e.g. "SEIF-EDINE" vs "SEIF-EDDINE").
+     */
+    function isChauffeurMatch(rowDriver, targetChauffeur) {
+      if (!rowDriver || !targetChauffeur) return false;
+      const r = normalizeDriver(rowDriver);
+      const t = normalizeDriver(targetChauffeur);
+      if (r === t) return true;
 
-      AppState.completedDeliveryIds = loadDeliveredIds();
-      list = list.map(d => {
-        const isCompleted = AppState.completedDeliveryIds.has(String(d.id));
-        return { ...d, completed: isCompleted || d.completed, status: isCompleted ? 'Livré' : d.status };
-      });
-
-      if (AppState.currentUser && AppState.currentUser.role === 'chauffeur') {
-        const assignedName = normalizeDriver(AppState.currentUser.chauffeurName);
-        list = list.filter(d => normalizeDriver(d.driver) === assignedName);
-      } else if (AppState.currentUser && AppState.currentUser.role === 'admin') {
-        // 1. Filter by Chauffeur (Strictly authorized chauffeurs)
-        if (AppState.adminFilterDriver && AppState.adminFilterDriver !== 'ALL') {
-          const filterNorm = normalizeDriver(AppState.adminFilterDriver);
-          list = list.filter(d => normalizeDriver(d.driver) === filterNorm);
-        }
-        // 2. Filter by Boutique
-        if (AppState.adminFilterBoutique && AppState.adminFilterBoutique !== 'ALL') {
-          const bNorm = AppState.adminFilterBoutique.trim().toUpperCase();
-          list = list.filter(d => (d.destination || "").trim().toUpperCase() === bNorm);
-        }
-        // 3. Optional Free Text Search
-        if (AppState.adminFilterSearch && AppState.adminFilterSearch.trim()) {
-          const q = AppState.adminFilterSearch.trim().toLowerCase();
-          list = list.filter(d => {
-            const mag = (d.magasin || d.destination || "").toLowerCase();
-            const mat = (d.matricule || d.vehicle || "").toLowerCase();
-            const drv = (d.chauffeur || d.driver || "").toLowerCase();
-            return mag.includes(q) || mat.includes(q) || drv.includes(q);
-          });
-        }
+      // Joint assignment check (e.g. "BOUKHALFA ADEL + SAADI BILLEL")
+      if (r.includes('+') || r.includes('/') || r.includes('&') || r.includes(' ET ')) {
+        const parts = r.split(/[\+\/\&]| ET /i).map(s => normalizeDriver(s));
+        if (parts.some(p => p === t || isChauffeurMatch(p, t))) return true;
       }
 
-      AppState.deliveries = list;
-      DELIVERY_DATA = AppState.deliveries;
+      // Strip non-alphanumeric and collapse double 'D'
+      const cleanR = r.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+      const cleanT = t.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+      if (cleanR === cleanT) return true;
+      if (cleanR.includes(cleanT) || cleanT.includes(cleanR)) return true;
+
+      return false;
+    }
+
+    /**
+     * Computes the active deliveries list based on current user authentication:
+     * - Admin: gets ALL deliveries across the system, with optional Chauffeur/Boutique filters.
+     * - Chauffeur: gets ONLY the deliveries assigned specifically to their account.
+     */
+    function computeActiveDeliveries() {
+      AppState.completedDeliveryIds = loadDeliveredIds();
+
+      // Synchronize in-memory completion flags
+      AppState.rawDeliveries = AppState.rawDeliveries.map(d => {
+        const isCompleted = AppState.completedDeliveryIds.has(String(d.id)) || d.status === 'Livré' || d.completed === true;
+        if (isCompleted) {
+          AppState.completedDeliveryIds.add(String(d.id));
+        }
+        return {
+          ...d,
+          completed: isCompleted,
+          status: isCompleted ? 'Livré' : 'Non Livré'
+        };
+      });
+      saveDeliveredIds(AppState.completedDeliveryIds);
+
+      const currentUser = getAuthSession() || AppState.currentUser;
+      const allData = AppState.rawDeliveries;
+      let displayData = [];
+
+      if (!currentUser) {
+        displayData = [];
+      } else if (currentUser.role === 'admin') {
+        // Admin gets all records
+        displayData = allData;
+
+        // 1. Admin Filter by Chauffeur (Strictly authorized chauffeurs)
+        if (AppState.adminFilterDriver && AppState.adminFilterDriver !== 'ALL') {
+          displayData = displayData.filter(delivery => {
+            const ch = delivery.chauffeur || delivery.driver || delivery.Chauffeur || "";
+            return isChauffeurMatch(ch, AppState.adminFilterDriver);
+          });
+        }
+
+        // 2. Admin Filter by Boutique
+        if (AppState.adminFilterBoutique && AppState.adminFilterBoutique !== 'ALL') {
+          const bNorm = AppState.adminFilterBoutique.trim().toUpperCase();
+          displayData = displayData.filter(delivery => {
+            const dest = (delivery.magasin || delivery.destination || "").trim().toUpperCase();
+            return dest === bNorm;
+          });
+        }
+
+        // 3. Admin Free Text Search
+        if (AppState.adminFilterSearch && AppState.adminFilterSearch.trim()) {
+          const q = AppState.adminFilterSearch.trim().toLowerCase();
+          displayData = displayData.filter(delivery => {
+            const mag = (delivery.magasin || delivery.destination || "").toLowerCase();
+            const mat = (delivery.matricule || delivery.vehicle || "").toLowerCase();
+            const drv = (delivery.chauffeur || delivery.driver || delivery.Chauffeur || "").toLowerCase();
+            const did = String(delivery.id || "").toLowerCase();
+            return mag.includes(q) || mat.includes(q) || drv.includes(q) || did.includes(q);
+          });
+        }
+
+      } else if (currentUser.role === 'chauffeur') {
+        // Chauffeur ONLY sees rows assigned to them
+        const targetDriver = currentUser.chauffeurName || currentUser.username || "";
+        displayData = allData.filter(delivery => {
+          const drv = delivery.chauffeur || delivery.driver || delivery.Chauffeur || "";
+          return isChauffeurMatch(drv, targetDriver);
+        });
+      }
+
+      console.log(`[Tradifoot RBAC] Role: ${currentUser ? currentUser.role : 'none'} | Total raw: ${allData.length} | Displayed: ${displayData.length}`);
+
+      AppState.deliveries = displayData;
+      DELIVERY_DATA = displayData;
     }
 
     function populateAdminChauffeurs() {
       if (!DOM.adminFilterChauffeur) return;
       const prevVal = DOM.adminFilterChauffeur.value;
 
-      // STRICT REQUIREMENT: Include ONLY authorized chauffeurs (role === 'chauffeur')
       const authorizedChauffeurs = AUTHORIZED_ACCOUNTS
         .filter(acc => acc.role === 'chauffeur')
-        .map(acc => normalizeDriver(acc.chauffeurName))
+        .map(acc => acc.chauffeurName.trim())
         .filter(Boolean);
 
       const sortedChauffeurs = Array.from(new Set(authorizedChauffeurs)).sort();
@@ -9089,7 +9301,7 @@ const LOCAL_DELIVERY_DATA = [
         DOM.adminFilterChauffeur.appendChild(opt);
       });
 
-      if (prevVal && sortedChauffeurs.includes(prevVal)) {
+      if (prevVal && (prevVal === "ALL" || sortedChauffeurs.includes(prevVal))) {
         DOM.adminFilterChauffeur.value = prevVal;
       }
     }
@@ -9100,7 +9312,7 @@ const LOCAL_DELIVERY_DATA = [
 
       const boutiqueSet = new Set();
       AppState.rawDeliveries.forEach(d => {
-        const dest = (d.destination || "").trim();
+        const dest = (d.magasin || d.destination || "").trim();
         if (dest && !dest.toUpperCase().startsWith("TOTAL") && dest.toUpperCase() !== "NONE") {
           boutiqueSet.add(dest.toUpperCase());
         }
@@ -9115,7 +9327,7 @@ const LOCAL_DELIVERY_DATA = [
         DOM.adminFilterBoutique.appendChild(opt);
       });
 
-      if (prevVal && sortedBoutiques.includes(prevVal)) {
+      if (prevVal && (prevVal === "ALL" || sortedBoutiques.includes(prevVal))) {
         DOM.adminFilterBoutique.value = prevVal;
       }
     }
@@ -9129,7 +9341,7 @@ const LOCAL_DELIVERY_DATA = [
       DOM.adminToolbar.classList.remove("hidden");
 
       const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
-      const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0), 0);
       const deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
       const rate = dayDeliveries.length > 0 ? Math.round((deliveredCount / dayDeliveries.length) * 100) : 0;
 
@@ -9156,6 +9368,12 @@ const LOCAL_DELIVERY_DATA = [
     function getUniqueDeliveries(list) {
       const seen = new Set();
       return list.filter(item => {
+        const itemId = String(item.id || '').trim();
+        if (itemId) {
+          if (seen.has(itemId)) return false;
+          seen.add(itemId);
+          return true;
+        }
         const store = (item.magasin || item.destination || '').trim().toUpperCase();
         const qty = item.quantite !== undefined ? item.quantite : item.quantity;
         const key = `${item.date}|${store}|${qty}`;
@@ -9174,139 +9392,112 @@ const LOCAL_DELIVERY_DATA = [
       ];
 
       if (DOM.calendarMonthYear) {
-        DOM.calendarMonthYear.innerHTML = `
-          <i class="fa-regular fa-calendar text-blue-600"></i>
-          <span>${MONTH_NAMES[month]} ${year}</span>
-        `;
+        DOM.calendarMonthYear.textContent = `${MONTH_NAMES[month]} ${year}`;
       }
 
       if (!DOM.calendarDaysGrid) return;
       DOM.calendarDaysGrid.innerHTML = "";
 
       const firstDayOfMonth = new Date(year, month, 1);
-      let startingDay = firstDayOfMonth.getDay();
-      startingDay = startingDay === 0 ? 6 : startingDay - 1;
-
+      const startingDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // Monday = 0
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+      // Pad previous month days
+      for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+        const dayNum = daysInPrevMonth - i;
+        const cell = document.createElement("div");
+        cell.className = "h-11 sm:h-13 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 flex flex-col justify-between opacity-30 select-none bg-slate-50/50 cursor-not-allowed";
+        cell.innerHTML = `<span class="text-xs font-semibold text-slate-400">${dayNum}</span>`;
+        DOM.calendarDaysGrid.appendChild(cell);
+      }
 
       let monthTotalUnits = 0;
       let monthTotalDeliveries = 0;
 
-      for (let i = startingDay - 1; i >= 0; i--) {
-        const prevDayNum = daysInPrevMonth - i;
-        const cell = document.createElement("div");
-        cell.className = "min-h-[44px] h-12 sm:h-16 md:h-20 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
-        cell.innerHTML = `<span class="text-xs sm:text-sm font-semibold">${prevDayNum}</span>`;
-        DOM.calendarDaysGrid.appendChild(cell);
-      }
-
-      const todayStr = "2026-10-28";
-
+      // Current month days
       for (let day = 1; day <= daysInMonth; day++) {
-        const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(d => d.date === dStr));
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === dateStr));
+
+        const isSelected = (dateStr === AppState.selectedDateStr);
         const hasDeliveries = dayDeliveries.length > 0;
 
-        let dayUnits = 0;
+        let totalQty = 0;
+        let deliveredCount = 0;
         if (hasDeliveries) {
-          dayDeliveries.forEach(d => {
-            dayUnits += Number(d.quantity) || 0;
-            monthTotalUnits += Number(d.quantity) || 0;
-            monthTotalDeliveries++;
-          });
+          totalQty = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0), 0);
+          deliveredCount = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id))).length;
+          monthTotalUnits += totalQty;
+          monthTotalDeliveries += dayDeliveries.length;
         }
 
-        const isSelected = (dStr === AppState.selectedDateStr);
-        const isToday = (dStr === todayStr);
+        const isFullyDelivered = hasDeliveries && (deliveredCount === dayDeliveries.length);
 
         const cell = document.createElement("div");
-        cell.onclick = () => selectDate(dStr);
+        cell.setAttribute("data-date", dateStr);
 
-        let baseClasses = "min-h-[44px] h-13 sm:h-16 md:h-20 p-1 sm:p-1.5 md:p-2 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ";
+        let cellClasses = "h-11 sm:h-13 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 flex flex-col justify-between transition-all duration-200 cursor-pointer relative select-none ";
 
         if (isSelected) {
-          baseClasses += "glass-card ring-2 ring-blue-600 bg-blue-50/90 border-blue-400 shadow-sm ";
+          cellClasses += "bg-[#0B1F3F] text-white shadow-md shadow-blue-950/30 scale-102 ring-2 ring-blue-500 z-10 ";
         } else if (hasDeliveries) {
-          baseClasses += "glass-card border-blue-100/80 hover:border-blue-400 hover:bg-blue-50/30 ";
+          if (isFullyDelivered) {
+            cellClasses += "bg-emerald-50/90 hover:bg-emerald-100/90 text-slate-800 border border-emerald-300 shadow-2xs hover:scale-102 ";
+          } else {
+            cellClasses += "bg-white hover:bg-blue-50 text-slate-800 border border-blue-200/80 shadow-2xs hover:scale-102 ";
+          }
         } else {
-          baseClasses += "border-slate-200/60 hover:border-slate-300 bg-white/60 text-slate-500 hover:text-slate-700 ";
+          cellClasses += "bg-white/60 hover:bg-slate-100 text-slate-500 border border-transparent ";
         }
 
-        let statusDots = "";
+        cell.className = cellClasses;
+
+        let dotIndicator = "";
         if (hasDeliveries) {
-          const hasDelivered = dayDeliveries.some(d => d.completed || d.status === "Livré" || AppState.completedDeliveryIds.has(String(d.id)));
-          const hasPending = dayDeliveries.some(d => !d.completed && d.status !== "Livré" && !AppState.completedDeliveryIds.has(String(d.id)));
-
-          statusDots = '<div class="flex items-center space-x-1 mt-0.5">';
-          if (hasDelivered) statusDots += '<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-2xs"></span>';
-          if (hasPending) statusDots += '<span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span>';
-          statusDots += '</div>';
+          if (isFullyDelivered) {
+            dotIndicator = `<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-[9px] font-bold ${isSelected ? 'text-emerald-300' : 'text-emerald-700'}">${dayDeliveries.length}</span></div>`;
+          } else {
+            dotIndicator = `<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600"></span><span class="text-[9px] font-bold ${isSelected ? 'text-blue-200' : 'text-blue-700'}">${dayDeliveries.length}</span></div>`;
+          }
         }
 
-        cell.className = baseClasses;
         cell.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="text-xs sm:text-sm font-bold ${isSelected ? 'text-blue-900' : (isToday ? 'text-blue-600 font-extrabold' : 'text-slate-800')}">
-              ${day}
-            </span>
-            ${isToday ? '<span class="h-1.5 w-1.5 rounded-full bg-blue-600"></span>' : ''}
+          <div class="flex items-center justify-between w-full">
+            <span class="text-xs font-bold leading-none ${isSelected ? 'text-white' : (hasDeliveries ? 'text-slate-900' : 'text-slate-600')}">${day}</span>
+            ${dotIndicator}
           </div>
-          ${hasDeliveries ? `
-            <div class="mt-auto">
-              ${statusDots}
-              <div class="mt-0.5 px-1 py-0.5 rounded-md bg-blue-50 text-[11px] font-bold text-blue-900 border border-blue-200/70 flex items-center justify-center sm:justify-between truncate">
-                <span>${dayDeliveries.length}<span class="hidden sm:inline"> livr.</span></span>
-                <span class="hidden sm:inline text-slate-700 text-[10px] font-semibold">${dayUnits.toLocaleString()}</span>
-              </div>
-            </div>
-          ` : `
-            <div class="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-300 text-right">-</div>
-          `}
+          ${hasDeliveries ? `<div class="text-[9px] font-semibold truncate ${isSelected ? 'text-cyan-200' : 'text-slate-500'}">${totalQty.toLocaleString()} p</div>` : ''}
         `;
 
-        DOM.calendarDaysGrid.appendChild(cell);
-      }
-
-      const totalRenderedDays = startingDay + daysInMonth;
-      const remainingCells = (totalRenderedDays % 7 === 0) ? 0 : 7 - (totalRenderedDays % 7);
-      for (let i = 1; i <= remainingCells; i++) {
-        const cell = document.createElement("div");
-        cell.className = "min-h-[44px] h-12 sm:h-16 md:h-20 p-1 sm:p-1.5 rounded-xl border border-slate-200/60 bg-slate-100/50 text-slate-400 flex flex-col justify-between opacity-40 cursor-not-allowed";
-        cell.innerHTML = `<span class="text-xs font-semibold">${i}</span>`;
+        cell.addEventListener("click", () => selectDate(dateStr));
         DOM.calendarDaysGrid.appendChild(cell);
       }
 
       if (DOM.monthTotalUnits) DOM.monthTotalUnits.textContent = monthTotalUnits.toLocaleString();
-      if (DOM.monthTotalDeliveries) DOM.monthTotalDeliveries.textContent = monthTotalDeliveries;
+      if (DOM.monthTotalDeliveries) DOM.monthTotalDeliveries.textContent = monthTotalDeliveries.toLocaleString();
     }
 
     function updateProgressUI() {
       const { totalCount, completedCount } = AppState;
-      const offset = totalCount > 0 ? 87.96 - ((completedCount / totalCount) * 87.96) : 87.96;
+      const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      const circumference = 87.96;
+      const offset = circumference - (percent / 100) * circumference;
+
       if (DOM.progressCircle) {
         DOM.progressCircle.style.strokeDashoffset = offset;
       }
-      if (DOM.progressText) {
-        DOM.progressText.innerText = `${completedCount} / ${totalCount} Livré`;
-      }
       if (DOM.progressPercent) {
-        const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-        DOM.progressPercent.innerText = `${pct}%`;
+        DOM.progressPercent.textContent = `${percent}%`;
       }
-      if (DOM.progressRingIcon) {
-        if (totalCount > 0 && completedCount === totalCount) {
-          DOM.progressRingIcon.innerHTML = '<i class="fa-solid fa-check text-emerald-600 text-[10px]"></i>';
-        } else {
-          DOM.progressRingIcon.innerHTML = '<i class="fa-solid fa-flag-checkered text-slate-400 text-[10px]"></i>';
-        }
+      if (DOM.progressText) {
+        DOM.progressText.textContent = `${completedCount} / ${totalCount}`;
       }
     }
 
     function renderDailyManifest() {
       if (!DOM.cardsContainer) return;
       DOM.cardsContainer.innerHTML = "";
-
       DOM.cardsContainer.className = "flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]";
 
       const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
@@ -9315,8 +9506,7 @@ const LOCAL_DELIVERY_DATA = [
       const formattedDate = dateObj.toLocaleDateString('fr-FR', options);
 
       if (DOM.manifestDateTitle) {
-        DOM.manifestDateTitle.textContent =
-          formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+        DOM.manifestDateTitle.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
       }
 
       const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
@@ -9341,7 +9531,7 @@ const LOCAL_DELIVERY_DATA = [
       updateProgressUI();
       updateAdminKPIs();
 
-      // Apply Manifest Filter
+      // Apply Segmented Filter
       let filtered = [];
       if (AppState.activeManifestFilter === "Delivered") {
         filtered = dayDeliveries.filter(x => x.completed || x.status === "Livré" || AppState.completedDeliveryIds.has(String(x.id)));
@@ -9351,10 +9541,14 @@ const LOCAL_DELIVERY_DATA = [
         filtered = dayDeliveries;
       }
 
-      const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0), 0);
       if (DOM.manifestTotalQty) DOM.manifestTotalQty.textContent = totalUnits.toLocaleString();
 
-      // INTELLIGENT EMPTY STATE (Never leave user stuck with an empty box!)
+      // Collect user dates with deliveries for intelligent empty states
+      const userDates = [...new Set(AppState.deliveries.map(deliv => deliv.date))].filter(Boolean).sort();
+      const latestUserDate = userDates.length > 0 ? userDates[userDates.length - 1] : null;
+
+      // INTELLIGENT EMPTY STATE
       if (filtered.length === 0) {
         if (dayDeliveries.length > 0) {
           const allDelivered = (deliveredCount === dayDeliveries.length);
@@ -9369,8 +9563,8 @@ const LOCAL_DELIVERY_DATA = [
                 </h4>
                 <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
                   ${allDelivered 
-                    ? `Les ${dayDeliveries.length} expéditions programmées pour cette date ont déjà été enregistrées comme livrées.` 
-                    : `Il y a ${dayDeliveries.length} livraisons enregistrées pour cette journée. Cliquez ci-dessous pour les afficher.`}
+                    ? `Les ${dayDeliveries.length} expéditions programmées pour cette date ont été enregistrées comme livrées.` 
+                    : `Il y a ${dayDeliveries.length} livraisons pour cette journée. Cliquez ci-dessous pour les afficher.`}
                 </p>
               </div>
               <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2">
@@ -9387,33 +9581,38 @@ const LOCAL_DELIVERY_DATA = [
           `;
         } else {
           DOM.cardsContainer.innerHTML = `
-            <div class="col-span-full h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-4 my-auto">
-              <div class="h-16 w-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
-                <i class="fa-solid fa-calendar-xmark text-2xl text-slate-400"></i>
+            <div class="col-span-full h-full flex flex-col items-center justify-center text-center p-8 bg-white/70 rounded-3xl border border-blue-100 shadow-xs space-y-4 my-auto">
+              <div class="h-16 w-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shadow-xs">
+                <i class="fa-regular fa-calendar-xmark text-3xl"></i>
               </div>
-              <div>
-                <h4 class="text-sm sm:text-base font-bold text-slate-700">Aucune expédition programmée</h4>
-                <p class="text-xs sm:text-sm text-slate-500 max-w-xs mt-1">
-                  Aucune tournée de livraison n'est enregistrée pour le ${formattedDate}.
+              <div class="space-y-1">
+                <h4 class="text-base sm:text-lg font-bold text-slate-800">Aucune expédition programmée</h4>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
+                  ${latestUserDate ? `Aucune livraison pour le ${formattedDate}. Votre date la plus récente est le ${latestUserDate}.` : `Aucune livraison n'est enregistrée pour ce compte.`}
                 </p>
               </div>
-              <button onclick="jumpToNextDelivery()" class="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-all duration-150 active:scale-95 px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 min-h-[44px]">
-                <span>Voir la prochaine livraison</span>
-                <i class="fa-solid fa-arrow-right text-xs"></i>
-              </button>
+              ${latestUserDate ? `
+                <div class="pt-2">
+                  <button onclick="selectDate('${latestUserDate}')" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2 min-h-[44px]">
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                    <span>Consulter ma dernière livraison (${latestUserDate})</span>
+                  </button>
+                </div>
+              ` : ''}
             </div>
           `;
         }
         return;
       }
 
-      // RENDER RICH, EXECUTIVE DELIVERY CARDS
+      // RENDER DELIVERY CARDS
       filtered.forEach(item => {
         const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
         const card = document.createElement("div");
-        card.className = `flex-shrink-0 shrink-0 w-full glass-card rounded-2xl p-4 sm:p-5 transition-all duration-300 hover:-translate-y-0.5 border ${
+
+        card.className = `p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-300 flex-shrink-0 ${
           isCompleted 
-            ? 'opacity-85 bg-slate-50/95 border-slate-200' 
+            ? 'bg-emerald-50/40 border-emerald-200/90 shadow-sm shadow-emerald-900/5' 
             : 'bg-white/95 border-blue-100/90 shadow-sm shadow-blue-950/5'
         } flex flex-col justify-between`;
         card.setAttribute("data-delivery-id", item.id);
@@ -9440,7 +9639,7 @@ const LOCAL_DELIVERY_DATA = [
 
         card.innerHTML = `
           <div>
-            <!-- Top Row: ID & Date + Status Badge & Action Button -->
+            <!-- Top Row: ID, Date, Badges & Action Checkmark -->
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
               <div class="flex items-center space-x-2.5 min-w-0">
                 <span class="h-6 px-2.5 rounded-md bg-blue-50 text-blue-900 text-xs font-bold font-mono border border-blue-200/70 shrink-0">
@@ -9455,53 +9654,71 @@ const LOCAL_DELIVERY_DATA = [
                 <div class="status-badge-container">
                   ${statusBadge}
                 </div>
-                <button data-id="${item.id}" class="${btnClass}" title="${isCompleted ? 'Livraison complétée (cliquer pour annuler)' : 'Marquer comme livré'}" aria-label="Valider livraison">
-                  <i class="fa-solid fa-check text-sm"></i>
+                <!-- Interactive Action Button (Click to Livrer) -->
+                <button type="button" onclick="event.stopPropagation(); markAsDelivered('${item.id}', event)" data-id="${item.id}" class="${btnClass}" title="${isCompleted ? 'Livraison complétée (cliquer pour annuler)' : 'Marquer comme Livré'}" aria-label="Valider livraison">
+                  <i class="fa-solid fa-check text-sm pointer-events-none"></i>
                 </button>
               </div>
             </div>
 
-            <!-- Magasin (Store Name) -->
+            <!-- Magasin / Store Name -->
             <div class="mt-3.5">
               <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Magasin</div>
               <h4 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug flex items-start gap-2 break-words">
                 <i class="fa-solid fa-store text-blue-600 text-base mt-1 shrink-0"></i>
-                <span class="break-words">${storeName}</span>
+                <span class="flex-1">${storeName}</span>
               </h4>
+            </div>
 
-              <!-- Chauffeur & Matricule Badges -->
-              <div class="flex flex-wrap items-center gap-2 mt-3">
-                <!-- Chauffeur -->
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-900 text-xs sm:text-sm font-semibold border border-blue-200/70 shadow-2xs">
-                  <i class="fa-solid fa-user-tie text-blue-600 text-xs"></i>
-                  <span class="truncate">${driverName}</span>
-                </span>
+            <!-- Clean Delivery Metadata Tags -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-100 text-sm">
+              <!-- Chauffeur -->
+              <div class="flex items-center gap-2 text-slate-700 bg-slate-50/80 px-3 py-1.5 rounded-xl border border-slate-100">
+                <i class="fa-solid fa-user-tie text-blue-600 text-xs shrink-0"></i>
+                <div class="min-w-0 flex-1">
+                  <span class="text-[10px] text-slate-400 font-bold block uppercase leading-none">Chauffeur</span>
+                  <span class="text-xs sm:text-sm font-semibold truncate block text-slate-800">${driverName}</span>
+                </div>
+              </div>
 
-                <!-- Matricule -->
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold border border-slate-200 shadow-2xs">
-                  <i class="fa-solid fa-truck text-slate-500 text-xs"></i>
-                  <span class="truncate">${matricule}</span>
-                </span>
+              <!-- Matricule -->
+              <div class="flex items-center gap-2 text-slate-700 bg-slate-50/80 px-3 py-1.5 rounded-xl border border-slate-100">
+                <i class="fa-solid fa-truck text-slate-500 text-xs shrink-0"></i>
+                <div class="min-w-0 flex-1">
+                  <span class="text-[10px] text-slate-400 font-bold block uppercase leading-none">Matricule</span>
+                  <span class="text-xs sm:text-sm font-semibold truncate block text-slate-700 font-mono">${matricule}</span>
+                </div>
               </div>
             </div>
 
             <!-- Quantité -->
-            <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-sm">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Quantité</span>
-              <div class="text-base sm:text-lg font-extrabold text-blue-900 flex items-center gap-1.5">
-                <i class="fa-solid fa-boxes-stacked text-blue-600 text-sm"></i>
-                <span>${Number(qty).toLocaleString()} Paires</span>
-              </div>
+            <div class="mt-2.5 flex items-center justify-between bg-blue-50/50 px-3 py-2 rounded-xl border border-blue-100/60">
+              <span class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                <i class="fa-solid fa-boxes-stacked text-blue-600 text-xs"></i>
+                <span>Quantité à livrer :</span>
+              </span>
+              <span class="text-sm sm:text-base font-bold text-blue-900 font-mono">
+                ${Number(qty).toLocaleString()} Paires
+              </span>
             </div>
+
+            <!-- Google Sheets Live Sync Pill -->
+            ${isCompleted ? `
+              <div class="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+                <span>Synchronisé avec Google Sheets</span>
+              </div>
+            ` : ''}
+
           </div>
 
-          <!-- Bottom Action Strip -->
-          <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
-            <button data-id="${item.id}" class="btn-complete-text flex items-center gap-2 text-xs sm:text-sm font-bold ${isCompleted ? 'text-emerald-700 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-700'} transition min-h-[44px]">
-              <i class="fa-solid ${isCompleted ? 'fa-circle-check text-emerald-600 text-sm' : 'fa-circle text-slate-300 text-sm'}"></i>
-              <span>${isCompleted ? 'Livré' : 'Marquer comme Livré'}</span>
+          <!-- Bottom Actions: Toggle Status & View Details -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
+            <button type="button" onclick="event.stopPropagation(); markAsDelivered('${item.id}', event)" data-id="${item.id}" class="btn-complete-text flex items-center gap-2 text-xs sm:text-sm font-bold ${isCompleted ? 'text-emerald-700 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-700'} transition min-h-[44px]">
+              <i class="fa-solid ${isCompleted ? 'fa-circle-check text-emerald-600 text-sm' : 'fa-circle text-slate-300 text-sm'} pointer-events-none"></i>
+              <span>${isCompleted ? 'Livré' : 'Livrer'}</span>
             </button>
-            <button onclick="viewRouteDetail('${item.id}')" class="text-slate-700 hover:text-blue-700 font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl hover:bg-slate-100 border border-transparent hover:border-slate-200 min-h-[44px]">
+            <button type="button" onclick="viewRouteDetail('${item.id}')" class="text-slate-700 hover:text-blue-700 font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl hover:bg-slate-100 border border-transparent hover:border-slate-200 min-h-[44px]">
               <span>Détails</span>
               <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
             </button>
@@ -9512,59 +9729,98 @@ const LOCAL_DELIVERY_DATA = [
       });
     }
 
+    /**
+     * Mark as Delivered Action Handler:
+     * 1. Optimistic UI: Flips status immediately, updates in-memory state.
+     * 2. LocalStorage Persistence: Keeps delivered status across page refreshes.
+     * 3. DOM Re-render: Instantly updates counter badges and moves card between tabs.
+     * 4. Google Sheets Registration: Transmits status mutation directly to Google Sheets Web App.
+     */
+    async function markAsDelivered(deliveryId, event) {
+      if (event) {
+        if (event.stopPropagation) event.stopPropagation();
+        if (event.preventDefault) event.preventDefault();
+      }
+
+      if (!deliveryId) {
+        console.warn("[Tradifoot] markAsDelivered called without deliveryId.");
+        return;
+      }
+
+      const idStr = String(deliveryId).trim();
+      console.log(`[Tradifoot] Processing 'Livrer' click for tournée #${idStr}`);
+
+      // Locate item in memory
+      const targetItem = AppState.rawDeliveries.find(d => String(d.id).trim() === idStr);
+      if (!targetItem) {
+        console.error(`[Tradifoot] Tournée #${idStr} not found in AppState.rawDeliveries.`);
+        return;
+      }
+
+      const isCurrentlyCompleted = targetItem.status === 'Livré' || 
+                                   targetItem.completed === true || 
+                                   AppState.completedDeliveryIds.has(idStr);
+
+      const willBeCompleted = !isCurrentlyCompleted;
+      const newStatus = willBeCompleted ? 'Livré' : 'Non Livré';
+
+      // 1. Optimistic UI update
+      targetItem.completed = willBeCompleted;
+      targetItem.status = newStatus;
+
+      if (Array.isArray(AppState.deliveries)) {
+        const itemInView = AppState.deliveries.find(d => String(d.id).trim() === idStr);
+        if (itemInView) {
+          itemInView.completed = willBeCompleted;
+          itemInView.status = newStatus;
+        }
+      }
+
+      // 2. LocalStorage persistence
+      AppState.completedDeliveryIds = loadDeliveredIds();
+      if (willBeCompleted) {
+        AppState.completedDeliveryIds.add(idStr);
+      } else {
+        AppState.completedDeliveryIds.delete(idStr);
+      }
+      saveDeliveredIds(AppState.completedDeliveryIds);
+
+      // 3. Instant DOM re-render & tab badge recalculation
+      computeActiveDeliveries();
+      renderDailyManifest();
+      renderCalendar();
+
+      // 4. Instant Visual Toast
+      showNotification(
+        willBeCompleted ? `Tournée #${idStr} marquée comme Livrée ! Enregistrement Google Sheets...` : `Tournée #${idStr} remise en attente`,
+        willBeCompleted ? "success" : "info"
+      );
+
+      // 5. Asynchronous Google Sheets Registration
+      syncDeliveryStatusToSheet(targetItem, newStatus);
+    }
+
+    // Expose markAsDelivered globally on window
+    window.markAsDelivered = markAsDelivered;
+
     function initCardEventDelegation() {
       if (!DOM.cardsContainer) return;
-
       DOM.cardsContainer.addEventListener("click", (e) => {
         const toggleBtn = e.target.closest(".btn-complete-toggle") || e.target.closest(".btn-complete-text");
         if (!toggleBtn) return;
-
         const itemId = toggleBtn.getAttribute("data-id");
         if (!itemId) return;
-
-        const targetItem = AppState.rawDeliveries.find(d => String(d.id) === String(itemId));
-        if (!targetItem) return;
-
-        const isCurrentlyCompleted = AppState.completedDeliveryIds.has(itemId);
-        const willBeCompleted = !isCurrentlyCompleted;
-        const newStatus = willBeCompleted ? 'Livré' : 'Non Livré';
-
-        targetItem.completed = willBeCompleted;
-        targetItem.status = newStatus;
-
-        if (willBeCompleted) {
-          AppState.completedDeliveryIds.add(itemId);
-        } else {
-          AppState.completedDeliveryIds.delete(itemId);
-        }
-
-        saveDeliveredIds(AppState.completedDeliveryIds);
-
-        // Recompute and refresh UI
-        computeActiveDeliveries();
-        renderDailyManifest();
-        renderCalendar();
-        
-
-        showNotification(
-          willBeCompleted ? `Tournée #${itemId} marquée comme Livrée` : `Tournée #${itemId} remise en attente`,
-          willBeCompleted ? "success" : "info"
-        );
-
-        // Background Google Apps Script sync
-        fetch(`${GOOGLE_APP_URL}?action=update_status&id=${encodeURIComponent(itemId)}&status=${encodeURIComponent(newStatus)}`, {
-          method: 'POST',
-          mode: 'no-cors'
-        }).catch(() => {});
+        markAsDelivered(itemId, e);
       });
     }
 
     function selectDate(dateStr) {
       AppState.selectedDateStr = dateStr;
       selectedDateStr = dateStr;
+      const [y, m, d] = dateStr.split("-").map(Number);
+      AppState.currentViewDate = new Date(y, m - 1, 1);
       renderCalendar();
       renderDailyManifest();
-      
     }
 
     function changeMonth(delta) {
@@ -9574,153 +9830,174 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function goToToday() {
-      const today = "2026-10-28";
-      const [y, m, d] = today.split("-").map(Number);
-      AppState.currentViewDate = new Date(y, m - 1, 1);
-      selectDate(today);
+      AppState.currentViewDate = new Date(2026, 9, 1);
+      selectDate("2026-10-28");
     }
 
     function setManifestFilter(status) {
       AppState.activeManifestFilter = status;
       activeManifestFilter = status;
 
-      const ACTIVE = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-bold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/90 outline-none select-none active:scale-95 min-h-[44px]";
-      const INACTIVE = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
+      const tabs = [
+        { id: DOM.filterAll, active: status === "ALL" },
+        { id: DOM.filterPending, active: status === "PENDING" },
+        { id: DOM.filterDelivered, active: status === "Delivered" }
+      ];
 
-      if (DOM.filterAll) DOM.filterAll.className = (status === 'ALL') ? ACTIVE : INACTIVE;
-      if (DOM.filterPending) DOM.filterPending.className = (status === 'PENDING') ? ACTIVE : INACTIVE;
-      if (DOM.filterDelivered) DOM.filterDelivered.className = (status === 'Delivered') ? ACTIVE : INACTIVE;
+      tabs.forEach(tab => {
+        if (!tab.id) return;
+        if (tab.active) {
+          tab.id.className = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 bg-white text-slate-900 shadow-sm border border-slate-200/80 outline-none select-none active:scale-95 min-h-[44px]";
+        } else {
+          tab.id.className = "flex-1 flex items-center justify-center py-2 px-2 rounded-xl text-xs sm:text-sm font-semibold transition duration-200 text-slate-600 hover:text-slate-900 outline-none select-none active:scale-95 min-h-[44px]";
+        }
+      });
 
       renderDailyManifest();
     }
 
     function jumpToNextDelivery() {
-      const sortedDates = [...new Set(AppState.deliveries.map(d => d.date))].sort();
-      let nextDate = sortedDates.find(d => d > AppState.selectedDateStr);
-      if (!nextDate) nextDate = sortedDates[0];
-      if (!nextDate) return;
-
-      const [y, m, d] = nextDate.split("-").map(Number);
-      AppState.currentViewDate = new Date(y, m - 1, 1);
-      selectDate(nextDate);
+      const allDates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean).sort();
+      const nextDate = allDates.find(d => d > AppState.selectedDateStr);
+      if (nextDate) {
+        selectDate(nextDate);
+      } else if (allDates.length > 0) {
+        selectDate(allDates[0]);
+      }
     }
 
     function viewRouteDetail(deliveryId) {
-      const item = AppState.deliveries.find(d => String(d.id) === String(deliveryId));
-      if (!item) return;
+      const item = AppState.rawDeliveries.find(d => String(d.id).trim() === String(deliveryId).trim());
+      if (!item || !DOM.detailModal || !DOM.modalBody) return;
 
+      const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
       const storeName = item.magasin || item.destination || "Magasin";
       const driverName = item.chauffeur || item.driver || "Non assigné";
       const matricule = item.matricule || item.vehicle || "Camion standard";
       const qty = item.quantite !== undefined ? item.quantite : item.quantity;
       const delivDate = item.date || "";
 
-      if (DOM.modalRouteName) DOM.modalRouteName.textContent = storeName;
-      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Tournée #${item.id} • ${delivDate}`;
+      if (DOM.modalRouteName) DOM.modalRouteName.textContent = `Tournée #${item.id}`;
+      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `${delivDate} • ${storeName}`;
 
-      const isCompleted = item.completed || item.status === "Livré" || AppState.completedDeliveryIds.has(String(item.id));
+      DOM.modalBody.innerHTML = `
+        <div class="space-y-4">
+          <!-- Status Banner -->
+          <div class="p-3.5 rounded-2xl ${isCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-slate-100 border border-slate-200 text-slate-800'} flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider">Statut de la livraison</span>
+            <span class="text-xs font-bold px-3 py-1 rounded-full ${isCompleted ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">
+              ${isCompleted ? 'Livré' : 'Non Livré'}
+            </span>
+          </div>
 
-      if (DOM.modalBody) {
-        DOM.modalBody.innerHTML = `
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Magasin</span>
-              <span class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                <i class="fa-solid fa-store text-blue-600 text-sm"></i>
-                ${storeName}
-              </span>
+          <!-- Essential Details Grid -->
+          <div class="grid grid-cols-2 gap-3 text-xs sm:text-sm">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Date</span>
+              <span class="font-bold text-slate-800">${delivDate}</span>
             </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Date</span>
-              <span class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                <i class="fa-regular fa-calendar-check text-blue-600 text-sm"></i>
-                ${delivDate}
-              </span>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Magasin</span>
+              <span class="font-bold text-slate-800">${storeName}</span>
             </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Chauffeur</span>
-              <span class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                <i class="fa-solid fa-user-tie text-blue-600 text-sm"></i>
-                ${driverName}
-              </span>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Chauffeur</span>
+              <span class="font-bold text-slate-800">${driverName}</span>
             </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Matricule</span>
-              <span class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                <i class="fa-solid fa-truck text-slate-600 text-sm"></i>
-                ${matricule}
-              </span>
-            </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Quantité</span>
-              <span class="font-extrabold text-blue-900 text-base sm:text-lg flex items-center gap-2">
-                <i class="fa-solid fa-boxes-stacked text-blue-600 text-base"></i>
-                ${Number(qty).toLocaleString()} Paires
-              </span>
-            </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Statut</span>
-              <div class="mt-1">
-                ${isCompleted ? `
-                  <span class="inline-flex items-center gap-1.5 text-emerald-800 font-bold text-sm bg-emerald-100/80 px-3.5 py-1.5 rounded-full border border-emerald-300 shadow-2xs">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Livré
-                  </span>
-                ` : `
-                  <span class="inline-flex items-center gap-1.5 text-slate-700 font-bold text-sm bg-slate-200/80 px-3.5 py-1.5 rounded-full border border-slate-300 shadow-2xs">
-                    <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span> Non Livré
-                  </span>
-                `}
-              </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Matricule</span>
+              <span class="font-bold text-slate-800 font-mono">${matricule}</span>
             </div>
           </div>
-        `;
-      }
 
-      if (DOM.detailModal) DOM.detailModal.classList.remove("hidden");
+          <!-- Quantite Highlight -->
+          <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-blue-900 uppercase">Quantité programmée</span>
+            <span class="text-base font-extrabold text-blue-950 font-mono">${Number(qty).toLocaleString()} Paires</span>
+          </div>
+
+          <!-- Google Sheets Sync Confirmation -->
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+            <i class="fa-solid fa-file-spreadsheet text-emerald-600"></i>
+            <span>Connecté à Google Sheets (Enregistrement automatique au clic 'Livrer')</span>
+          </div>
+
+          <!-- Modal Action -->
+          <div class="pt-2 flex justify-end">
+            <button onclick="markAsDelivered('${item.id}', event); closeModal();" class="px-5 py-2.5 rounded-xl ${isCompleted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95">
+              ${isCompleted ? 'Remettre en attente' : 'Marquer comme Livré maintenant'}
+            </button>
+          </div>
+        </div>
+      `;
+
+      DOM.detailModal.classList.remove("hidden");
     }
 
     function closeModal() {
       if (DOM.detailModal) DOM.detailModal.classList.add("hidden");
     }
 
+    /**
+     * Initializes the authenticated application workspace:
+     * - Configures role-based toolbar and badges
+     * - Auto-detects the most relevant date with deliveries for the logged-in chauffeur
+     * - Renders calendar and daily manifest
+     * - Flushes offline queue if available
+     */
     function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
 
+      const isAdmin = AppState.currentUser.role === 'admin';
+
       if (DOM.userRoleBadge) {
-        DOM.userRoleBadge.textContent = AppState.currentUser.role.toUpperCase();
+        DOM.userRoleBadge.textContent = isAdmin ? "ADMIN CONSOLE" : "CHAUFFEUR";
+        DOM.userRoleBadge.className = isAdmin
+          ? "px-3 py-0.5 text-xs font-semibold rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/30 hidden sm:inline-block"
+          : "px-3 py-0.5 text-xs font-semibold rounded-full bg-blue-950/80 text-cyan-300 border border-cyan-500/30 hidden sm:inline-block";
         DOM.userRoleBadge.classList.remove("hidden");
       }
       if (DOM.userRoleSubtitle) {
-        DOM.userRoleSubtitle.textContent = AppState.currentUser.role === 'admin'
-          ? "Portail d'Administration Logistique"
+        DOM.userRoleSubtitle.textContent = isAdmin
+          ? "Portail d'Administration Logistique • Vue Globale"
           : `Espace Chauffeur • ${AppState.currentUser.chauffeurName}`;
       }
 
-      populateAdminChauffeurs();
-      populateAdminBoutiques();
+      if (DOM.adminToolbar) {
+        if (isAdmin) {
+          DOM.adminToolbar.classList.remove("hidden");
+          populateAdminChauffeurs();
+          populateAdminBoutiques();
+        } else {
+          DOM.adminToolbar.classList.add("hidden");
+        }
+      }
+
+      // Compute active deliveries based on RBAC
       computeActiveDeliveries();
 
-      // Find newest date with deliveries or default to today
-      const dates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean);
-      if (dates.includes("2026-10-28")) {
-        AppState.selectedDateStr = "2026-10-28";
-      } else if (dates.length > 0) {
-        AppState.selectedDateStr = dates.sort().pop();
+      // AUTO-DATE SELECTION FOR CHAUFFEUR & ADMIN:
+      // 1. If today (2026-10-28) has deliveries for this user, use today.
+      // 2. Otherwise, select the most recent date with deliveries for this user.
+      // 3. Fallback to today if no deliveries found.
+      const todayStr = "2026-10-28";
+      const availableDates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean).sort();
+
+      if (availableDates.includes(todayStr)) {
+        AppState.selectedDateStr = todayStr;
+      } else if (availableDates.length > 0) {
+        AppState.selectedDateStr = availableDates[availableDates.length - 1];
+      } else {
+        AppState.selectedDateStr = todayStr;
       }
 
       const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
       AppState.currentViewDate = new Date(y, m - 1, 1);
 
       renderCalendar();
-      
       setManifestFilter('ALL');
       initCardEventDelegation();
-      syncRemoteDeliveries();
+      flushOfflineSyncQueue();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
