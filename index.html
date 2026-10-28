@@ -1722,24 +1722,42 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * Rebuilt Google Sheets Connection & Real-Time Mutation Engine with Cache-Busting.
+     * Rebuilt Google Sheets Connection & Real-Time Mutation Engine with Driver Tracking.
      */
     async function syncDeliveryStatusToSheet(item, newStatus) {
       if (!item) return;
+
+      // Retrieve logged-in driver's chauffeurName from localStorage session
+      let driverName = "";
+      try {
+        const rawSession = localStorage.getItem("auth_session");
+        if (rawSession) {
+          const session = JSON.parse(rawSession);
+          if (session && session.chauffeurName && session.chauffeurName !== "All") {
+            driverName = session.chauffeurName;
+          } else if (session && session.username) {
+            driverName = session.username;
+          }
+        }
+      } catch (e) {}
+
+      if (!driverName) {
+        driverName = String(item.chauffeur || item.driver || "").trim();
+      }
 
       const payload = {
         action: 'update_status',
         id: String(item.id || '').trim(),
         status: newStatus,
+        chauffeur: driverName,
         date: String(item.date || AppState.selectedDateStr || '').trim(),
         magasin: String(item.magasin || item.destination || '').trim(),
-        chauffeur: String(item.chauffeur || item.driver || '').trim(),
         matricule: String(item.matricule || item.vehicle || '').trim(),
         quantite: Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0,
         timestamp: new Date().toISOString()
       };
 
-      updateSheetSyncBadge('syncing', `Envoi #${payload.id} vers Google Sheets...`);
+      updateSheetSyncBadge('syncing', `Envoi #${payload.id} (${driverName || 'Tournée'}) vers Google Sheets...`);
       const jsonString = JSON.stringify(payload);
       const postUrl = `${GOOGLE_APP_URL}?t=${new Date().getTime()}`;
 
@@ -2493,6 +2511,23 @@ const LOCAL_DELIVERY_DATA = [
         return;
       }
 
+      // Retrieve logged-in driver's chauffeurName from localStorage
+      let currentDriverName = "";
+      try {
+        const rawSession = localStorage.getItem("auth_session");
+        if (rawSession) {
+          const session = JSON.parse(rawSession);
+          if (session && session.chauffeurName && session.chauffeurName !== "All") {
+            currentDriverName = session.chauffeurName;
+          }
+        }
+      } catch (e) {}
+
+      if (currentDriverName) {
+        targetItem.chauffeur = currentDriverName;
+        targetItem.driver = currentDriverName;
+      }
+
       const isCurrentlyCompleted = isItemDelivered(targetItem);
       const newStatus = isCurrentlyCompleted ? 'Non Livré' : 'Livré';
       const willBeCompleted = !isCurrentlyCompleted;
@@ -2505,6 +2540,10 @@ const LOCAL_DELIVERY_DATA = [
         if (itemInView) {
           itemInView.completed = willBeCompleted;
           itemInView.status = newStatus;
+          if (currentDriverName) {
+            itemInView.chauffeur = currentDriverName;
+            itemInView.driver = currentDriverName;
+          }
         }
       }
 
