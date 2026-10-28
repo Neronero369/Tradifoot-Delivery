@@ -1359,6 +1359,8 @@ const LOCAL_DELIVERY_DATA = [
       isFetchingRemote: false
     };
 
+    let autoPollingTimer = null;
+
     let DOM = {};
 
     function initDOMCache() {
@@ -1447,12 +1449,21 @@ const LOCAL_DELIVERY_DATA = [
 
     function isItemDelivered(item) {
       if (!item) return false;
-      const idStr = String(item.id || '').trim();
-      return Boolean(
-        (idStr && AppState.completedDeliveryIds.has(idStr)) ||
-        item.completed === true ||
-        item.status === 'Livré'
-      );
+      return Boolean(item.completed === true || item.status === 'Livré');
+    }
+
+    function initLocalDeliveryStates() {
+      AppState.completedDeliveryIds = loadDeliveredIds();
+      AppState.rawDeliveries.forEach(item => {
+        const idStr = String(item.id || '').trim();
+        if (AppState.completedDeliveryIds.has(idStr)) {
+          item.completed = true;
+          item.status = 'Livré';
+        } else {
+          item.completed = false;
+          item.status = 'Non Livré';
+        }
+      });
     }
 
     function showNotification(msg, type = "info") {
@@ -1496,8 +1507,9 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * SERVER AS ABSOLUTE SOURCE OF TRUTH:
-     * Overwrites local delivery records and synchronizes browser localStorage.
+     * SERVER AS ABSOLUTE SOURCE OF TRUTH (Kill Local Conflicts):
+     * Strictly overwrites local delivery records, completely replaces conflicting local states,
+     * and forces localStorage to synchronize with the server.
      */
     function applyServerSourceOfTruth(remoteDeliveries) {
       if (!Array.isArray(remoteDeliveries) || remoteDeliveries.length === 0) return;
@@ -1507,42 +1519,21 @@ const LOCAL_DELIVERY_DATA = [
 
       remoteDeliveries.forEach(r => {
         if (!r) return;
-        const rId = String(r.id || '').trim();
-        const rDate = String(r.date || '').trim();
-        const rStore = normalizeDriver(r.magasin || r.destination || '');
-        const rDriver = normalizeDriver(r.chauffeur || r.driver || '');
+        const norm = normalizeDeliveryRecord(r);
+        if (!norm) return;
+        const rId = String(norm.id || '').trim();
+        const rDate = String(norm.date || '').trim();
+        const rStore = normalizeDriver(norm.magasin || norm.destination || '');
+        const rDriver = normalizeDriver(norm.chauffeur || norm.driver || '');
 
-        const isLivre = Boolean(
-          r.completed === true ||
-          (typeof r.status === 'string' && /livr/i.test(r.status) && !/non/i.test(r.status))
-        );
-
-        const record = {
-          ...r,
-          id: rId,
-          date: rDate,
-          magasin: r.magasin || r.destination || '',
-          destination: r.magasin || r.destination || '',
-          chauffeur: r.chauffeur || r.driver || '',
-          driver: r.chauffeur || r.driver || '',
-          matricule: r.matricule || r.vehicle || '',
-          vehicle: r.matricule || r.vehicle || '',
-          quantite: Number(r.quantite !== undefined ? r.quantite : r.quantity) || 0,
-          quantity: Number(r.quantite !== undefined ? r.quantite : r.quantity) || 0,
-          status: isLivre ? 'Livré' : 'Non Livré',
-          completed: isLivre
-        };
-
-        if (rId) remoteById.set(rId.toUpperCase(), record);
+        if (rId) remoteById.set(rId.toUpperCase(), norm);
         if (rDate && rStore) {
-          remoteByComposite.set(`${rDate}|||${rStore}|||${rDriver}`, record);
+          remoteByComposite.set(`${rDate}|||${rStore}|||${rDriver}`, norm);
         }
       });
 
-      // Strict overwrite of localStorage completion Set
-      const newCompletedIds = new Set(AppState.completedDeliveryIds);
-
-      AppState.rawDeliveries = AppState.rawDeliveries.map(localItem => {
+      // Strict server overwrite: Overwrite local delivery records and kill local conflicts
+      AppState.rawDeliveries.forEach(localItem => {
         const localId = String(localItem.id || '').trim().toUpperCase();
         const localDate = String(localItem.date || '').trim();
         const localStore = normalizeDriver(localItem.magasin || localItem.destination || '');
@@ -1552,22 +1543,35 @@ const LOCAL_DELIVERY_DATA = [
         const remoteMatch = (localId && remoteById.get(localId)) || remoteByComposite.get(compKey);
 
         if (remoteMatch) {
-          const serverIsLivre = remoteMatch.completed;
           const cleanId = String(localItem.id).trim();
-          if (serverIsLivre) {
-            newCompletedIds.add(cleanId);
-          } else {
-            newCompletedIds.delete(cleanId);
+          const serverIsLivre = remoteMatch.completed;
+
+          // In-place mutation strictly overwriting local status
+          localItem.status = serverIsLivre ? 'Livré' : 'Non Livré';
+          localItem.completed = serverIsLivre;
+          if (remoteMatch.magasin) {
+            localItem.magasin = remoteMatch.magasin;
+            localItem.destination = remoteMatch.magasin;
           }
-          return {
-            ...localItem,
-            ...remoteMatch,
-            id: localItem.id,
-            status: serverIsLivre ? 'Livré' : 'Non Livré',
-            completed: serverIsLivre
-          };
+          if (remoteMatch.chauffeur) {
+            localItem.chauffeur = remoteMatch.chauffeur;
+            localItem.driver = remoteMatch.chauffeur;
+          }
+          if (remoteMatch.matricule) {
+            localItem.matricule = remoteMatch.matricule;
+            localItem.vehicle = remoteMatch.matricule;
+          }
+          if (remoteMatch.quantite) {
+            localItem.quantite = remoteMatch.quantite;
+            localItem.quantity = remoteMatch.quantite;
+          }
+
+          if (serverIsLivre) {
+            AppState.completedDeliveryIds.add(cleanId);
+          } else {
+            AppState.completedDeliveryIds.delete(cleanId);
+          }
         }
-        return localItem;
       });
 
       // Append any newly discovered routes from server
@@ -1578,14 +1582,13 @@ const LOCAL_DELIVERY_DATA = [
         if (!exists) {
           const norm = normalizeDeliveryRecord(r);
           if (norm) {
-            if (norm.completed) newCompletedIds.add(String(norm.id).trim());
+            if (norm.completed) AppState.completedDeliveryIds.add(String(norm.id).trim());
             AppState.rawDeliveries.push(norm);
           }
         }
       });
 
-      // Overwrite persistent localStorage cache
-      AppState.completedDeliveryIds = newCompletedIds;
+      // Overwrite persistent localStorage cache with the server source of truth
       saveDeliveredIds(AppState.completedDeliveryIds);
 
       // Refresh view
@@ -1596,7 +1599,7 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * Fetches deliveries from Google Apps Script Web App.
+     * Fetches deliveries from Google Apps Script Web App with aggressive cache-busting.
      */
     async function fetchRemoteDeliveries(isManual = false) {
       if (AppState.isFetchingRemote) return;
@@ -1615,16 +1618,24 @@ const LOCAL_DELIVERY_DATA = [
         const chauffeurName = user ? (user.chauffeurName || '') : '';
 
         let remoteDeliveries = null;
+        const cacheBuster = `t=${Date.now()}&_bust=${Math.random().toString(36).substring(2, 8)}`;
 
-        // Primary Fetch Method: POST with plain text payload
+        // Primary Fetch Method: POST with cache-busting URL and headers
         try {
-          const res = await fetch(GOOGLE_APP_URL, {
+          const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}${cacheBuster}`;
+          const res = await fetch(postUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            cache: 'no-store',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
             body: JSON.stringify({
               action: 'get_deliveries',
               role: role,
-              chauffeurName: chauffeurName
+              chauffeurName: chauffeurName,
+              t: Date.now()
             })
           });
 
@@ -1634,18 +1645,27 @@ const LOCAL_DELIVERY_DATA = [
               const json = JSON.parse(text);
               if (json && Array.isArray(json.deliveries)) {
                 remoteDeliveries = json.deliveries;
+              } else if (Array.isArray(json)) {
+                remoteDeliveries = json;
+              } else if (json && Array.isArray(json.data)) {
+                remoteDeliveries = json.data;
               }
             } catch (pErr) {}
           }
         } catch (postErr) {}
 
-        // Fallback Fetch Method: GET query
+        // Fallback Fetch Method: GET query with cache-busting parameter and no-store
         if (!remoteDeliveries) {
           try {
-            const getUrl = `${GOOGLE_APP_URL}?action=get_deliveries&role=${encodeURIComponent(role)}&chauffeurName=${encodeURIComponent(chauffeurName)}&_t=${Date.now()}`;
+            const getUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}action=get_deliveries&role=${encodeURIComponent(role)}&chauffeurName=${encodeURIComponent(chauffeurName)}&${cacheBuster}`;
             const getRes = await fetch(getUrl, {
               method: 'GET',
-              headers: { 'Accept': 'application/json' }
+              cache: 'no-store',
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
             });
             if (getRes.ok) {
               const getText = await getRes.text();
@@ -1653,6 +1673,10 @@ const LOCAL_DELIVERY_DATA = [
                 const getJson = JSON.parse(getText);
                 if (getJson && Array.isArray(getJson.deliveries)) {
                   remoteDeliveries = getJson.deliveries;
+                } else if (Array.isArray(getJson)) {
+                  remoteDeliveries = getJson;
+                } else if (getJson && Array.isArray(getJson.data)) {
+                  remoteDeliveries = getJson.data;
                 }
               } catch (jErr) {}
             }
@@ -1691,7 +1715,7 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * Rebuilt Google Sheets Connection & Real-Time Mutation Engine.
+     * Rebuilt Google Sheets Connection & Real-Time Mutation Engine with Cache-Busting.
      */
     async function syncDeliveryStatusToSheet(item, newStatus) {
       if (!item) return;
@@ -1710,12 +1734,13 @@ const LOCAL_DELIVERY_DATA = [
 
       updateSheetSyncBadge('syncing', `Envoi #${payload.id} vers Google Sheets...`);
       const jsonString = JSON.stringify(payload);
+      const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
       try {
-        await fetch(GOOGLE_APP_URL, {
+        await fetch(postUrl, {
           method: 'POST',
           mode: 'no-cors',
-          cache: 'no-cache',
+          cache: 'no-store',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8'
           },
@@ -1731,7 +1756,7 @@ const LOCAL_DELIVERY_DATA = [
         try {
           if (navigator.sendBeacon) {
             const blob = new Blob([jsonString], { type: 'text/plain;charset=utf-8' });
-            if (navigator.sendBeacon(GOOGLE_APP_URL, blob)) {
+            if (navigator.sendBeacon(postUrl, blob)) {
               updateSheetSyncBadge('success', 'Google Sheets Synchronisé ✓');
               return true;
             }
@@ -1763,12 +1788,13 @@ const LOCAL_DELIVERY_DATA = [
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         localStorage.removeItem("pending_sheet_sync_queue");
+        const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
         for (const item of queue) {
-          await fetch(GOOGLE_APP_URL, {
+          await fetch(postUrl, {
             method: 'POST',
             mode: 'no-cors',
-            cache: 'no-cache',
+            cache: 'no-store',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(item)
           });
@@ -1779,15 +1805,53 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
+    /**
+     * Silent Background Auto-Polling (every 30s)
+     */
+    function startAutoPolling() {
+      stopAutoPolling();
+      autoPollingTimer = setInterval(() => {
+        const session = AppState.currentUser || getAuthSession();
+        if (session && document.visibilityState === 'visible') {
+          fetchRemoteDeliveries(false);
+        }
+      }, 30000);
+    }
+
+    function stopAutoPolling() {
+      if (autoPollingTimer) {
+        clearInterval(autoPollingTimer);
+        autoPollingTimer = null;
+      }
+    }
+
+    // App Visibility Sync (Mobile Lock/Unlock Handler & Tab Switching)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        const session = AppState.currentUser || getAuthSession();
+        if (session) {
+          fetchRemoteDeliveries(false);
+        }
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      const session = AppState.currentUser || getAuthSession();
+      if (session) {
+        fetchRemoteDeliveries(false);
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      const session = AppState.currentUser || getAuthSession();
+      if (session) {
+        fetchRemoteDeliveries(false);
+      }
+    });
+
     window.addEventListener('online', () => {
       flushOfflineSyncQueue();
       fetchRemoteDeliveries(false);
-    });
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && AppState.currentUser) {
-        fetchRemoteDeliveries(false);
-      }
     });
 
     function handleLogin(event) {
@@ -1833,6 +1897,7 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function handleLogout() {
+      stopAutoPolling();
       clearAuthSession();
       AppState.currentUser = null;
       if (DOM.mainApp) DOM.mainApp.classList.add("hidden");
@@ -1876,21 +1941,6 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function computeActiveDeliveries() {
-      AppState.completedDeliveryIds = loadDeliveredIds();
-
-      AppState.rawDeliveries = AppState.rawDeliveries.map(d => {
-        const isCompleted = isItemDelivered(d);
-        if (isCompleted) {
-          AppState.completedDeliveryIds.add(String(d.id));
-        }
-        return {
-          ...d,
-          completed: isCompleted,
-          status: isCompleted ? 'Livré' : 'Non Livré'
-        };
-      });
-      saveDeliveredIds(AppState.completedDeliveryIds);
-
       const currentUser = getAuthSession() || AppState.currentUser;
       const allData = AppState.rawDeliveries;
       let displayData = [];
@@ -2154,6 +2204,9 @@ const LOCAL_DELIVERY_DATA = [
     function renderDailyManifest() {
       if (!DOM.cardsContainer) return;
 
+      const prevScrollTop = DOM.cardsContainer ? DOM.cardsContainer.scrollTop : 0;
+      const prevWindowY = window.scrollY || document.documentElement.scrollTop || 0;
+
       const [y, m, d] = AppState.selectedDateStr.split("-").map(Number);
       const dateObj = new Date(y, m - 1, d);
       const formattedDate = dateObj.toLocaleDateString("fr-FR", {
@@ -2377,6 +2430,13 @@ const LOCAL_DELIVERY_DATA = [
       });
 
       DOM.cardsContainer.innerHTML = cardsHtml;
+
+      if (DOM.cardsContainer) {
+        DOM.cardsContainer.scrollTop = prevScrollTop;
+      }
+      if ((window.scrollY || document.documentElement.scrollTop || 0) !== prevWindowY) {
+        window.scrollTo({ top: prevWindowY, behavior: 'instant' });
+      }
     }
 
     async function markAsDelivered(deliveryId, event) {
@@ -2604,13 +2664,17 @@ const LOCAL_DELIVERY_DATA = [
       setManifestFilter('ALL');
       flushOfflineSyncQueue();
 
-      // Automatic Remote Sync: Fetch latest server status on app initialization
+      // Start silent 30-second background auto-polling
+      startAutoPolling();
+
+      // Automatic Remote Sync: Immediately fetch latest server source of truth
       fetchRemoteDeliveries(false);
     }
 
     window.addEventListener("DOMContentLoaded", () => {
       initDOMCache();
       initDelegatedEventListeners();
+      initLocalDeliveryStates();
 
       const session = getAuthSession();
       if (session && session.username && session.role) {
