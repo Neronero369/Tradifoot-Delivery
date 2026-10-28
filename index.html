@@ -1428,7 +1428,10 @@ const LOCAL_DELIVERY_DATA = [
 
     function clearAuthSession() {
       try {
-        localStorage.removeItem("auth_session");
+        localStorage.clear();
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.clear();
+        }
       } catch (e) {}
     }
 
@@ -1507,9 +1510,10 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * SERVER AS ABSOLUTE SOURCE OF TRUTH (Kill Local Conflicts):
-     * Strictly overwrites local delivery records, completely replaces conflicting local states,
-     * and forces localStorage to synchronize with the server.
+     * STRICT DATA OVERWRITE (NO LOCAL MERGING):
+     * The server response 100% destroys and overwrites the local delivery state array.
+     * If the server says a delivery is "Non Livré", the frontend strictly obeys,
+     * killing any local state or localStorage conflicts.
      */
     function applyServerSourceOfTruth(remoteDeliveries) {
       if (!Array.isArray(remoteDeliveries) || remoteDeliveries.length === 0) return;
@@ -1532,7 +1536,7 @@ const LOCAL_DELIVERY_DATA = [
         }
       });
 
-      // Strict server overwrite: Overwrite local delivery records and kill local conflicts
+      // Strict server overwrite: 100% overwrite local delivery records
       AppState.rawDeliveries.forEach(localItem => {
         const localId = String(localItem.id || '').trim().toUpperCase();
         const localDate = String(localItem.date || '').trim();
@@ -1543,12 +1547,12 @@ const LOCAL_DELIVERY_DATA = [
         const remoteMatch = (localId && remoteById.get(localId)) || remoteByComposite.get(compKey);
 
         if (remoteMatch) {
-          const cleanId = String(localItem.id).trim();
-          const serverIsLivre = remoteMatch.completed;
+          const serverIsLivre = Boolean(remoteMatch.completed);
 
-          // In-place mutation strictly overwriting local status
+          // In-place mutation strictly overwriting local status (no merging)
           localItem.status = serverIsLivre ? 'Livré' : 'Non Livré';
           localItem.completed = serverIsLivre;
+
           if (remoteMatch.magasin) {
             localItem.magasin = remoteMatch.magasin;
             localItem.destination = remoteMatch.magasin;
@@ -1565,12 +1569,6 @@ const LOCAL_DELIVERY_DATA = [
             localItem.quantite = remoteMatch.quantite;
             localItem.quantity = remoteMatch.quantite;
           }
-
-          if (serverIsLivre) {
-            AppState.completedDeliveryIds.add(cleanId);
-          } else {
-            AppState.completedDeliveryIds.delete(cleanId);
-          }
         }
       });
 
@@ -1582,13 +1580,20 @@ const LOCAL_DELIVERY_DATA = [
         if (!exists) {
           const norm = normalizeDeliveryRecord(r);
           if (norm) {
-            if (norm.completed) AppState.completedDeliveryIds.add(String(norm.id).trim());
             AppState.rawDeliveries.push(norm);
           }
         }
       });
 
-      // Overwrite persistent localStorage cache with the server source of truth
+      // Strict Rebuild: Rebuild completedDeliveryIds strictly from the active state (NO local merging with old cache)
+      AppState.completedDeliveryIds = new Set();
+      AppState.rawDeliveries.forEach(d => {
+        if (d.completed === true || d.status === 'Livré') {
+          AppState.completedDeliveryIds.add(String(d.id).trim());
+        }
+      });
+
+      // Overwrite persistent localStorage cache to strictly match the server source of truth
       saveDeliveredIds(AppState.completedDeliveryIds);
 
       // Refresh view
@@ -1618,24 +1623,25 @@ const LOCAL_DELIVERY_DATA = [
         const chauffeurName = user ? (user.chauffeurName || '') : '';
 
         let remoteDeliveries = null;
-        const cacheBuster = `t=${Date.now()}&_bust=${Math.random().toString(36).substring(2, 8)}`;
+        const timestamp = new Date().getTime();
+        const postUrl = `${GOOGLE_APP_URL}?t=${timestamp}`;
 
-        // Primary Fetch Method: POST with cache-busting URL and headers
+        // Primary Fetch Method: POST with aggressive cache-busting and no-store
         try {
-          const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}${cacheBuster}`;
           const res = await fetch(postUrl, {
             method: 'POST',
             cache: 'no-store',
             headers: {
               'Content-Type': 'text/plain;charset=utf-8',
               'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
+              'Pragma': 'no-cache',
+              'Expires': '0'
             },
             body: JSON.stringify({
               action: 'get_deliveries',
               role: role,
               chauffeurName: chauffeurName,
-              t: Date.now()
+              t: timestamp
             })
           });
 
@@ -1654,17 +1660,18 @@ const LOCAL_DELIVERY_DATA = [
           }
         } catch (postErr) {}
 
-        // Fallback Fetch Method: GET query with cache-busting parameter and no-store
+        // Fallback Fetch Method: GET query with timestamp parameter and cache: 'no-store'
         if (!remoteDeliveries) {
           try {
-            const getUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}action=get_deliveries&role=${encodeURIComponent(role)}&chauffeurName=${encodeURIComponent(chauffeurName)}&${cacheBuster}`;
+            const getUrl = `${GOOGLE_APP_URL}?action=get_deliveries&role=${encodeURIComponent(role)}&chauffeurName=${encodeURIComponent(chauffeurName)}&t=${new Date().getTime()}`;
             const getRes = await fetch(getUrl, {
               method: 'GET',
               cache: 'no-store',
               headers: {
                 'Accept': 'application/json',
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
+                'Pragma': 'no-cache',
+                'Expires': '0'
               }
             });
             if (getRes.ok) {
@@ -1734,7 +1741,7 @@ const LOCAL_DELIVERY_DATA = [
 
       updateSheetSyncBadge('syncing', `Envoi #${payload.id} vers Google Sheets...`);
       const jsonString = JSON.stringify(payload);
-      const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+      const postUrl = `${GOOGLE_APP_URL}?t=${new Date().getTime()}`;
 
       try {
         await fetch(postUrl, {
@@ -1742,7 +1749,9 @@ const LOCAL_DELIVERY_DATA = [
           mode: 'no-cors',
           cache: 'no-store',
           headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
+            'Content-Type': 'text/plain;charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
           },
           body: jsonString
         });
@@ -1788,14 +1797,18 @@ const LOCAL_DELIVERY_DATA = [
         if (!Array.isArray(queue) || queue.length === 0) return;
 
         localStorage.removeItem("pending_sheet_sync_queue");
-        const postUrl = `${GOOGLE_APP_URL}${GOOGLE_APP_URL.includes('?') ? '&' : '?'}t=${Date.now()}`;
+        const postUrl = `${GOOGLE_APP_URL}?t=${new Date().getTime()}`;
 
         for (const item of queue) {
           await fetch(postUrl, {
             method: 'POST',
             mode: 'no-cors',
             cache: 'no-store',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
             body: JSON.stringify(item)
           });
         }
@@ -1896,10 +1909,38 @@ const LOCAL_DELIVERY_DATA = [
       showNotification(`Bienvenue, ${found.username} (${found.role.toUpperCase()})`, "success");
     }
 
+    /**
+     * NUCLEAR LOGOUT FUNCTION:
+     * Completely wipes localStorage to guarantee zero ghost data survives a logout.
+     * Resets in-memory state back to clean initial deliveries.
+     */
     function handleLogout() {
       stopAutoPolling();
-      clearAuthSession();
+
+      // 1. Nuclear wipe of all browser local storage
+      try {
+        localStorage.clear();
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.clear();
+        }
+      } catch (e) {
+        console.warn("[Auth] Failed to clear localStorage:", e);
+      }
+
+      // 2. Complete reset of in-memory application state
       AppState.currentUser = null;
+      AppState.completedDeliveryIds = new Set();
+      AppState.rawDeliveries = LOCAL_DELIVERY_DATA.map(normalizeDeliveryRecord).filter(Boolean);
+      AppState.deliveries = [];
+      AppState.totalCount = 0;
+      AppState.completedCount = 0;
+      AppState.selectedDateStr = '2026-10-28';
+      AppState.activeManifestFilter = 'ALL';
+      AppState.adminFilterDriver = 'ALL';
+      AppState.adminFilterBoutique = 'ALL';
+      AppState.adminFilterSearch = '';
+
+      // 3. Reset UI screens and form inputs
       if (DOM.mainApp) DOM.mainApp.classList.add("hidden");
       if (DOM.authScreen) {
         DOM.authScreen.classList.remove("hidden");
@@ -1907,7 +1948,10 @@ const LOCAL_DELIVERY_DATA = [
       }
       const pInput = document.getElementById("login-pin");
       if (pInput) pInput.value = "";
-      showNotification("Déconnexion réussie.", "info");
+      const uInput = document.getElementById("login-username");
+      if (uInput) uInput.value = "";
+
+      showNotification("Déconnexion réussie. Données locales effacées.", "info");
     }
 
     function revealDashboard() {
