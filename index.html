@@ -1297,20 +1297,55 @@ const LOCAL_DELIVERY_DATA = [
     let selectedDateStr = '2026-10-28';
     let activeManifestFilter = 'ALL';
 
+    const ADMIN_USERNAMES = ["mounir", "BENAMAR NACIM", "MEKHLOUFI MOHAMMED", "ADMIN", "ALL"];
+
+    function isAdminUser(userOrName) {
+      if (!userOrName) return false;
+      if (typeof userOrName === 'object') {
+        if (userOrName.role === 'admin') return true;
+        userOrName = userOrName.username || userOrName.chauffeurName || '';
+      }
+      const clean = String(userOrName).trim().toUpperCase();
+      return ADMIN_USERNAMES.some(a => a.toUpperCase() === clean);
+    }
+
+    const ORIGINAL_CHAUFFEUR_MAP = new Map();
+    if (typeof LOCAL_DELIVERY_DATA !== 'undefined' && Array.isArray(LOCAL_DELIVERY_DATA)) {
+      LOCAL_DELIVERY_DATA.forEach(d => {
+        if (d && d.id) {
+          const rawDriver = String(d.chauffeur || d.driver || "").trim();
+          if (rawDriver && !isAdminUser(rawDriver) && rawDriver.toUpperCase() !== "NON SPÉCIFIÉ") {
+            ORIGINAL_CHAUFFEUR_MAP.set(String(d.id).trim().toUpperCase(), rawDriver);
+          }
+        }
+      });
+    }
+
     /**
      * Canonical delivery record normalizer.
      * Guarantees all expected properties are present with proper defaults.
+     * Strictly preserves le chauffeur du programme de livraison.
      */
     function normalizeDeliveryRecord(d) {
       if (!d) return null;
       const store = String(d.magasin || d.destination || "").trim();
-      const driver = String(d.Chauffeur || d.chauffeur || d.driver || "").trim();
+      let driver = String(d.Chauffeur || d.chauffeur || d.driver || "").trim();
+      const id = String(d.id || "").trim();
+
+      // If incoming record has an admin name as chauffeur or is unassigned,
+      // recover the legitimate chauffeur from the delivery program manifest map
+      if (id && (!driver || isAdminUser(driver) || driver === "All")) {
+        const originalDriver = ORIGINAL_CHAUFFEUR_MAP.get(id.toUpperCase());
+        if (originalDriver) {
+          driver = originalDriver;
+        }
+      }
+
       const vehicle = String(d.matricule || d.vehicle || "").trim();
       const qty = Number(d.quantite !== undefined ? d.quantite : (d.quantity !== undefined ? d.quantity : 0)) || 0;
       const rawStatus = String(d.status || "");
       const isLivre = Boolean(d.completed === true || /livr/i.test(rawStatus) && !/non/i.test(rawStatus));
       const status = isLivre ? "Livré" : "Non Livré";
-      const id = String(d.id || "").trim();
       const date = String(d.date || "").trim();
 
       return {
@@ -1725,37 +1760,42 @@ const LOCAL_DELIVERY_DATA = [
     async function syncDeliveryStatusToSheet(item, newStatus) {
       if (!item) return;
 
-      // Retrieve logged-in driver's chauffeurName from localStorage session
-      let driverName = "";
-      try {
-        const rawSession = localStorage.getItem("auth_session");
-        if (rawSession) {
-          const session = JSON.parse(rawSession);
-          if (session && session.chauffeurName && session.chauffeurName !== "All") {
-            driverName = session.chauffeurName;
-          } else if (session && session.username) {
-            driverName = session.username;
-          }
-        }
-      } catch (e) {}
+      // Extract the legitimate chauffeur assigned to this delivery in the programme de livraison
+      // MEKHLOUFI MOHAMMED, mounir, and BENAMAR NACIM are admins, NOT chauffeurs.
+      // Even when an admin presses "Livrer", the delivery in Google Sheet MUST show le chauffeur du programme de livraison!
+      let programChauffeur = String(item.chauffeur || item.Chauffeur || item.driver || "").trim();
 
-      if (!driverName) {
-        driverName = String(item.chauffeur || item.driver || "").trim();
+      if (!programChauffeur || programChauffeur === "All" || isAdminUser(programChauffeur)) {
+        const orig = ORIGINAL_CHAUFFEUR_MAP.get(String(item.id).trim().toUpperCase());
+        if (orig) {
+          programChauffeur = orig;
+        } else if (isAdminUser(programChauffeur)) {
+          programChauffeur = "NON SPÉCIFIÉ";
+        }
+      }
+
+      let loggedInUser = AppState.currentUser;
+      if (!loggedInUser) {
+        try {
+          const rawSession = localStorage.getItem("auth_session");
+          if (rawSession) loggedInUser = JSON.parse(rawSession);
+        } catch (e) {}
       }
 
       const payload = {
         action: 'update_status',
         id: String(item.id || '').trim(),
         status: newStatus,
-        chauffeur: driverName,
+        chauffeur: programChauffeur || "NON SPÉCIFIÉ",
         date: String(item.date || AppState.selectedDateStr || '').trim(),
         magasin: String(item.magasin || item.destination || '').trim(),
         matricule: String(item.matricule || item.vehicle || '').trim(),
         quantite: Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0,
+        updatedBy: loggedInUser ? (loggedInUser.username || '') : '',
         timestamp: new Date().toISOString()
       };
 
-      updateSheetSyncBadge('syncing', `Envoi #${payload.id} (${driverName || 'Tournée'}) vers Google Sheets...`);
+      updateSheetSyncBadge('syncing', `Envoi #${payload.id} (${programChauffeur || 'Tournée'}) vers Google Sheets...`);
       const jsonString = JSON.stringify(payload);
       const postUrl = `${GOOGLE_APP_URL}?t=${new Date().getTime()}`;
 
@@ -2514,22 +2554,9 @@ const LOCAL_DELIVERY_DATA = [
         return;
       }
 
-      // Retrieve logged-in driver's chauffeurName from localStorage
-      let currentDriverName = "";
-      try {
-        const rawSession = localStorage.getItem("auth_session");
-        if (rawSession) {
-          const session = JSON.parse(rawSession);
-          if (session && session.chauffeurName && session.chauffeurName !== "All") {
-            currentDriverName = session.chauffeurName;
-          }
-        }
-      } catch (e) {}
-
-      if (currentDriverName) {
-        targetItem.chauffeur = currentDriverName;
-        targetItem.driver = currentDriverName;
-      }
+      // Preserve the assigned chauffeur from the delivery program (le chauffeur du programme de livraison)
+      // MEKHLOUFI MOHAMMED, mounir, and BENAMAR NACIM are admins that can access and control anything
+      // and press "Livrer" for any delivery, but the delivery must ALWAYS maintain its assigned chauffeur!
 
       const isCurrentlyCompleted = isItemDelivered(targetItem);
       const newStatus = isCurrentlyCompleted ? 'Non Livré' : 'Livré';
@@ -2543,10 +2570,6 @@ const LOCAL_DELIVERY_DATA = [
         if (itemInView) {
           itemInView.completed = willBeCompleted;
           itemInView.status = newStatus;
-          if (currentDriverName) {
-            itemInView.chauffeur = currentDriverName;
-            itemInView.driver = currentDriverName;
-          }
         }
       }
 

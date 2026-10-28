@@ -23,6 +23,22 @@ const SCHEMA_HEADERS = ["ID", "Date", "Magasin", "Chauffeur", "Matricule", "Quan
 // 1. DATA SANITIZATION & COMPOSITE KEY HELPERS
 // =========================================================================
 
+const ADMIN_NAMES = [
+  "MOUNIR",
+  "MEKHLOUFI MOHAMMED",
+  "BENAMAR NACIM",
+  "ADMIN",
+  "ALL"
+];
+
+function isAdminName(val) {
+  if (!val) return false;
+  const norm = normalizeText(val);
+  return ADMIN_NAMES.some(function(admin) {
+    return norm === admin || norm.replace(/\s+/g, '') === admin.replace(/\s+/g, '');
+  });
+}
+
 /**
  * Normalizes any date input (Date instance, timestamp, French DD/MM/YYYY, ISO)
  * into standard YYYY-MM-DD format.
@@ -250,11 +266,25 @@ function doPost(e) {
           const finalMagasin = magasin || values[i][2];
 
           // Priority for Chauffeur column (Column D):
-          // 1. Incoming payload chauffeur (e.g. SAADI BILLEL)
-          // 2. Existing sheet row chauffeur (if not empty / not "NON SPÉCIFIÉ")
-          // 3. Fallback to "NON SPÉCIFIÉ" only if both are completely empty
+          // The delivery must ALWAYS show le chauffeur du programme de livraison!
+          // MEKHLOUFI MOHAMMED, mounir, and BENAMAR NACIM are admins, NOT chauffeurs.
+          // Even when an admin presses "Livrer", Column D must preserve the assigned chauffeur.
           const existingChauffeur = String(values[i][3] || "").trim();
-          finalChauffeurName = incomingChauffeur || (existingChauffeur && existingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ" ? existingChauffeur : "") || "NON SPÉCIFIÉ";
+          const hasValidExisting = existingChauffeur && 
+                                   existingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ" && 
+                                   !isAdminName(existingChauffeur);
+
+          if (hasValidExisting) {
+            // Strictly preserve the existing chauffeur from the delivery program
+            finalChauffeurName = existingChauffeur;
+          } else if (incomingChauffeur && !isAdminName(incomingChauffeur) && incomingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ") {
+            // Legitimate chauffeur provided in incoming payload
+            finalChauffeurName = incomingChauffeur;
+          } else if (existingChauffeur && !isAdminName(existingChauffeur)) {
+            finalChauffeurName = existingChauffeur;
+          } else {
+            finalChauffeurName = "NON SPÉCIFIÉ";
+          }
 
           const finalMatricule = matricule || values[i][4];
           const finalQty = quantite !== "" ? quantite : values[i][5];
@@ -279,7 +309,7 @@ function doPost(e) {
     // Append new row if delivery record does not exist yet
     if (!updated) {
       const newId = id || `DEL-${String(lastRow + 1).padStart(4, '0')}`;
-      finalChauffeurName = incomingChauffeur || "NON SPÉCIFIÉ";
+      finalChauffeurName = (incomingChauffeur && !isAdminName(incomingChauffeur)) ? incomingChauffeur : "NON SPÉCIFIÉ";
       sheet.appendRow([
         newId,
         date,
