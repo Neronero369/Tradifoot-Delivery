@@ -7,6 +7,6 @@ echo [1/2] Connecting to Outlook Classic & syncing latest delivery programs...
 python "%~dp0tradifoot_tracker.py" --sync --open
 if %ERRORLEVEL% NEQ 0 (
     echo [!] Python sync encountered an error. Opening existing dashboard...
-    start "" "%~dp0dashboard.html"
+    start "" "%~dp0index.html"
 )
 exit
