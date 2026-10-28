@@ -26,7 +26,7 @@ REQUIRED_HEADERS = [
     "ID", "Date", "Magasin", "Chauffeur", "Matricule", "Quantite", "Status", "Remarques"
 ]
 
-DEFAULT_GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbwM5y2SPfnT1lMg4_ingmt_ZWzfHFb7l-qTwTow3-eThQ52Rf1FfLRrcBertuvxUY6d/exec"
+DEFAULT_GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbwqLs9WYjdjESCnX9avFBABv2bZdTXh1a43rYDC6N51l4uIO6em0wS51OaTyTuMAOY/exec"
 
 
 def normalize_composite_key(date_str, store_str, driver_str):

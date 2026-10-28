@@ -75,7 +75,7 @@ Les données transmises vers la feuille de calcul Google Sheets suivent le sché
 
 * **Google Apps Script Web App URL :**
   ```text
-  https://script.google.com/macros/s/AKfycbwqhYV_Xm_k5qg2K2-QzGZgC7W76i1YyWjV-8o9_BqD7g/exec
+  https://script.google.com/macros/s/AKfycbwqLs9WYjdjESCnX9avFBABv2bZdTXh1a43rYDC6N51l4uIO6em0wS51OaTyTuMAOY/exec
   ```
 * **Actions supportées (POST JSON) :**
   1. `get_deliveries` :
