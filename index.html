@@ -221,7 +221,7 @@
         </div>
 
         <!-- Live Supabase Connection Status Badge (Click to Refresh) -->
-        <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition">
+        <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition">
           <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
@@ -12540,31 +12540,23 @@ const LOCAL_DELIVERY_DATA = [
       if (!statusTextEl) return;
 
       if (status === 'syncing') {
-        statusTextEl.textContent = customText || "Synchronisation Supabase...";
+        statusTextEl.textContent = customText || "Synchronisation...";
         if (badgeEl) {
-          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold shadow-2xs hover:bg-blue-500/25 transition";
+          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-blue-500/25 transition";
         }
       } else if (status === 'success') {
-        statusTextEl.textContent = customText || "Supabase Connecté ✓";
+        statusTextEl.textContent = customText || "Supabase En Direct 🟢";
         if (badgeEl) {
-          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition";
+          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition";
         }
-      } else if (status === 'error') {
-        statusTextEl.textContent = customText || "Supabase Hors-ligne";
+      } else {
+        statusTextEl.textContent = customText || "Supabase Reconnexion...";
         if (badgeEl) {
-          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-2xs hover:bg-amber-500/25 transition";
+          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-amber-500/25 transition";
         }
       }
     }
 
-    
-    /**
-     * Cross-Check Against Supabase Database on Every Load, Login, and Refresh.
-     * - Filters Supabase rows to ignore empty/corrupted rows (skip if Date AND Magasin empty or Quantite == 0).
-     * - For every delivery in dashboard: checks if matching row exists in Supabase by ID, Composite Fingerprint,
-     *   or Fallback Key with Status === 'Livré'.
-     * - If matched as 'Livré', FORCES delivery status to 'Livré' in dashboard state.
-     */
     function applyServerSourceOfTruth(remoteDeliveries) {
       if (!Array.isArray(remoteDeliveries)) return;
 
@@ -12856,7 +12848,6 @@ const LOCAL_DELIVERY_DATA = [
       const normDate = normalizeDate(item.date || item.Date || AppState.selectedDateStr);
       const store = String(item.magasin || item.Magasin || item.destination || '').trim();
 
-      // Preserve original manifest chauffeur unless it was NON SPÉCIFIÉ
       const originalChauffeur = String(item.chauffeur || item.driver || '').trim().toUpperCase();
       const isGeneric = !originalChauffeur || /non sp[ée]cifi[ée]/i.test(originalChauffeur) || isAdminUser(originalChauffeur);
       const finalChauffeur = isGeneric ? currentUser.chauffeurName : (item.chauffeur || currentUser.chauffeurName);
@@ -12864,18 +12855,12 @@ const LOCAL_DELIVERY_DATA = [
       const vehicle = String(item.matricule || item.vehicle || '').trim();
       const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
 
-      updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId} vers Supabase...`);
+      updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId}...`);
 
-      const upsertPayload = {
-        delivery_id: deliveryId,
-        delivery_key: deliveryKey,
-        date: normDate,
-        magasin: store,
-        chauffeur: finalChauffeur,
-        delivered_by: currentUser.chauffeurName,
-        matricule: vehicle,
-        quantite: qty,
+      const updatePayload = {
         status: newStatus,
+        delivered_by: currentUser.chauffeurName,
+        chauffeur: finalChauffeur,
         updated_at: new Date().toISOString()
       };
 
@@ -12884,54 +12869,68 @@ const LOCAL_DELIVERY_DATA = [
           console.error('Supabase error: client non configuré');
           updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
           showNotification('Supabase non configuré. Sauvegarde hors-ligne.', 'error');
-          queueOfflineSync(upsertPayload);
+          queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
           return false;
         }
 
-        let { data, error } = await supabaseClient
+        // 1. Mise à jour directe par delivery_key
+        let updateRes = await supabaseClient
           .from('deliveries')
-          .upsert(upsertPayload, { onConflict: 'delivery_key' });
+          .update(updatePayload)
+          .eq('delivery_key', deliveryKey)
+          .select();
 
-        // Fallback tolérant si le schéma distant n'a pas encore les colonnes delivery_key / delivered_by
-        if (error && (/delivery_key|chauffeur|delivered_by/i.test(error.message || '') || error.code === 'PGRST204')) {
-          console.warn('[Supabase] Tentative de secours sur colonnes de base:', error.message);
-          const fallbackData = {
+        let data = updateRes.data;
+        let error = updateRes.error;
+
+        // 2. Si non trouvé par delivery_key, secours par delivery_id
+        if (!error && (!data || data.length === 0)) {
+          const res2 = await supabaseClient
+            .from('deliveries')
+            .update(updatePayload)
+            .eq('delivery_id', deliveryId)
+            .select();
+          data = res2.data;
+          error = res2.error;
+        }
+
+        // 3. Si la ligne n'existait pas encore, upsert complet
+        if (!error && (!data || data.length === 0)) {
+          const upsertPayload = {
+            delivery_id: deliveryId,
+            delivery_key: deliveryKey,
             date: normDate,
             magasin: store,
+            chauffeur: finalChauffeur,
+            delivered_by: currentUser.chauffeurName,
             matricule: vehicle,
             quantite: qty,
             status: newStatus,
             updated_at: new Date().toISOString()
           };
-          const numericId = Number(deliveryId.replace(/\D/g, ''));
-          let fbRes = null;
-          if (numericId) {
-            fbRes = await supabaseClient
-              .from('deliveries')
-              .update(fallbackData)
-              .eq('id', numericId);
-          }
-          if (!fbRes || fbRes.error) {
-            fbRes = await supabaseClient.from('deliveries').insert(fallbackData);
-          }
-          error = fbRes ? fbRes.error : null;
+          const res3 = await supabaseClient
+            .from('deliveries')
+            .upsert(upsertPayload, { onConflict: 'delivery_key' })
+            .select();
+          data = res3.data;
+          error = res3.error;
         }
 
         if (error) {
           console.error('Supabase error:', error);
           showNotification(`Erreur Supabase: ${error.message || 'Échec de synchronisation'}`, 'error');
           updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-          queueOfflineSync(upsertPayload);
+          queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
           return false;
         }
 
-        updateSupabaseSyncBadge('success', 'Supabase Synchronisé ✓');
+        updateSupabaseSyncBadge('success', 'Supabase En Direct 🟢');
         return true;
       } catch (err) {
         console.error('Supabase error:', err);
         showNotification(`Erreur Supabase: ${err.message || 'Échec réseau'}`, 'error');
         updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-        queueOfflineSync(upsertPayload);
+        queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
         return false;
       }
     }
@@ -12976,7 +12975,7 @@ const LOCAL_DELIVERY_DATA = [
         if (session && document.visibilityState === 'visible') {
           fetchRemoteDeliveries(false);
         }
-      }, 30000);
+      }, 5000); // Heartbeat 5s pour synchronisation instantanée mobile & PC
     }
 
     function stopAutoPolling() {
@@ -13913,19 +13912,25 @@ const LOCAL_DELIVERY_DATA = [
         .channel('public:deliveries')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
           console.log('[Supabase Realtime] Événement reçu:', payload);
+          const newRow = payload.new;
+          if (newRow && newRow.status === 'Livré') {
+            const driverTag = newRow.delivered_by || newRow.chauffeur || 'Chauffeur';
+            const storeTag = newRow.magasin || newRow.delivery_id;
+            showNotification(`⚡ [En direct] ${storeTag} validé Livré par ${driverTag}`, 'success');
+          }
           fetchRemoteDeliveries(false);
         })
-        .subscribe((status) => {
-          console.log('[Supabase Realtime] État souscription:', status);
+        .subscribe((status, err) => {
+          console.log('[Supabase Realtime] État souscription:', status, err || '');
           if (status === 'SUBSCRIBED') {
             updateSupabaseSyncBadge('success', 'Supabase En Direct 🟢');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            updateSupabaseSyncBadge('error', 'Supabase Déconnecté');
+            updateSupabaseSyncBadge('error', 'Supabase Reconnexion...');
           }
         });
     }
 
-    // Réveil mobile & reconnexion instantanée
+    // Réveil mobile & reconnexion instantanée multi-événements
     ['visibilitychange', 'pageshow', 'focus', 'online'].forEach(evt => {
       window.addEventListener(evt, () => {
         if (AppState.currentUser) {
