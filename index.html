@@ -12394,25 +12394,34 @@ const LOCAL_DELIVERY_DATA = [
      * Requirement 2: Primary Fingerprint Matching (Date + Magasin + Quantite + Chauffeur)
      * Normalized unique key: Date|Magasin|Quantite|Chauffeur
      */
-    function getDeliveryKey(item) {
+    /**
+     * Requirement 2: Deterministic Composite Fingerprint Matching (Zero Amnesia Across Imports)
+     * Format: YYYY-MM-DD|MAGASIN_NAME|QUANTITE
+     * Returns empty string if row is corrupted or empty (!date || !magasin || quantite <= 0)
+     */
+    function buildDeliveryKey(item) {
       if (!item) return "";
-      const dateVal = normalizeDate(item.Date || item.date);
-      const magasinVal = normalizeText(item.Magasin || item.magasin || item.destination);
-      const quantiteVal = Number(item.Quantite !== undefined ? item.Quantite : (item.quantite !== undefined ? item.quantite : item.quantity)) || 0;
-      const chauffeurVal = normalizeText(item.Chauffeur || item.chauffeur || item.driver);
-      return `${dateVal}|${magasinVal}|${quantiteVal}|${chauffeurVal}`;
+      const d = normalizeDate(item.date || item.Date);
+      const m = normalizeText(item.magasin || item.Magasin || item.destination);
+      const q = Number(item.quantite !== undefined ? item.quantite : (item.Quantite !== undefined ? item.Quantite : item.quantity)) || 0;
+      if (!d || !m || q <= 0) return "";
+      return `${d}|${m}|${q}`;
     }
 
-    /**
-     * Requirement 2: Fallback Fingerprint Matching (Date + Magasin + Quantite)
-     * Used when remote Chauffeur is 'NON SPÉCIFIÉ' or an admin name.
-     */
+    function isValidDeliveryItem(item) {
+      if (!item) return false;
+      const d = normalizeDate(item.date || item.Date);
+      const m = normalizeText(item.magasin || item.Magasin || item.destination);
+      const q = Number(item.quantite !== undefined ? item.quantite : (item.Quantite !== undefined ? item.Quantite : item.quantity)) || 0;
+      return Boolean(d && m && q > 0);
+    }
+
+    function getDeliveryKey(item) {
+      return buildDeliveryKey(item);
+    }
+
     function getDeliveryFallbackKey(item) {
-      if (!item) return "";
-      const dateVal = normalizeDate(item.Date || item.date);
-      const magasinVal = normalizeText(item.Magasin || item.magasin || item.destination);
-      const quantiteVal = Number(item.Quantite !== undefined ? item.Quantite : (item.quantite !== undefined ? item.quantite : item.quantity)) || 0;
-      return `${dateVal}|${magasinVal}|${quantiteVal}`;
+      return buildDeliveryKey(item);
     }
 
     /**
@@ -12556,154 +12565,85 @@ const LOCAL_DELIVERY_DATA = [
     function applyServerSourceOfTruth(remoteDeliveries) {
       if (!Array.isArray(remoteDeliveries)) return;
 
-      // 1. Fresh clone of LOCAL_DELIVERY_DATA with clean default Non Livré status
-      const baseDeliveries = LOCAL_DELIVERY_DATA.map((d, idx) => {
-        const item = normalizeDeliveryRecord(d, idx);
-        item.status = "Non Livré";
-        item.completed = false;
-        return item;
-      }).filter(Boolean);
-
-      // 2. Build lookup maps of all valid rows from Supabase
-      const supabasePrimaryMap = new Map();
-      const supabaseFallbackMap = new Map();
-      const supabaseIdDateQtyMap = new Map();
+      // 1. Index Supabase rows by delivery_key AND delivery_id
+      const supabaseKeyMap = new Map();
       const supabaseIdMap = new Map();
 
       remoteDeliveries.forEach(row => {
         if (!row) return;
-        const store = normalizeText(row.magasin || row.Magasin || row.destination);
-        const qty = Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0;
-
-        if (!store && qty === 0) return;
-
-        const rawStatus = String(row.status || row.Status || "");
+        const rawStatus = String(row.status || row.Status || '');
         const isLivre = Boolean(row.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
-        const status = isLivre ? "Livré" : "Non Livré";
+        const dKey = row.delivery_key || buildDeliveryKey(row);
+        const rId = String(row.delivery_id || row.id || '').trim().toUpperCase();
 
-        const pKey = getDeliveryKey(row);
-        const fKey = getDeliveryFallbackKey(row);
-        const idDateQtyKey = getDeliveryIdDateQtyKey(row);
-        const rowId = String(row.delivery_id || row.id || row.ID || "").trim().toUpperCase();
+        const entry = {
+          isLivre,
+          status: isLivre ? 'Livré' : 'Non Livré',
+          delivered_by: row.delivered_by || null,
+          chauffeur: row.chauffeur || '',
+          row
+        };
 
-        const rowDriver = normalizeText(row.chauffeur || row.Chauffeur || row.driver);
-        const isGenericDriver = !rowDriver || rowDriver === "NON SPECIFIE" || rowDriver === "NON SPÉCIFIÉ" || isAdminUser(rowDriver);
-
-        if (pKey) {
-          if (!supabasePrimaryMap.has(pKey) || isLivre) {
-            supabasePrimaryMap.set(pKey, { isLivre, status, row });
-          }
-        }
-        if (fKey) {
-          if (!supabaseFallbackMap.has(fKey) || isLivre || isGenericDriver) {
-            supabaseFallbackMap.set(fKey, { isLivre, status, row });
-          }
-        }
-        if (idDateQtyKey) {
-          if (!supabaseIdDateQtyMap.has(idDateQtyKey) || isLivre) {
-            supabaseIdDateQtyMap.set(idDateQtyKey, { isLivre, status, row });
-          }
-        }
-        if (rowId) {
-          if (!supabaseIdMap.has(rowId) || isLivre) {
-            supabaseIdMap.set(rowId, { isLivre, status, row });
-          }
-        }
+        if (dKey) supabaseKeyMap.set(dKey, entry);
+        if (rId) supabaseIdMap.set(rId, entry);
       });
 
-      // 3. Loop through base deliveries and overlay database status
-      const syncedCompletedIds = new Set();
-      const syncedDeliveredKeys = new Set();
-      const syncedFallbackKeys = new Set();
+      // 2. Filter LOCAL_DELIVERY_DATA to valid deliveries (quantite > 0, valid date & store)
+      const baseDeliveries = LOCAL_DELIVERY_DATA
+        .filter(isValidDeliveryItem)
+        .map((d, idx) => {
+          const item = normalizeDeliveryRecord(d, idx);
+          item.delivery_key = buildDeliveryKey(item);
+          return item;
+        })
+        .filter(Boolean);
 
+      const serverDeliveredIds = new Set();
+      const serverDeliveredKeys = new Set();
+
+      // 3. Hard Source-of-Truth Overlay: Supabase status strictly overrides local
       baseDeliveries.forEach(item => {
-        const pKey = getDeliveryKey(item);
-        const fKey = getDeliveryFallbackKey(item);
-        const idDateQtyKey = getDeliveryIdDateQtyKey(item);
-        const itemId = String(item.delivery_id || item.id || item.ID || "").trim().toUpperCase();
+        const itemKey = item.delivery_key || buildDeliveryKey(item);
+        const itemId = String(item.delivery_id || item.id || '').trim().toUpperCase();
 
         let match = null;
-        if (itemId && supabaseIdMap.has(itemId)) {
+        if (itemKey && supabaseKeyMap.has(itemKey)) {
+          match = supabaseKeyMap.get(itemKey);
+        } else if (itemId && supabaseIdMap.has(itemId)) {
           match = supabaseIdMap.get(itemId);
-        } else if (pKey && supabasePrimaryMap.has(pKey)) {
-          match = supabasePrimaryMap.get(pKey);
-        } else if (idDateQtyKey && supabaseIdDateQtyMap.has(idDateQtyKey)) {
-          match = supabaseIdDateQtyMap.get(idDateQtyKey);
-        } else if (fKey && supabaseFallbackMap.has(fKey)) {
-          match = supabaseFallbackMap.get(fKey);
         }
 
-        if (match && match.isLivre) {
-          item.status = "Livré";
-          item.completed = true;
-          if (item.id) syncedCompletedIds.add(String(item.id).trim().toUpperCase());
-          if (item.delivery_id) syncedCompletedIds.add(String(item.delivery_id).trim().toUpperCase());
-          if (pKey) syncedDeliveredKeys.add(pKey);
-          if (fKey) syncedFallbackKeys.add(fKey);
-        } else {
-          item.status = "Non Livré";
-          item.completed = false;
-        }
-      });
-
-      // 4. Ingest extra rows present in Supabase that are not in LOCAL_DELIVERY_DATA
-      remoteDeliveries.forEach((row, idx) => {
-        if (!row) return;
-        const store = normalizeText(row.magasin || row.Magasin || row.destination);
-        const qty = Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0;
-        if (!store && qty === 0) return;
-
-        const pKey = getDeliveryKey(row);
-        const fKey = getDeliveryFallbackKey(row);
-        const idDateQtyKey = getDeliveryIdDateQtyKey(row);
-        const rId = String(row.delivery_id || row.id || row.ID || "").trim().toUpperCase();
-
-        const alreadyExists = baseDeliveries.some(d => {
-          const dId = String(d.delivery_id || d.id || d.ID || "").trim().toUpperCase();
-          return (rId && dId && rId === dId) ||
-                 (pKey && getDeliveryKey(d) === pKey) ||
-                 (idDateQtyKey && getDeliveryIdDateQtyKey(d) === idDateQtyKey) ||
-                 (fKey && getDeliveryFallbackKey(d) === fKey);
-        });
-
-        if (!alreadyExists) {
-          const newRec = normalizeDeliveryRecord(row, baseDeliveries.length + idx);
-          if (newRec) {
-            const rawStatus = String(row.status || row.Status || "");
-            const isLivre = Boolean(row.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
-            newRec.status = isLivre ? "Livré" : "Non Livré";
-            newRec.completed = isLivre;
-            if (isLivre) {
-              if (newRec.id) syncedCompletedIds.add(String(newRec.id).trim().toUpperCase());
-              if (newRec.delivery_id) syncedCompletedIds.add(String(newRec.delivery_id).trim().toUpperCase());
-              if (pKey) syncedDeliveredKeys.add(pKey);
-              if (fKey) syncedFallbackKeys.add(fKey);
-            }
-            baseDeliveries.push(newRec);
+        if (match) {
+          if (match.isLivre) {
+            item.status = 'Livré';
+            item.completed = true;
+            if (match.delivered_by) item.delivered_by = match.delivered_by;
+            if (item.id) serverDeliveredIds.add(String(item.id).trim().toUpperCase());
+            if (itemKey) serverDeliveredKeys.add(itemKey);
+          } else {
+            item.status = 'Non Livré';
+            item.completed = false;
           }
         }
       });
 
-      // 5. Rebuild localStorage strictly from this synced list
+      // 4. Overwrite local storage strictly with Supabase source of truth (no stale cache overrides)
       try {
-        if (remoteDeliveries && remoteDeliveries.length > 0) {
-          localStorage.setItem("delivered_delivery_ids", JSON.stringify(Array.from(syncedCompletedIds)));
-          localStorage.setItem("tradifoot_delivered_keys", JSON.stringify(Array.from(syncedDeliveredKeys)));
-          localStorage.setItem("tradifoot_delivered_fallback_keys", JSON.stringify(Array.from(syncedFallbackKeys)));
-        }
+        localStorage.setItem("delivered_delivery_ids", JSON.stringify(Array.from(serverDeliveredIds)));
+        localStorage.setItem("tradifoot_delivered_keys", JSON.stringify(Array.from(serverDeliveredKeys)));
         localStorage.setItem("tradifoot_deliveries", JSON.stringify(baseDeliveries));
       } catch (e) {}
 
       AppState.rawDeliveries = baseDeliveries;
-      AppState.completedDeliveryIds = syncedCompletedIds;
-      AppState.deliveredKeys = syncedDeliveredKeys;
-      AppState.deliveredFallbackKeys = syncedFallbackKeys;
+      AppState.completedDeliveryIds = serverDeliveredIds;
+      AppState.deliveredKeys = serverDeliveredKeys;
 
-      // 6. Refresh UI components
+      // 5. Refresh UI components: Segmented tabs ("Non Livré" / "Livré") & Circular progress ring
       computeActiveDeliveries();
       renderCalendar();
       renderDailyManifest();
       updateAdminKPIs();
+      updateProgressUI();
 
       if (AppState.currentUser && AppState.currentUser.role === 'admin') {
         populateAdminChauffeurs();
@@ -12731,38 +12671,48 @@ const LOCAL_DELIVERY_DATA = [
           .select('*', { count: 'exact', head: true });
 
         if (error) {
-          console.error('Supabase seed count check error:', error);
+          console.error('[Supabase Seed] Erreur count:', error);
           return;
         }
 
-        if (count === 0 || count === null) {
+        const isTableEmpty = (count === 0 || count === null);
+        if (isTableEmpty) {
           console.log('[Supabase Seed] La table deliveries est vide. Début du peuplement initial...');
           updateSupabaseSyncBadge('syncing', 'Initialisation Supabase (0%)...');
 
-          const allRecords = LOCAL_DELIVERY_DATA.map((item, idx) => ({
-            delivery_id: item.id || `DEL-${String(idx + 1).padStart(4, '0')}`,
-            date: normalizeDate(item.date),
-            magasin: item.magasin || item.destination || '',
-            chauffeur: item.chauffeur || item.driver || '',
-            matricule: item.matricule || item.vehicle || '',
-            quantite: Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0,
-            status: item.status || 'Non Livré'
-          }));
+          const validRecords = LOCAL_DELIVERY_DATA
+            .filter(isValidDeliveryItem)
+            .map((item, idx) => {
+              const dKey = buildDeliveryKey(item);
+              const delId = item.id || `DEL-${String(idx + 1).padStart(4, '0')}`;
+              return {
+                delivery_id: delId,
+                delivery_key: dKey,
+                date: normalizeDate(item.date),
+                magasin: normalizeText(item.magasin || item.destination),
+                chauffeur: normalizeText(item.chauffeur || item.driver),
+                matricule: normalizeText(item.matricule || item.vehicle),
+                quantite: Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0,
+                status: item.status || 'Non Livré',
+                delivered_by: null,
+                updated_at: new Date().toISOString()
+              };
+            });
 
           const BATCH_SIZE = 100;
-          for (let i = 0; i < allRecords.length; i += BATCH_SIZE) {
-            const batch = allRecords.slice(i, i + BATCH_SIZE);
-            const percent = Math.round(((i + batch.length) / allRecords.length) * 100);
+          for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
+            const batch = validRecords.slice(i, i + BATCH_SIZE);
+            const percent = Math.round(((i + batch.length) / validRecords.length) * 100);
             updateSupabaseSyncBadge('syncing', `Initialisation Supabase (${percent}%)...`);
 
             let { error: upsertErr } = await supabaseClient
               .from('deliveries')
-              .upsert(batch, { onConflict: 'delivery_id' });
+              .upsert(batch, { onConflict: 'delivery_key' });
 
             if (upsertErr) {
-              console.warn(`[Supabase Seed] Erreur upsert lot ${i}:`, upsertErr);
-              // Fallback tolérant au cas où la table Supabase n'a pas encore delivery_id/chauffeur
-              if (/chauffeur|delivery_id/i.test(upsertErr.message || '') || upsertErr.code === 'PGRST204') {
+              console.warn(`[Supabase Seed] Avertissement lot ${i}:`, upsertErr.message);
+              // Schema tolerance fallback
+              if (/delivery_key|chauffeur|delivered_by/i.test(upsertErr.message || '') || upsertErr.code === 'PGRST204') {
                 const cleanBatch = batch.map(b => ({
                   date: b.date,
                   magasin: b.magasin,
@@ -12772,7 +12722,7 @@ const LOCAL_DELIVERY_DATA = [
                 }));
                 const { error: insErr } = await supabaseClient.from('deliveries').insert(cleanBatch);
                 if (insErr) {
-                  console.error('[Supabase Seed] Échec insertion de secours:', insErr);
+                  console.error('[Supabase Seed] Échec fallback insert:', insErr);
                   throw insErr;
                 }
               } else {
@@ -12781,9 +12731,9 @@ const LOCAL_DELIVERY_DATA = [
             }
           }
 
-          console.log(`[Supabase Seed] Base Supabase initialisée avec succès (${allRecords.length} tournées).`);
+          console.log(`[Supabase Seed] Base Supabase initialisée avec succès (${validRecords.length} tournées).`);
           updateSupabaseSyncBadge('success', 'Supabase Synchronisé ✓');
-          showNotification(`Initialisation de la base Supabase terminée (${allRecords.length} tournées)`, 'success');
+          showNotification(`Initialisation de la base Supabase terminée (${validRecords.length} tournées)`, 'success');
         }
       } catch (err) {
         console.error('Supabase seed error:', err);
@@ -12793,11 +12743,7 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * Requirement 3: Overlay Synced Deliveries
-     * - Queries Supabase directly via supabaseClient.from('deliveries').select('*')
-     * - Maps returned rows into canonical format
-     * - Matches against local deliveries by delivery_id or composite key (date + magasin + quantite)
-     * - Re-renders segmented tabs ("Non Livré" / "Livré") and circular progress ring
+     * Requirement 3: Fetch Remote Deliveries & Hard Source of Truth Sync
      */
     async function fetchRemoteDeliveries(isManual = false) {
       if (AppState.isFetchingRemote) return;
@@ -12835,16 +12781,18 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         if (data && Array.isArray(data)) {
-          // Canonical normalization of Supabase rows
           const mappedData = data.map(row => {
             const rawStatus = String(row.status || row.Status || '');
             const isLivre = Boolean(row.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
+            const dKey = row.delivery_key || buildDeliveryKey(row);
             return {
               id: String(row.delivery_id || row.id || '').trim(),
               delivery_id: String(row.delivery_id || row.id || '').trim(),
+              delivery_key: dKey,
               date: normalizeDate(row.date || row.Date),
               magasin: String(row.magasin || row.Magasin || row.destination || '').trim(),
               chauffeur: String(row.chauffeur || row.Chauffeur || row.driver || '').trim(),
+              delivered_by: String(row.delivered_by || '').trim() || null,
               matricule: String(row.matricule || row.Matricule || row.vehicle || '').trim(),
               quantite: Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0,
               status: isLivre ? 'Livré' : 'Non Livré',
@@ -12862,7 +12810,7 @@ const LOCAL_DELIVERY_DATA = [
           updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
         }
       } catch (err) {
-        console.error('Supabase fetch error:', err);
+        console.error('Supabase error:', err);
         updateSupabaseSyncBadge('error', 'Supabase Hors-ligne');
         if (isManual) {
           showNotification(`Erreur Supabase: ${err.message || 'Supabase injoignable'}`, 'error');
@@ -12901,19 +12849,27 @@ const LOCAL_DELIVERY_DATA = [
       }
 
       const deliveryId = String(item.delivery_id || item.id || '').trim();
+      const deliveryKey = item.delivery_key || buildDeliveryKey(item);
       const normDate = normalizeDate(item.date || item.Date || AppState.selectedDateStr);
       const store = String(item.magasin || item.Magasin || item.destination || '').trim();
-      const driver = currentUser.chauffeurName || currentUser.username || String(item.chauffeur || item.driver || '').trim();
+
+      // Preserve original manifest chauffeur unless it was NON SPÉCIFIÉ
+      const originalChauffeur = String(item.chauffeur || item.driver || '').trim().toUpperCase();
+      const isGeneric = !originalChauffeur || /non sp[ée]cifi[ée]/i.test(originalChauffeur) || isAdminUser(originalChauffeur);
+      const finalChauffeur = isGeneric ? currentUser.chauffeurName : (item.chauffeur || currentUser.chauffeurName);
+
       const vehicle = String(item.matricule || item.vehicle || '').trim();
       const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
 
       updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId} vers Supabase...`);
 
-      const upsertRecord = {
+      const upsertPayload = {
         delivery_id: deliveryId,
+        delivery_key: deliveryKey,
         date: normDate,
         magasin: store,
-        chauffeur: driver,
+        chauffeur: finalChauffeur,
+        delivered_by: currentUser.chauffeurName,
         matricule: vehicle,
         quantite: qty,
         status: newStatus,
@@ -12925,17 +12881,17 @@ const LOCAL_DELIVERY_DATA = [
           console.error('Supabase error: client non configuré');
           updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
           showNotification('Supabase non configuré. Sauvegarde hors-ligne.', 'error');
-          queueOfflineSync(upsertRecord);
+          queueOfflineSync(upsertPayload);
           return false;
         }
 
         let { data, error } = await supabaseClient
           .from('deliveries')
-          .upsert(upsertRecord, { onConflict: 'delivery_id' });
+          .upsert(upsertPayload, { onConflict: 'delivery_key' });
 
-        // Fallback tolérant si le schéma distant n'a pas encore les colonnes personnalisées
-        if (error && (/chauffeur|delivery_id/i.test(error.message || '') || error.code === 'PGRST204')) {
-          console.warn('[Supabase] Tentative de secours avec les colonnes de base:', error.message);
+        // Fallback tolérant si le schéma distant n'a pas encore les colonnes delivery_key / delivered_by
+        if (error && (/delivery_key|chauffeur|delivered_by/i.test(error.message || '') || error.code === 'PGRST204')) {
+          console.warn('[Supabase] Tentative de secours sur colonnes de base:', error.message);
           const fallbackData = {
             date: normDate,
             magasin: store,
@@ -12962,7 +12918,7 @@ const LOCAL_DELIVERY_DATA = [
           console.error('Supabase error:', error);
           showNotification(`Erreur Supabase: ${error.message || 'Échec de synchronisation'}`, 'error');
           updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-          queueOfflineSync(upsertRecord);
+          queueOfflineSync(upsertPayload);
           return false;
         }
 
@@ -12972,7 +12928,7 @@ const LOCAL_DELIVERY_DATA = [
         console.error('Supabase error:', err);
         showNotification(`Erreur Supabase: ${err.message || 'Échec réseau'}`, 'error');
         updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-        queueOfflineSync(upsertRecord);
+        queueOfflineSync(upsertPayload);
         return false;
       }
     }
@@ -13109,20 +13065,21 @@ const LOCAL_DELIVERY_DATA = [
         try { supabaseClient.removeChannel(AppState.supabaseRealtimeChannel); AppState.supabaseRealtimeChannel = null; } catch(e) {}
       }
 
-      // 1. Nuclear wipe of all browser local storage
+      // Nuclear wipe of all browser local storage
       try {
-        localStorage.removeItem('auth_session');
+        localStorage.clear();
         if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.removeItem('auth_session');
+          sessionStorage.clear();
         }
       } catch (e) {
         console.warn("[Auth] Failed to clear localStorage:", e);
       }
 
-      // 2. Complete reset of in-memory application state
+      // Complete reset of in-memory application state
       AppState.currentUser = null;
       AppState.completedDeliveryIds = new Set();
-      AppState.rawDeliveries = LOCAL_DELIVERY_DATA.map((d, i) => normalizeDeliveryRecord(d, i)).filter(Boolean);
+      AppState.deliveredKeys = new Set();
+      AppState.rawDeliveries = LOCAL_DELIVERY_DATA.filter(isValidDeliveryItem).map((d, i) => normalizeDeliveryRecord(d, i)).filter(Boolean);
       AppState.deliveries = [];
       AppState.totalCount = 0;
       AppState.completedCount = 0;
@@ -13132,7 +13089,7 @@ const LOCAL_DELIVERY_DATA = [
       AppState.adminFilterBoutique = 'ALL';
       AppState.adminFilterSearch = '';
 
-      // 3. Reset UI screens and form inputs with clean blank values
+      // Reset UI screens and form inputs
       if (DOM.mainApp) DOM.mainApp.classList.add("hidden");
       if (DOM.authScreen) {
         DOM.authScreen.classList.remove("hidden");

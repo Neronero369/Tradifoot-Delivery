@@ -31,6 +31,19 @@ DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur"
 SUPABASE_DELIVERIES_ENDPOINT = f"{DEFAULT_SUPABASE_URL}/rest/v1/deliveries"
 
 
+def build_delivery_key(date_str, store_str, quantite):
+    """Deterministic Composite Fingerprint Matching (Date + Magasin + Quantite)."""
+    d = str(date_str or "").strip()
+    m = " ".join(str(store_str or "").strip().upper().split())
+    try:
+        q = int(quantite)
+    except (ValueError, TypeError):
+        q = 0
+    if not d or not m or q <= 0:
+        return ""
+    return f"{d}|{m}|{q}"
+
+
 def normalize_composite_key(date_str, store_str, driver_str):
     """Generates a canonical composite key [Date + Magasin + Chauffeur]."""
     d = str(date_str or "").strip()
@@ -121,8 +134,15 @@ def parse_delivery_excel(file_path):
         # Remarques
         notes = str(raw_notes or "").strip()
 
+        d_key = build_delivery_key(normalized_date, store_name, qty)
+        if not normalized_date or not store_name or qty <= 0:
+            errors.append(f"Row {row_idx}: Ignorée (données incomplètes: date='{normalized_date}', magasin='{store_name}', quantite={qty})")
+            continue
+
         records.append({
             "id": delivery_id,
+            "delivery_id": delivery_id,
+            "delivery_key": d_key,
             "date": normalized_date,
             "magasin": store_name,
             "chauffeur": driver_name,
@@ -220,10 +240,10 @@ def upsert_manifest_records(incoming_records, existing_records):
 def push_manifest_to_supabase(excel_path_or_records, supabase_url=None, anon_key=None):
     """
     Ingests an Excel delivery manifest directly into the Supabase 'deliveries' table
-    using HTTPS REST API (PostgREST upsert with Prefer: resolution=merge-duplicates).
+    using HTTPS REST API (PostgREST upsert on conflict delivery_key).
     """
     base_url = (supabase_url or DEFAULT_SUPABASE_URL).rstrip("/")
-    url = f"{base_url}/rest/v1/deliveries"
+    url = f"{base_url}/rest/v1/deliveries?on_conflict=delivery_key"
     key = anon_key or DEFAULT_SUPABASE_ANON_KEY
 
     if isinstance(excel_path_or_records, str):
@@ -232,19 +252,33 @@ def push_manifest_to_supabase(excel_path_or_records, supabase_url=None, anon_key
     else:
         records = excel_path_or_records
 
-    # Map records to canonical Supabase columns
     rows = []
     now_iso = datetime.now().isoformat()
     for r in records:
+        del_date = str(r.get("date") or "").strip()
+        del_store = str(r.get("magasin") or "").strip()
+        try:
+            del_qty = int(r.get("quantite") or 0)
+        except (ValueError, TypeError):
+            del_qty = 0
+
+        # Filter corrupted / empty rows
+        if not del_date or not del_store or del_qty <= 0:
+            continue
+
+        dkey = r.get("delivery_key") or build_delivery_key(del_date, del_store, del_qty)
         del_id = str(r.get("id") or r.get("delivery_id") or "").strip()
+
         rows.append({
             "delivery_id": del_id,
-            "date": r.get("date"),
-            "magasin": r.get("magasin"),
-            "chauffeur": r.get("chauffeur"),
-            "matricule": r.get("matricule"),
-            "quantite": int(r.get("quantite") or 0),
+            "delivery_key": dkey,
+            "date": del_date,
+            "magasin": del_store,
+            "chauffeur": str(r.get("chauffeur") or "").strip().upper(),
+            "matricule": str(r.get("matricule") or "").strip().upper(),
+            "quantite": del_qty,
             "status": r.get("status") or "Non Livré",
+            "delivered_by": r.get("delivered_by"),
             "updated_at": now_iso
         })
 
@@ -271,6 +305,32 @@ def push_manifest_to_supabase(excel_path_or_records, supabase_url=None, anon_key
             }
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="ignore")
+        # Schema tolerance fallback if remote table does not have on_conflict=delivery_key yet
+        if "delivery_key" in err_body or "PGRST204" in err_body:
+            fallback_url = f"{base_url}/rest/v1/deliveries"
+            fallback_rows = [{
+                "date": r["date"],
+                "magasin": r["magasin"],
+                "matricule": r["matricule"],
+                "quantite": r["quantite"],
+                "status": r["status"],
+                "updated_at": r["updated_at"]
+            } for r in rows]
+            fallback_req = urllib.request.Request(
+                fallback_url,
+                data=json.dumps(fallback_rows).encode("utf-8"),
+                headers={
+                    "apikey": key,
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json"
+                },
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(fallback_req, timeout=45) as fb_resp:
+                    return {"status": "success", "count": len(fallback_rows), "note": "inserted via fallback"}
+            except Exception:
+                pass
         return {"status": "error", "code": e.code, "message": str(e), "details": err_body}
     except urllib.error.URLError as e:
         return {"status": "error", "message": str(e)}

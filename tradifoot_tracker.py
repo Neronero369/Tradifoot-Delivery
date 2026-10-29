@@ -1073,8 +1073,14 @@ def update_calendar_app(db_data, index_path=None):
                 final_completed = False
                 route_id = f"DEL-{route_counter:04d}"
 
+            if not deliv_date or not store_clean or qty <= 0:
+                continue
+
+            del_key = f"{deliv_date}|{store_clean}|{qty}"
             all_routes.append({
                 "id": route_id,
+                "delivery_id": route_id,
+                "delivery_key": del_key,
                 "date": deliv_date,
                 "magasin": d["store"],
                 "destination": d["store"],
