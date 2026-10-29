@@ -93,11 +93,27 @@ function isChauffeurMatch(rowDriver, targetChauffeur) {
 /**
  * Builds an immutable composite key from [Date + Magasin + Chauffeur].
  */
-function generateCompositeKey(dateVal, storeVal, driverVal) {
+/**
+ * Builds a normalized primary composite key from [Date + Magasin + Quantite + Chauffeur].
+ * Includes Number(qtyVal) || 0 so multiple deliveries on the same date/store with different quantities are uniquely identified.
+ */
+function generateCompositeKey(dateVal, storeVal, driverVal, qtyVal) {
   const normDate = normalizeDate(dateVal);
   const normStore = normalizeText(storeVal);
   const normDriver = normalizeText(driverVal);
-  return `${normDate}|||${normStore}|||${normDriver}`;
+  const normQty = Number(qtyVal) || 0;
+  return normDate + "|" + normStore + "|" + normQty + "|" + normDriver;
+}
+
+/**
+ * Builds a fallback composite key from [Date + Magasin + Quantite]
+ * Used when Chauffeur is 'NON SPÉCIFIÉ' or an admin name.
+ */
+function generateFallbackKey(dateVal, storeVal, qtyVal) {
+  const normDate = normalizeDate(dateVal);
+  const normStore = normalizeText(storeVal);
+  const normQty = Number(qtyVal) || 0;
+  return normDate + "|" + normStore + "|" + normQty;
 }
 
 /**
@@ -217,8 +233,16 @@ function doPost(e) {
     }
 
     // -------------------------------------------------------------
-    // ACTION: update_status (Single-row mutation from driver or admin)
+    // ACTION: update_status (Single-row mutation from chauffeur)
     // -------------------------------------------------------------
+    const userRole = String(data.role || "").trim().toLowerCase();
+    if (userRole === "admin") {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "Admin accounts are strictly read-only and cannot alter delivery status."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
 
@@ -249,47 +273,45 @@ function doPost(e) {
     // H (8): Date Mise à Jour
     if (lastRow > 1) {
       const values = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
-      const targetCompKey = generateCompositeKey(date, magasin, incomingChauffeur);
 
       for (let i = 0; i < values.length; i++) {
         const rowId = String(values[i][0] || "").trim();
         const rowDate = normalizeDate(values[i][1]);
         const rowMagasin = normalizeText(values[i][2]);
+        const rowQty = Number(values[i][5]) || 0;
+
+        // Match existing row by ID, Primary Composite Fingerprint, or Fallback Fingerprint
+        const isIdMatch = Boolean(id && rowId && id.toUpperCase() === rowId.toUpperCase());
         const rowChauffeur = normalizeText(values[i][3]);
-        const rowCompKey = `${rowDate}|||${rowMagasin}|||${rowChauffeur}`;
+        const targetCompKey = generateCompositeKey(date, magasin, incomingChauffeur, quantite);
+        const rowCompKey = generateCompositeKey(rowDate, rowMagasin, rowChauffeur, rowQty);
+        const targetFbKey = generateFallbackKey(date, magasin, quantite);
+        const rowFbKey = generateFallbackKey(rowDate, rowMagasin, rowQty);
 
-        // Match by ID or composite key
-        if ((id && rowId.toUpperCase() === id.toUpperCase()) || (targetCompKey && rowCompKey === targetCompKey)) {
+        const isPrimaryMatch = Boolean(date && magasin && targetCompKey && rowCompKey && targetCompKey === rowCompKey);
+        const isFallbackMatch = Boolean(date && magasin && targetFbKey && rowFbKey && targetFbKey === rowFbKey);
+
+        if (isIdMatch || isPrimaryMatch || isFallbackMatch) {
           const targetRow = i + 2;
-          const finalId = rowId || id;
+          const finalId = rowId || id || `LIV-${String(targetRow - 1).padStart(4, '0')}`;
           const finalDate = date || rowDate;
-          const finalMagasin = magasin || values[i][2];
+          const finalMagasin = values[i][2] || (data.Magasin || data.magasin || magasin);
 
-          // Priority for Chauffeur column (Column D):
-          // The delivery must ALWAYS show le chauffeur du programme de livraison!
-          // MEKHLOUFI MOHAMMED, mounir, and BENAMAR NACIM are admins, NOT chauffeurs.
-          // Even when an admin presses "Livrer", Column D must preserve the assigned chauffeur.
+          // Preserve original Chauffeur name (never write "NON SPÉCIFIÉ" if legitimate name exists)
           const existingChauffeur = String(values[i][3] || "").trim();
-          const hasValidExisting = existingChauffeur && 
-                                   existingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ" && 
-                                   !isAdminName(existingChauffeur);
-
-          if (hasValidExisting) {
-            // Strictly preserve the existing chauffeur from the delivery program
+          if (existingChauffeur && existingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ" && !isAdminName(existingChauffeur)) {
             finalChauffeurName = existingChauffeur;
-          } else if (incomingChauffeur && !isAdminName(incomingChauffeur) && incomingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ") {
-            // Legitimate chauffeur provided in incoming payload
+          } else if (incomingChauffeur && incomingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ" && !isAdminName(incomingChauffeur)) {
             finalChauffeurName = incomingChauffeur;
-          } else if (existingChauffeur && !isAdminName(existingChauffeur)) {
+          } else if (existingChauffeur && existingChauffeur.toUpperCase() !== "NON SPÉCIFIÉ") {
             finalChauffeurName = existingChauffeur;
           } else {
-            finalChauffeurName = "NON SPÉCIFIÉ";
+            finalChauffeurName = incomingChauffeur || "NON SPÉCIFIÉ";
           }
 
-          const finalMatricule = matricule || values[i][4];
-          const finalQty = quantite !== "" ? quantite : values[i][5];
+          const finalMatricule = values[i][4] || matricule;
+          const finalQty = rowQty || quantite;
 
-          // Write updated values: Column D = finalChauffeurName, Column G = status ("Livré")
           sheet.getRange(targetRow, 1, 1, 8).setValues([[
             finalId,
             finalDate,
@@ -297,7 +319,7 @@ function doPost(e) {
             finalChauffeurName,
             finalMatricule,
             finalQty,
-            status,
+            status, // "Livré"
             timestamp
           ]]);
           updated = true;
@@ -306,18 +328,19 @@ function doPost(e) {
       }
     }
 
-    // Append new row if delivery record does not exist yet
+    // Append complete row with all fields if not found yet (never blank / NaN columns)
     if (!updated) {
-      const newId = id || `DEL-${String(lastRow + 1).padStart(4, '0')}`;
+      const newId = id || `LIV-${String(lastRow + 1).padStart(4, '0')}`;
       finalChauffeurName = (incomingChauffeur && !isAdminName(incomingChauffeur)) ? incomingChauffeur : "NON SPÉCIFIÉ";
+      const cleanStore = String(data.Magasin || data.magasin || magasin).trim();
       sheet.appendRow([
         newId,
         date,
-        magasin,
+        cleanStore,
         finalChauffeurName,
         matricule,
         quantite,
-        status,
+        status, // "Livré"
         timestamp
       ]);
       updated = true;
@@ -354,45 +377,71 @@ function fetchDeliveriesFromSheet(sheet, role, chauffeurName) {
   const normalizedRole = String(role || "admin").toLowerCase();
   const targetDriver = chauffeurName ? normalizeText(chauffeurName) : "";
   const deliveries = [];
+  const missingIdUpdates = [];
 
   for (let i = 0; i < values.length; i++) {
     const row = values[i];
-    const rowId = String(row[0] || "").trim();
-    if (!rowId) continue;
+    const rowDate = normalizeDate(row[1]);
+    const store = String(row[2] || "").trim();
+    const qty = Number(row[5]) || 0;
+
+    // Skip corrupted/empty rows where both Date and Magasin are empty
+    if (!rowDate && !store) {
+      continue;
+    }
+
+    let rowId = String(row[0] || "").trim();
+    if (!rowId) {
+      const rowIndex = i + 2;
+      rowId = `LIV-${String(rowIndex - 1).padStart(4, '0')}`;
+      missingIdUpdates.push({ row: rowIndex, id: rowId });
+    }
 
     const rowDriver = String(row[3] || "").trim();
 
-    // RBAC Filter:
-    if (normalizedRole === 'chauffeur') {
-      if (!targetDriver || !isChauffeurMatch(rowDriver, targetDriver)) {
-        continue;
-      }
-    } else if (targetDriver && targetDriver !== 'ALL') {
+    // Role filter only if a specific chauffeur driver filter is explicitly provided
+    if (normalizedRole === 'chauffeur' && targetDriver && targetDriver !== 'ALL') {
       if (!isChauffeurMatch(rowDriver, targetDriver)) {
         continue;
       }
     }
 
     const rowStatus = normalizeStatus(row[6]);
-    const store = String(row[2] || "").trim();
     const matricule = String(row[4] || "").trim();
-    const qty = Number(row[5]) || 0;
 
     deliveries.push({
       id: rowId,
-      date: normalizeDate(row[1]),
+      ID: rowId,
+      date: rowDate,
+      Date: rowDate,
       magasin: store,
+      Magasin: store,
       destination: store,
       chauffeur: rowDriver,
+      Chauffeur: rowDriver,
       driver: rowDriver,
       matricule: matricule,
+      Matricule: matricule,
       vehicle: matricule,
       quantite: qty,
+      Quantite: qty,
       quantity: qty,
       status: rowStatus,
+      Status: rowStatus,
       completed: (rowStatus === "Livré"),
       lastUpdated: row[7] ? new Date(row[7]).toISOString() : null
     });
+  }
+
+  // Persist generated Unique IDs back into Google Sheet Column A
+  if (missingIdUpdates.length > 0) {
+    try {
+      for (let k = 0; k < missingIdUpdates.length; k++) {
+        sheet.getRange(missingIdUpdates[k].row, 1).setValue(missingIdUpdates[k].id);
+      }
+    } catch (wbErr) {
+      console.warn("Could not backfill Unique IDs to sheet:", wbErr);
+    }
   }
 
   return deliveries;
@@ -413,7 +462,8 @@ function upsertDeliveryManifest(sheet, incomingRecords) {
     for (let i = 0; i < existingValues.length; i++) {
       const r = existingValues[i];
       const rId = String(r[0] || "").trim();
-      const compKey = generateCompositeKey(r[1], r[2], r[3]);
+      const compKey = generateCompositeKey(r[1], r[2], r[3], r[5]);
+      const fbKey = generateFallbackKey(r[1], r[2], r[5]);
 
       const record = {
         rowIndex: i + 2,
@@ -471,7 +521,8 @@ function upsertDeliveryManifest(sheet, incomingRecords) {
 
     if (!incDate && !incStore) { skippedCount++; continue; }
 
-    const compKey = generateCompositeKey(incDate, incStore, incDriver);
+    const compKey = generateCompositeKey(incDate, incStore, incDriver, incQty);
+    const fbKey = generateFallbackKey(incDate, incStore, incQty);
     let match = null;
     if (incId && existingMap.has(`ID:${incId.toUpperCase()}`)) {
       match = existingMap.get(`ID:${incId.toUpperCase()}`);
