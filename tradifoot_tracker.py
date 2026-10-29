@@ -23,6 +23,240 @@ DASHBOARD_PATH = os.path.join(WORKSPACE_DIR, "dashboard.html")
 
 os.makedirs(PROGRAMS_DIR, exist_ok=True)
 
+# Supabase REST Ingestion Integration
+try:
+    from parse_programme import (
+        push_manifest_to_supabase,
+        parse_delivery_excel,
+        DEFAULT_SUPABASE_REST_URL,
+        DEFAULT_SUPABASE_API_KEY
+    )
+except ImportError:
+    sys.path.append(WORKSPACE_DIR)
+    from parse_programme import (
+        push_manifest_to_supabase,
+        parse_delivery_excel,
+        DEFAULT_SUPABASE_REST_URL,
+        DEFAULT_SUPABASE_API_KEY
+    )
+
+
+def parse_excel_file_for_supabase(fpath):
+    """
+    Parses an individual delivery Excel file (standardized template or Outlook format)
+    into flat records matching the Supabase deliveries schema.
+    """
+    # 1. Try template schema (parse_programme.py)
+    try:
+        res = parse_delivery_excel(fpath)
+        if res.get("success") and res.get("records"):
+            return res["records"]
+    except Exception:
+        pass
+
+    # 2. Try Outlook delivery file format
+    try:
+        prog = parse_delivery_file(fpath)
+        if not prog or not prog.get("destinations"):
+            return []
+
+        fallback_date = prog.get("received_date", "")[:10]
+        m_dd = re.search(r'(\d{1,2})[-_](\d{1,2})[-_](\d{4})', prog.get("filename", ""))
+        if m_dd:
+            d_val, m_val = int(m_dd.group(1)), int(m_dd.group(2))
+            if m_val > 12 and d_val <= 12:
+                d_val, m_val = m_val, d_val
+            m_val = max(1, min(12, m_val))
+            d_val = max(1, min(31, d_val))
+            fallback_date = f"{m_dd.group(3)}-{m_val:02d}-{d_val:02d}"
+        else:
+            m_short = re.search(r'(\d{1,2})[-_](\d{1,2})', prog.get("filename", ""))
+            if m_short:
+                yr = prog.get("year_month", "2026")[:4]
+                d_val, m_val = int(m_short.group(1)), int(m_short.group(2))
+                if m_val > 12 and d_val <= 12:
+                    d_val, m_val = m_val, d_val
+                m_val = max(1, min(12, m_val))
+                d_val = max(1, min(31, d_val))
+                fallback_date = f"{yr}-{m_val:02d}-{d_val:02d}"
+
+        records = []
+        slug = re.sub(r'[^a-zA-Z0-9]', '', prog.get("filename", ""))[:10].upper()
+        for idx, d in enumerate(prog.get("destinations", []), 1):
+            store = (d.get("store") or "").strip().upper()
+            qty = d.get("quantity", 0)
+            if not store or store.startswith("TOTAL") or qty <= 0:
+                continue
+
+            del_date = str(d.get("delivery_date") or "").strip()
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', del_date):
+                del_date = fallback_date
+
+            driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
+            vehicle = d.get("vehicle") or "Camion Porteur"
+            if not vehicle or vehicle == "/":
+                vehicle = "Camion Porteur"
+
+            rec_id = f"DEL-{slug}-{idx:04d}"
+            records.append({
+                "id": rec_id,
+                "delivery_id": rec_id,
+                "date": del_date,
+                "magasin": store,
+                "chauffeur": driver,
+                "matricule": vehicle,
+                "quantite": qty,
+                "status": "Non Livré"
+            })
+        return records
+    except Exception as e:
+        print(f"[-] Error extracting Supabase records from {fpath}: {e}")
+        return []
+
+
+def extract_routes_from_programs(programs, index_path=None):
+    """
+    Extracts canonical delivery routes from parsed programs with Status Preservation.
+    Matches the schema expected by Supabase and the Calendar dashboard.
+    """
+    if index_path is None:
+        index_path = os.path.join(WORKSPACE_DIR, "index.html")
+
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    all_routes = []
+    seen_route_keys = set()
+    route_counter = 1
+
+    # Status Preservation: Read existing index.html to retain completed deliveries
+    existing_statuses_by_composite = {}
+    existing_statuses_by_id = {}
+    if os.path.exists(index_path):
+        with open(index_path, "r", encoding="utf-8", newline="") as f:
+            html_content = f.read()
+
+        var_loc_start = html_content.find("const LOCAL_DELIVERY_DATA =")
+        if var_loc_start != -1:
+            bracket_start = html_content.find("[", var_loc_start)
+            next_var = html_content.find("let DELIVERY_DATA =", bracket_start)
+            if next_var != -1:
+                semicolon_pos = html_content.rfind("];", bracket_start, next_var)
+                if bracket_start != -1 and semicolon_pos != -1:
+                    try:
+                        raw_existing_json = html_content[bracket_start:semicolon_pos + 1]
+                        existing_list = json.loads(raw_existing_json)
+                        for item in existing_list:
+                            i_id = str(item.get("id") or item.get("delivery_id") or "").strip()
+                            i_date = str(item.get("date") or "").strip()
+                            i_mag = " ".join(str(item.get("magasin") or item.get("destination") or "").strip().upper().split())
+                            i_drv = " ".join(str(item.get("chauffeur") or item.get("driver") or "").strip().upper().split())
+                            i_status = str(item.get("status") or "")
+                            i_completed = bool(item.get("completed") or ("livr" in i_status.lower() and "non" not in i_status.lower()))
+                            rec_info = {
+                                "id": i_id,
+                                "status": "Livré" if i_completed else "Non Livré",
+                                "completed": i_completed
+                            }
+                            if i_id:
+                                existing_statuses_by_id[i_id.upper()] = rec_info
+                            if i_date and i_mag:
+                                existing_statuses_by_composite[(i_date, i_mag, i_drv)] = rec_info
+                    except Exception:
+                        pass
+
+    for p in programs:
+        # Determine target delivery date fallback
+        m_dd = re.search(r'(\d{1,2})[-_](\d{1,2})[-_](\d{4})', p["filename"])
+        if m_dd:
+            d_val, m_val = int(m_dd.group(1)), int(m_dd.group(2))
+            if m_val > 12 and d_val <= 12:
+                d_val, m_val = m_val, d_val
+            m_val = max(1, min(12, m_val))
+            d_val = max(1, min(31, d_val))
+            fallback_date = f"{m_dd.group(3)}-{m_val:02d}-{d_val:02d}"
+        else:
+            m_short = re.search(r'(\d{1,2})[-_](\d{1,2})', p["filename"])
+            if m_short:
+                yr = p.get("year_month", "2026")[:4]
+                d_val, m_val = int(m_short.group(1)), int(m_short.group(2))
+                if m_val > 12 and d_val <= 12:
+                    d_val, m_val = m_val, d_val
+                m_val = max(1, min(12, m_val))
+                d_val = max(1, min(31, d_val))
+                fallback_date = f"{yr}-{m_val:02d}-{d_val:02d}"
+            else:
+                fallback_date = p["received_date"][:10]
+
+        p_title = p.get("display_title", "Programme")
+
+        for d in p.get("destinations", []):
+            raw_deliv_date = str(d.get("delivery_date") or "").strip()
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', raw_deliv_date):
+                deliv_date = raw_deliv_date
+            else:
+                deliv_date = fallback_date
+
+            qty = d.get("quantity", 0)
+            store_clean = (d.get("store") or "").strip().upper()
+            if not store_clean or store_clean.startswith("TOTAL"):
+                continue
+
+            # Strict deduplication: same date, same destination, same quantity
+            route_key = (deliv_date, store_clean, qty)
+            if route_key in seen_route_keys:
+                continue
+            seen_route_keys.add(route_key)
+
+            driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
+            vehicle = d.get("vehicle") or "Camion Porteur"
+            if not vehicle or vehicle == "/":
+                vehicle = "Camion Porteur"
+
+            prio = d.get("priority") or 1
+            try:
+                prio = int(prio)
+            except Exception:
+                prio = 1
+
+            notes = d.get("remark") or d.get("retour") or f"Programme {p_title}"
+            time_str = f"Tournée {p_title}"
+
+            route_comp_key = (deliv_date, store_clean, driver)
+            matched_rec = existing_statuses_by_composite.get(route_comp_key) or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
+
+            if matched_rec and (matched_rec.get("status") == "Livré" or matched_rec.get("completed") is True):
+                final_status = "Livré"
+                final_completed = True
+                route_id = matched_rec.get("id") or f"DEL-{route_counter:04d}"
+            else:
+                final_status = "Non Livré"
+                final_completed = False
+                route_id = f"DEL-{route_counter:04d}"
+
+            if not deliv_date or not store_clean or qty <= 0:
+                continue
+
+            del_key = f"{deliv_date}|{store_clean}|{qty}"
+            all_routes.append({
+                "id": route_id,
+                "delivery_id": route_id,
+                "delivery_key": del_key,
+                "date": deliv_date,
+                "magasin": d["store"],
+                "destination": d["store"],
+                "chauffeur": driver,
+                "driver": driver,
+                "matricule": vehicle,
+                "vehicle": vehicle,
+                "quantite": qty,
+                "quantity": qty,
+                "status": final_status,
+                "completed": final_completed
+            })
+            route_counter += 1
+
+    return all_routes
+
+
 # -------------------------------------------------------------------------
 # OUTLOOK SYNC MODULE
 # -------------------------------------------------------------------------
@@ -46,6 +280,7 @@ def sync_from_outlook(days_back=90, full_scan=False):
 
     target_folders = ["GDS", "COMMERCIALS", "Inbox", "Deleted Items"]
     downloaded_count = 0
+    downloaded_files = []
     now = datetime.datetime.now()
 
     def scan_folder(folder, path):
@@ -76,6 +311,7 @@ def sync_from_outlook(days_back=90, full_scan=False):
                                 if not os.path.exists(save_path):
                                     att.SaveAsFile(save_path)
                                     downloaded_count += 1
+                                    downloaded_files.append(save_path)
                                     print(f"  [+] Downloaded: {safe_fn}")
                 except Exception:
                     pass
@@ -94,6 +330,19 @@ def sync_from_outlook(days_back=90, full_scan=False):
             scan_folder(f, f.Name)
 
     print(f"[+] Outlook sync complete: {downloaded_count} new file(s) retrieved.")
+
+    # Immediately push any newly downloaded delivery programs to Supabase
+    if downloaded_files:
+        print(f"[*] Immediately pushing {len(downloaded_files)} new delivery file(s) to Supabase...")
+        for new_file in downloaded_files:
+            try:
+                new_records = parse_excel_file_for_supabase(new_file)
+                if new_records:
+                    res = push_manifest_to_supabase(new_records)
+                    print(f"  [+] Pushed {len(new_records)} deliveries from '{os.path.basename(new_file)}' to Supabase.")
+            except Exception as e:
+                print(f"  [-] Error pushing '{os.path.basename(new_file)}' to Supabase: {e}")
+
     return downloaded_count
 
 
@@ -379,6 +628,20 @@ def build_database():
         json.dump(db_data, fp, ensure_ascii=False, indent=2)
 
     print(f"[+] Database updated: {len(programs)} programs indexed ({db_data['metadata']['total_dispatched_units']:,} total units).")
+
+    # Push live deliveries to Supabase backend
+    try:
+        print("[*] Synchronizing live delivery manifest with Supabase...")
+        routes_to_push = extract_routes_from_programs(programs)
+        if routes_to_push:
+            push_res = push_manifest_to_supabase(routes_to_push)
+            if push_res.get("status") == "success":
+                print(f"[+] Supabase database synchronized ({push_res.get('count', len(routes_to_push))} deliveries pushed).")
+            else:
+                print(f"[-] Supabase sync response: {push_res.get('message', push_res)}")
+    except Exception as e:
+        print(f"[!] Warning during Supabase push in build_database: {e}")
+
     return db_data
 
 
@@ -952,148 +1215,7 @@ def update_calendar_app(db_data, index_path=None):
         return None
 
     today_str = datetime.date.today().strftime("%Y-%m-%d")
-    all_routes = []
-    seen_route_keys = set()
-    route_counter = 1
-
-    # Status Preservation: Read existing index.html to retain completed deliveries
-    existing_statuses_by_composite = {}
-    existing_statuses_by_id = {}
-    with open(index_path, "r", encoding="utf-8", newline="") as f:
-        html_content = f.read()
-
-    var_loc_start = html_content.find("const LOCAL_DELIVERY_DATA =")
-    if var_loc_start != -1:
-        bracket_start = html_content.find("[", var_loc_start)
-        next_var = html_content.find("let DELIVERY_DATA =", bracket_start)
-        if next_var != -1:
-            semicolon_pos = html_content.rfind("];", bracket_start, next_var)
-            if bracket_start != -1 and semicolon_pos != -1:
-                try:
-                    raw_existing_json = html_content[bracket_start:semicolon_pos + 1]
-                    existing_list = json.loads(raw_existing_json)
-                    for item in existing_list:
-                        i_id = str(item.get("id") or "").strip()
-                        i_date = str(item.get("date") or "").strip()
-                        i_mag = " ".join(str(item.get("magasin") or item.get("destination") or "").strip().upper().split())
-                        i_drv = " ".join(str(item.get("chauffeur") or item.get("driver") or "").strip().upper().split())
-                        i_status = str(item.get("status") or "")
-                        i_completed = bool(item.get("completed") or ("livr" in i_status.lower() and "non" not in i_status.lower()))
-                        rec_info = {
-                            "id": i_id,
-                            "status": "Livré" if i_completed else "Non Livré",
-                            "completed": i_completed
-                        }
-                        if i_id:
-                            existing_statuses_by_id[i_id.upper()] = rec_info
-                        if i_date and i_mag:
-                            existing_statuses_by_composite[(i_date, i_mag, i_drv)] = rec_info
-                except Exception:
-                    pass
-
-
-    for p in db_data.get("programs", []):
-        # Identify brand label
-        b_list = [b for b in p.get("brands", {}).keys() if "SACHET" not in b and "PAPIER" not in b]
-        brand_str = " / ".join(b_list[:3]) if b_list else "Multi-marques"
-
-        # Determine target delivery date fallback
-        m_dd = re.search(r'(\d{1,2})[-_](\d{1,2})[-_](\d{4})', p["filename"])
-        if m_dd:
-            d_val, m_val = int(m_dd.group(1)), int(m_dd.group(2))
-            if m_val > 12 and d_val <= 12:
-                d_val, m_val = m_val, d_val
-            m_val = max(1, min(12, m_val))
-            d_val = max(1, min(31, d_val))
-            fallback_date = f"{m_dd.group(3)}-{m_val:02d}-{d_val:02d}"
-        else:
-            m_short = re.search(r'(\d{1,2})[-_](\d{1,2})', p["filename"])
-            if m_short:
-                yr = p.get("year_month", "2026")[:4]
-                d_val, m_val = int(m_short.group(1)), int(m_short.group(2))
-                if m_val > 12 and d_val <= 12:
-                    d_val, m_val = m_val, d_val
-                m_val = max(1, min(12, m_val))
-                d_val = max(1, min(31, d_val))
-                fallback_date = f"{yr}-{m_val:02d}-{d_val:02d}"
-            else:
-                fallback_date = p["received_date"][:10]
-
-        p_title = p.get("display_title", "Programme")
-
-        for d in p.get("destinations", []):
-            raw_deliv_date = str(d.get("delivery_date") or "").strip()
-            if re.match(r'^\d{4}-\d{2}-\d{2}$', raw_deliv_date):
-                deliv_date = raw_deliv_date
-            else:
-                deliv_date = fallback_date
-
-            qty = d.get("quantity", 0)
-            store_clean = (d.get("store") or "").strip().upper()
-            if not store_clean or store_clean.startswith("TOTAL"):
-                continue
-
-            # Strict deduplication: same date, same destination, same quantity
-            route_key = (deliv_date, store_clean, qty)
-            if route_key in seen_route_keys:
-                continue
-            seen_route_keys.add(route_key)
-
-            # Compute Status
-            if deliv_date < today_str:
-                status = "non_livre"
-            elif deliv_date == today_str:
-                status = "non_livre"
-            else:
-                status = "non_livre"
-
-            driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
-            vehicle = d.get("vehicle") or "Camion Porteur"
-            if not vehicle or vehicle == "/":
-                vehicle = "Camion Porteur"
-
-            prio = d.get("priority") or 1
-            try:
-                prio = int(prio)
-            except Exception:
-                prio = 1
-
-            notes = d.get("remark") or d.get("retour") or f"Programme {p_title}"
-            time_str = f"Tournée {p_title}"
-
-            route_comp_key = (deliv_date, store_clean, driver)
-            matched_rec = existing_statuses_by_composite.get(route_comp_key) or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
-
-            if matched_rec and (matched_rec.get("status") == "Livré" or matched_rec.get("completed") is True):
-                final_status = "Livré"
-                final_completed = True
-                route_id = matched_rec.get("id") or f"DEL-{route_counter:04d}"
-            else:
-                final_status = "Non Livré"
-                final_completed = False
-                route_id = f"DEL-{route_counter:04d}"
-
-            if not deliv_date or not store_clean or qty <= 0:
-                continue
-
-            del_key = f"{deliv_date}|{store_clean}|{qty}"
-            all_routes.append({
-                "id": route_id,
-                "delivery_id": route_id,
-                "delivery_key": del_key,
-                "date": deliv_date,
-                "magasin": d["store"],
-                "destination": d["store"],
-                "chauffeur": driver,
-                "driver": driver,
-                "matricule": vehicle,
-                "vehicle": vehicle,
-                "quantite": qty,
-                "quantity": qty,
-                "status": final_status,
-                "completed": final_completed
-            })
-            route_counter += 1
+    all_routes = extract_routes_from_programs(db_data.get("programs", []), index_path=index_path)
 
     # Read existing index.html
     with open(index_path, "r", encoding="utf-8", newline="") as f:

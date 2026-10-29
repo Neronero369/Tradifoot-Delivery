@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Tradifoot Logistics - Program Ingestion Parser, Validator & Upsert Engine
-Demonstrates reading, sanitizing, schema-validating, and transforming
-Excel delivery schedules into structured JSON ready for Supabase & Dashboard sync
-with strict Status Preservation (Never Downgrade 'Livré').
+Production Excel Delivery Schedule Parser & Supabase Synchronization.
+Dynamically locates headers (Boutique, Globale, Chauffeur, Livraison)
+and maps records directly to the Supabase database schema.
 """
 
 import sys
 import os
+import re
 import json
 import urllib.request
 import urllib.error
 from datetime import datetime, date
 import openpyxl
+
+DEFAULT_SUPABASE_REST_URL = "https://gmdgnzokgqyivlfeosdy.supabase.co/rest/v1/deliveries"
+DEFAULT_SUPABASE_API_KEY = "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur"
 
 AUTHORIZED_CHAUFFEURS = {
     "SAADI BILLEL",
@@ -21,14 +26,6 @@ AUTHORIZED_CHAUFFEURS = {
     "BALLA YOUCEF",
     "BAHLOULI ADEL"
 }
-
-REQUIRED_HEADERS = [
-    "ID", "Date", "Magasin", "Chauffeur", "Matricule", "Quantite", "Status", "Remarques"
-]
-
-DEFAULT_SUPABASE_URL = "https://gmdgnzokgqyivlfeosdy.supabase.co"
-DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur"
-SUPABASE_DELIVERIES_ENDPOINT = f"{DEFAULT_SUPABASE_URL}/rest/v1/deliveries"
 
 
 def build_delivery_key(date_str, store_str, quantite):
@@ -52,106 +49,150 @@ def normalize_composite_key(date_str, store_str, driver_str):
     return f"{d}|||{m}|||{c}"
 
 
+def normalize_date_to_iso(val, fallback=""):
+    """
+    Converts date representations (datetime, date, DD/MM/YYYY, etc.) to YYYY-MM-DD.
+    """
+    if isinstance(val, (datetime, date)):
+        return val.strftime("%Y-%m-%d")
+    s = str(val or "").strip()
+    if not s:
+        return fallback or datetime.today().strftime("%Y-%m-%d")
+
+    # Priority 1: DD/MM/YYYY and variations
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%Y-%m-%d", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(s[:10], fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Priority 2: ISO formatted timestamps
+    try:
+        return datetime.fromisoformat(s[:19]).strftime("%Y-%m-%d")
+    except Exception:
+        pass
+
+    return s[:10]
+
+
 def parse_delivery_excel(file_path):
     """
-    Parses and schema-validates a Programme de Livraison Excel workbook.
+    Parses a production Programme de Livraison Excel workbook dynamically by header name.
+
+    CRITICAL COLUMN MAPPING:
+      - Boutique   -> maps to magasin (String, uppercase, trimmed)
+      - Globale    -> maps to quantite (Integer, default 0, skip row if 0/empty)
+      - Chauffeur  -> maps to chauffeur (String, uppercase, default 'NON SPÉCIFIÉ')
+      - Livraison  -> maps to date (Convert from DD/MM/YYYY to YYYY-MM-DD)
+
+    Completely ignores all operational columns (Wilaya, Region, ACCESSOIRES,
+    CHAUSSETTES, SAC A DOS, FOOTWEAR, Sachet, P, OM, Retour, Chargement,
+    Materiel, REMARQUE).
+
+    Generates composite delivery_id (LIV-YYYYMMDD-STORE-CHAUF-INDEX).
+    Sets status strictly to 'Non Livré' for all newly parsed rows.
     """
     wb = openpyxl.load_workbook(file_path, data_only=True)
-    ws = wb.active
 
-    # 1. Header Validation (Row 1)
-    actual_headers = [str(cell.value or "").strip() for cell in ws[1]]
-    actual_headers_prefix = actual_headers[:len(REQUIRED_HEADERS)]
-    if actual_headers_prefix != REQUIRED_HEADERS:
+    # Locate the delivery program sheet (or default to active sheet)
+    ws = wb.active
+    for s_name in wb.sheetnames:
+        if re.search(r'prog|poro|livr', s_name, re.I):
+            ws = wb[s_name]
+            break
+
+    # 1. Dynamic Header Resolution (search rows 1 to 7)
+    header_row_idx = None
+    col_boutique = None
+    col_globale = None
+    col_chauffeur = None
+    col_livraison = None
+    raw_headers = []
+
+    for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
+        clean_row = [str(c or "").strip().lower() for c in row]
+        has_boutique = any(h in ("boutique", "magasin") or "boutique" in h or "magasin" in h for h in clean_row)
+        has_globale = any(h in ("globale", "global", "quantite", "quantité", "qte") or "globale" in h or "quantite" in h for h in clean_row)
+        
+        if has_boutique and (has_globale or any("livraison" in h or "chauffeur" in h for h in clean_row)):
+            header_row_idx = r_idx
+            raw_headers = [str(c or "").strip() for c in row]
+            for c_idx, h in enumerate(clean_row):
+                if h in ("boutique", "magasin") or ("boutique" in h and col_boutique is None) or ("magasin" in h and col_boutique is None):
+                    col_boutique = c_idx
+                elif h in ("globale", "global", "quantite", "quantité", "qte") or ("globale" in h and col_globale is None):
+                    col_globale = c_idx
+                elif h in ("chauffeur", "driver") or ("chauffeur" in h and col_chauffeur is None):
+                    col_chauffeur = c_idx
+                elif h in ("livraison", "date") or ("livraison" in h and col_livraison is None):
+                    col_livraison = c_idx
+            break
+
+    if header_row_idx is None or col_boutique is None:
+        wb.close()
         raise ValueError(
-            f"Invalid Excel Header Schema.\nExpected: {REQUIRED_HEADERS}\nFound:    {actual_headers_prefix}"
+            f"Could not locate required 'Boutique' column in {file_path}. Headers detected: {raw_headers}"
         )
 
     records = []
     errors = []
+    record_idx = 1
 
-    # 2. Iterate data rows starting at Row 2
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        # Skip completely empty rows
+    # 2. Iterate data rows starting immediately below the detected header row
+    for row_idx, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), start=header_row_idx + 1):
         if not any(row):
             continue
 
-        raw_id, raw_date, raw_store, raw_driver, raw_mat, raw_qty, raw_status, raw_notes = row[:8]
+        # Column 1: Boutique -> magasin (String, uppercase, trimmed)
+        raw_store = str(row[col_boutique] or "").strip() if col_boutique < len(row) and row[col_boutique] is not None else ""
+        magasin = " ".join(raw_store.upper().split())
 
-        # Row ID
-        delivery_id = str(raw_id).strip() if raw_id is not None else f"AUTO-{row_idx}"
-
-        # Date normalization -> YYYY-MM-DD
-        normalized_date = ""
-        if isinstance(raw_date, (datetime, date)):
-            normalized_date = raw_date.strftime("%Y-%m-%d")
-        elif isinstance(raw_date, str) and raw_date.strip():
-            raw_str = raw_date.strip()
-            parsed = False
-            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
-                try:
-                    dt = datetime.strptime(raw_str, fmt)
-                    normalized_date = dt.strftime("%Y-%m-%d")
-                    parsed = True
-                    break
-                except ValueError:
-                    pass
-            if not parsed:
-                errors.append(f"Row {row_idx} ({raw_store}): Format de date invalide: '{raw_date}'")
-                normalized_date = raw_str
-        else:
-            errors.append(f"Row {row_idx}: Date manquante")
-
-        # Magasin / Destination
-        store_name = str(raw_store or "").strip().upper()
-        if not store_name:
-            errors.append(f"Row {row_idx}: Nom de magasin manquant")
-
-        # Chauffeur validation & normalization
-        driver_name = str(raw_driver or "").strip().upper()
-        if driver_name and driver_name not in AUTHORIZED_CHAUFFEURS:
-            errors.append(f"Row {row_idx}: Chauffeur non autorisé '{raw_driver}' (Magasin: {store_name})")
-
-        # Matricule
-        matricule = str(raw_mat or "").strip().upper()
-
-        # Quantite
+        # Column 2: Globale -> quantite (Integer, default 0 if blank)
+        raw_qty = row[col_globale] if col_globale is not None and col_globale < len(row) else 0
         try:
-            qty = int(raw_qty) if raw_qty is not None else 0
-            if qty < 1:
-                errors.append(f"Row {row_idx}: Quantité ({qty}) doit être >= 1")
+            if raw_qty is not None and str(raw_qty).strip() != "":
+                qty = int(float(str(raw_qty).replace(",", ".")))
+            else:
+                qty = 0
         except (ValueError, TypeError):
-            errors.append(f"Row {row_idx}: Quantité non numérique '{raw_qty}'")
             qty = 0
 
-        # Status normalization
-        raw_status_str = str(raw_status or "Non Livré").strip().lower()
-        if "livr" in raw_status_str and "non" not in raw_status_str:
-            status = "Livré"
-        else:
-            status = "Non Livré"
-
-        # Remarques
-        notes = str(raw_notes or "").strip()
-
-        d_key = build_delivery_key(normalized_date, store_name, qty)
-        if not normalized_date or not store_name or qty <= 0:
-            errors.append(f"Row {row_idx}: Ignorée (données incomplètes: date='{normalized_date}', magasin='{store_name}', quantite={qty})")
+        # Skip rule: If a row has an empty Boutique or if Globale is 0/empty, skip entirely
+        if not magasin or magasin.startswith("TOTAL") or magasin == "NONE" or qty <= 0:
             continue
 
-        records.append({
+        # Column 3: Chauffeur -> chauffeur (String, uppercase, default 'NON SPÉCIFIÉ' if blank)
+        raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
+        chauffeur = " ".join(raw_driver.upper().split()) if raw_driver else "NON SPÉCIFIÉ"
+        if chauffeur in ("", "NONE", "NULL", "-", "/"):
+            chauffeur = "NON SPÉCIFIÉ"
+
+        # Column 4: Livraison -> date (Convert from DD/MM/YYYY to YYYY-MM-DD)
+        raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
+        normalized_date = normalize_date_to_iso(raw_date)
+
+        # Composite delivery_id: LIV-YYYYMMDD-STORE-CHAUF-INDEX
+        ymd = normalized_date.replace("-", "")
+        store_slug = re.sub(r'[^A-Z0-9]', '', magasin)[:12]
+        chauf_slug = re.sub(r'[^A-Z0-9]', '', chauffeur)[:8]
+        delivery_id = f"LIV-{ymd}-{store_slug}-{chauf_slug}-{record_idx:04d}"
+
+        # Matched schema payload for Supabase
+        record = {
             "id": delivery_id,
             "delivery_id": delivery_id,
-            "delivery_key": d_key,
             "date": normalized_date,
-            "magasin": store_name,
-            "chauffeur": driver_name,
-            "matricule": matricule,
+            "magasin": magasin,
+            "chauffeur": chauffeur,
+            "matricule": "",
             "quantite": qty,
-            "status": status,
-            "remarques": notes
-        })
+            "status": "Non Livré",
+            "delivery_key": build_delivery_key(normalized_date, magasin, qty)
+        }
+        records.append(record)
+        record_idx += 1
 
+    wb.close()
     return {
         "success": len(errors) == 0,
         "total_records": len(records),
@@ -204,7 +245,6 @@ def upsert_manifest_records(incoming_records, existing_records):
             incoming_status = item.get("status", "Non Livré")
 
             if curr_status == "Livré":
-                # PRESERVE 'Livré'
                 final_status = "Livré"
                 stats["preserved_livre"] += 1
             elif incoming_status == "Livré":
@@ -221,7 +261,6 @@ def upsert_manifest_records(incoming_records, existing_records):
             if item.get("matricule"):
                 matched["matricule"] = item["matricule"]
         else:
-            # Brand new row
             new_item = dict(item)
             if new_item.get("status") != "Livré":
                 new_item["status"] = "Non Livré"
@@ -237,110 +276,130 @@ def upsert_manifest_records(incoming_records, existing_records):
     return merged, stats
 
 
-def push_manifest_to_supabase(excel_path_or_records, supabase_url=None, anon_key=None):
+def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
     """
-    Ingests an Excel delivery manifest directly into the Supabase 'deliveries' table
-    using HTTPS REST API (PostgREST upsert on conflict delivery_key).
+    Pushes delivery records to Supabase REST endpoint via POST upsert
+    using standard Python urllib.request.
+
+    Mapped schema:
+    {
+        "delivery_id": r["id"],
+        "date": r["date"],
+        "magasin": r["magasin"],
+        "chauffeur": r["chauffeur"],
+        "matricule": r["matricule"],
+        "quantite": int(r.get("quantite", 0)),
+        "status": r["status"]
+    }
+
+    Headers for Upsert:
+    - apikey: <api_key>
+    - Authorization: Bearer <api_key>
+    - Content-Type: application/json
+    - Prefer: resolution=merge-duplicates
     """
-    base_url = (supabase_url or DEFAULT_SUPABASE_URL).rstrip("/")
-    url = f"{base_url}/rest/v1/deliveries?on_conflict=delivery_key"
-    key = anon_key or DEFAULT_SUPABASE_ANON_KEY
+    url = supabase_url or DEFAULT_SUPABASE_REST_URL
+    key = api_key or DEFAULT_SUPABASE_API_KEY
 
-    if isinstance(excel_path_or_records, str):
-        parsed = parse_delivery_excel(excel_path_or_records)
-        records = parsed["records"]
-    else:
-        records = excel_path_or_records
+    if isinstance(records, str):
+        parsed = parse_delivery_excel(records)
+        records = parsed.get("records", [])
 
-    rows = []
-    now_iso = datetime.now().isoformat()
+    if not records:
+        print("[!] No records provided to push to Supabase.")
+        return {"status": "success", "count": 0, "data": []}
+
+    payload = []
     for r in records:
-        del_date = str(r.get("date") or "").strip()
-        del_store = str(r.get("magasin") or "").strip()
-        try:
-            del_qty = int(r.get("quantite") or 0)
-        except (ValueError, TypeError):
-            del_qty = 0
-
-        # Filter corrupted / empty rows
-        if not del_date or not del_store or del_qty <= 0:
+        rec_id = r.get("id") or r.get("delivery_id")
+        if not rec_id:
             continue
+        try:
+            qty = int(r.get("quantite", 0))
+        except (ValueError, TypeError):
+            qty = 0
 
-        dkey = r.get("delivery_key") or build_delivery_key(del_date, del_store, del_qty)
-        del_id = str(r.get("id") or r.get("delivery_id") or "").strip()
+        deliv_date = str(r.get("date") or "").strip()
+        store = str(r.get("magasin") or "").strip()
+        driver = str(r.get("chauffeur") or "").strip()
+        matricule = str(r.get("matricule") or "").strip()
+        status = str(r.get("status") or "Non Livré").strip()
 
-        rows.append({
-            "delivery_id": del_id,
-            "delivery_key": dkey,
-            "date": del_date,
-            "magasin": del_store,
-            "chauffeur": str(r.get("chauffeur") or "").strip().upper(),
-            "matricule": str(r.get("matricule") or "").strip().upper(),
-            "quantite": del_qty,
-            "status": r.get("status") or "Non Livré",
-            "delivered_by": r.get("delivered_by"),
-            "updated_at": now_iso
-        })
+        dkey = r.get("delivery_key") or build_delivery_key(deliv_date, store, qty)
 
-    req_data = json.dumps(rows).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=req_data,
-        headers={
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates,return=representation"
-        },
-        method="POST"
-    )
+        mapped = {
+            "delivery_id": str(rec_id).strip(),
+            "date": deliv_date,
+            "magasin": store,
+            "chauffeur": driver,
+            "matricule": matricule,
+            "quantite": qty,
+            "status": status,
+            "delivery_key": dkey
+        }
+        payload.append(mapped)
 
+    if not payload:
+        print("[!] No valid records to push to Supabase after schema mapping.")
+        return {"status": "success", "count": 0, "data": []}
+
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+    }
+
+    # Ensure on_conflict target matches the table unique constraint (delivery_key)
+    if "on_conflict=" not in url:
+        sep = "&" if "?" in url else "?"
+        endpoint_url = f"{url}{sep}on_conflict=delivery_key"
+    else:
+        endpoint_url = url
+
+    BATCH_SIZE = 100
+    total_pushed = 0
     try:
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            resp_body = resp.read().decode("utf-8")
-            return {
-                "status": "success",
-                "count": len(rows),
-                "data": json.loads(resp_body) if resp_body else []
-            }
+        for i in range(0, len(payload), BATCH_SIZE):
+            batch = payload[i:i + BATCH_SIZE]
+            req_data = json.dumps(batch).encode("utf-8")
+            req = urllib.request.Request(endpoint_url, data=req_data, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=45) as resp:
+                    pass
+            except urllib.error.HTTPError as he:
+                # Fallback to direct url if endpoint rejects on_conflict parameter
+                if he.code == 400 and endpoint_url != url:
+                    fallback_req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
+                    with urllib.request.urlopen(fallback_req, timeout=45) as resp:
+                        pass
+                else:
+                    raise he
+            total_pushed += len(batch)
+
+        print(f"[+] Successfully pushed {total_pushed} records to Supabase.")
+        return {"status": "success", "count": total_pushed}
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="ignore")
-        # Schema tolerance fallback if remote table does not have on_conflict=delivery_key yet
-        if "delivery_key" in err_body or "PGRST204" in err_body:
-            fallback_url = f"{base_url}/rest/v1/deliveries"
-            fallback_rows = [{
-                "date": r["date"],
-                "magasin": r["magasin"],
-                "matricule": r["matricule"],
-                "quantite": r["quantite"],
-                "status": r["status"],
-                "updated_at": r["updated_at"]
-            } for r in rows]
-            fallback_req = urllib.request.Request(
-                fallback_url,
-                data=json.dumps(fallback_rows).encode("utf-8"),
-                headers={
-                    "apikey": key,
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json"
-                },
-                method="POST"
-            )
-            try:
-                with urllib.request.urlopen(fallback_req, timeout=45) as fb_resp:
-                    return {"status": "success", "count": len(fallback_rows), "note": "inserted via fallback"}
-            except Exception:
-                pass
+        print(f"[-] Supabase HTTP Error {e.code}: {err_body}")
         return {"status": "error", "code": e.code, "message": str(e), "details": err_body}
     except urllib.error.URLError as e:
+        print(f"[-] Supabase URL Error: {e}")
+        return {"status": "error", "message": str(e)}
+    except Exception as e:
+        print(f"[-] Supabase Push Unexpected Error: {e}")
         return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":
-    test_file = "template_programme_de_livraison.xlsx"
-    print(f"Parsing test file: {test_file}")
-    res = parse_delivery_excel(test_file)
-    print(f"Success: {res['success']}")
-    print(f"Total Rows: {res['total_records']}")
-    print(f"Errors ({len(res['errors'])}): {res['errors']}")
-    print(f"Sample Parsed Record: {res['records'][0] if res['records'] else None}")
+    test_files = [
+        "data/programs/20261029_1423_PROGRAMME 29-10-2026.xlsx",
+        "template_programme_de_livraison.xlsx"
+    ]
+    for tf in test_files:
+        if os.path.exists(tf):
+            print(f"\n--- Testing parse_delivery_excel on: {tf} ---")
+            res = parse_delivery_excel(tf)
+            print(f"Success: {res['success']}")
+            print(f"Total Rows: {res['total_records']}")
+            print(f"Sample Parsed Record: {res['records'][0] if res['records'] else None}")
