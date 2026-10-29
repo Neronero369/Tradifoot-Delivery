@@ -12686,12 +12686,11 @@ const LOCAL_DELIVERY_DATA = [
 
       // 5. Rebuild localStorage strictly from this synced list
       try {
-        localStorage.removeItem("delivered_delivery_ids");
-        localStorage.removeItem("tradifoot_delivered_keys");
-        localStorage.removeItem("tradifoot_delivered_fallback_keys");
-        localStorage.setItem("delivered_delivery_ids", JSON.stringify(Array.from(syncedCompletedIds)));
-        localStorage.setItem("tradifoot_delivered_keys", JSON.stringify(Array.from(syncedDeliveredKeys)));
-        localStorage.setItem("tradifoot_delivered_fallback_keys", JSON.stringify(Array.from(syncedFallbackKeys)));
+        if (remoteDeliveries && remoteDeliveries.length > 0) {
+          localStorage.setItem("delivered_delivery_ids", JSON.stringify(Array.from(syncedCompletedIds)));
+          localStorage.setItem("tradifoot_delivered_keys", JSON.stringify(Array.from(syncedDeliveredKeys)));
+          localStorage.setItem("tradifoot_delivered_fallback_keys", JSON.stringify(Array.from(syncedFallbackKeys)));
+        }
         localStorage.setItem("tradifoot_deliveries", JSON.stringify(baseDeliveries));
       } catch (e) {}
 
@@ -12716,6 +12715,90 @@ const LOCAL_DELIVERY_DATA = [
       applyServerSourceOfTruth(remoteDeliveries);
     }
 
+    /**
+     * Requirement 1: Automatic Initial Seeding (Push LOCAL_DELIVERY_DATA to Supabase)
+     * - Checks if the Supabase 'deliveries' table is empty using { count: 'exact', head: true }
+     * - If count === 0, batch uploads LOCAL_DELIVERY_DATA in chunks of 100 via upsert onConflict: 'delivery_id'
+     * - Displays notification: "Initialisation de la base Supabase terminée (835 tournées)"
+     */
+    async function seedSupabaseIfEmpty() {
+      if (!supabaseClient) return;
+
+      try {
+        updateSupabaseSyncBadge('syncing', 'Vérification Supabase...');
+        const { count, error } = await supabaseClient
+          .from('deliveries')
+          .select('*', { count: 'exact', head: true });
+
+        if (error) {
+          console.error('Supabase seed count check error:', error);
+          return;
+        }
+
+        if (count === 0 || count === null) {
+          console.log('[Supabase Seed] La table deliveries est vide. Début du peuplement initial...');
+          updateSupabaseSyncBadge('syncing', 'Initialisation Supabase (0%)...');
+
+          const allRecords = LOCAL_DELIVERY_DATA.map((item, idx) => ({
+            delivery_id: item.id || `DEL-${String(idx + 1).padStart(4, '0')}`,
+            date: normalizeDate(item.date),
+            magasin: item.magasin || item.destination || '',
+            chauffeur: item.chauffeur || item.driver || '',
+            matricule: item.matricule || item.vehicle || '',
+            quantite: Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0,
+            status: item.status || 'Non Livré'
+          }));
+
+          const BATCH_SIZE = 100;
+          for (let i = 0; i < allRecords.length; i += BATCH_SIZE) {
+            const batch = allRecords.slice(i, i + BATCH_SIZE);
+            const percent = Math.round(((i + batch.length) / allRecords.length) * 100);
+            updateSupabaseSyncBadge('syncing', `Initialisation Supabase (${percent}%)...`);
+
+            let { error: upsertErr } = await supabaseClient
+              .from('deliveries')
+              .upsert(batch, { onConflict: 'delivery_id' });
+
+            if (upsertErr) {
+              console.warn(`[Supabase Seed] Erreur upsert lot ${i}:`, upsertErr);
+              // Fallback tolérant au cas où la table Supabase n'a pas encore delivery_id/chauffeur
+              if (/chauffeur|delivery_id/i.test(upsertErr.message || '') || upsertErr.code === 'PGRST204') {
+                const cleanBatch = batch.map(b => ({
+                  date: b.date,
+                  magasin: b.magasin,
+                  matricule: b.matricule,
+                  quantite: b.quantite,
+                  status: b.status
+                }));
+                const { error: insErr } = await supabaseClient.from('deliveries').insert(cleanBatch);
+                if (insErr) {
+                  console.error('[Supabase Seed] Échec insertion de secours:', insErr);
+                  throw insErr;
+                }
+              } else {
+                throw upsertErr;
+              }
+            }
+          }
+
+          console.log(`[Supabase Seed] Base Supabase initialisée avec succès (${allRecords.length} tournées).`);
+          updateSupabaseSyncBadge('success', 'Supabase Synchronisé ✓');
+          showNotification(`Initialisation de la base Supabase terminée (${allRecords.length} tournées)`, 'success');
+        }
+      } catch (err) {
+        console.error('Supabase seed error:', err);
+        showNotification(`Erreur initialisation Supabase: ${err.message || 'Échec de connexion'}`, 'error');
+        updateSupabaseSyncBadge('error', 'Erreur init Supabase');
+      }
+    }
+
+    /**
+     * Requirement 3: Overlay Synced Deliveries
+     * - Queries Supabase directly via supabaseClient.from('deliveries').select('*')
+     * - Maps returned rows into canonical format
+     * - Matches against local deliveries by delivery_id or composite key (date + magasin + quantite)
+     * - Re-renders segmented tabs ("Non Livré" / "Livré") and circular progress ring
+     */
     async function fetchRemoteDeliveries(isManual = false) {
       if (AppState.isFetchingRemote) return;
       AppState.isFetchingRemote = true;
@@ -12746,7 +12829,10 @@ const LOCAL_DELIVERY_DATA = [
           .from('deliveries')
           .select('*');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase fetch error:', error);
+          throw error;
+        }
 
         if (data && Array.isArray(data)) {
           // Canonical normalization of Supabase rows
@@ -12779,7 +12865,7 @@ const LOCAL_DELIVERY_DATA = [
         console.error('Supabase fetch error:', err);
         updateSupabaseSyncBadge('error', 'Supabase Hors-ligne');
         if (isManual) {
-          showNotification('Supabase injoignable. Mode hors-ligne actif.', 'error');
+          showNotification(`Erreur Supabase: ${err.message || 'Supabase injoignable'}`, 'error');
         }
       } finally {
         AppState.isFetchingRemote = false;
@@ -12799,11 +12885,11 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
-     * Requirement 4: Update Status Mutation in Supabase
+     * Requirement 2: Correct Update & Upsert Logic
      * - Enforces chauffeur authentication (Admins cannot trigger updates)
      * - Optimistically updates local UI state
-     * - Performs update on Supabase table 'deliveries' (.eq('delivery_id', item.id))
-     * - If row does not exist in Supabase yet, upserts it with complete record details
+     * - Upserts delivery in Supabase table 'deliveries' with onConflict: 'delivery_id'
+     * - Logs explicit errors to console and shows toast notification on error
      */
     async function syncDeliveryStatusToSupabase(item, newStatus = 'Livré') {
       if (!item) return false;
@@ -12823,94 +12909,74 @@ const LOCAL_DELIVERY_DATA = [
 
       updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId} vers Supabase...`);
 
+      const upsertRecord = {
+        delivery_id: deliveryId,
+        date: normDate,
+        magasin: store,
+        chauffeur: driver,
+        matricule: vehicle,
+        quantite: qty,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
+
       try {
         if (!supabaseClient) {
+          console.error('Supabase error: client non configuré');
           updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
-          queueOfflineSync({ id: deliveryId, delivery_id: deliveryId, status: newStatus, chauffeur: driver, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
+          showNotification('Supabase non configuré. Sauvegarde hors-ligne.', 'error');
+          queueOfflineSync(upsertRecord);
           return false;
         }
 
-        const updateData = {
-          status: newStatus,
-          chauffeur: driver,
-          updated_at: new Date().toISOString()
-        };
-
-        // 1. Attempt direct update matching by delivery_id
-        let updateRes = await supabaseClient
+        let { data, error } = await supabaseClient
           .from('deliveries')
-          .update(updateData)
-          .eq('delivery_id', deliveryId)
-          .select();
+          .upsert(upsertRecord, { onConflict: 'delivery_id' });
 
-        // 2. Handle schema column tolerance (if chauffeur column is omitted in table)
-        if (updateRes.error && /chauffeur.*does not exist/i.test(updateRes.error.message)) {
-          delete updateData.chauffeur;
-          updateRes = await supabaseClient
-            .from('deliveries')
-            .update(updateData)
-            .eq('delivery_id', deliveryId)
-            .select();
-        }
-
-        // 3. If delivery_id doesn't exist as a column in table, match by numeric id
-        if (updateRes.error && /delivery_id.*does not exist/i.test(updateRes.error.message)) {
-          const numericId = Number(deliveryId.replace(/\D/g, ''));
-          if (numericId) {
-            updateRes = await supabaseClient
-              .from('deliveries')
-              .update(updateData)
-              .eq('id', numericId)
-              .select();
-          }
-        }
-
-        // 4. If row does not exist in Supabase yet, upsert it with complete record details
-        const needUpsert = !updateRes.error && (!updateRes.data || updateRes.data.length === 0);
-        if (needUpsert) {
-          const upsertRow = {
-            delivery_id: deliveryId,
+        // Fallback tolérant si le schéma distant n'a pas encore les colonnes personnalisées
+        if (error && (/chauffeur|delivery_id/i.test(error.message || '') || error.code === 'PGRST204')) {
+          console.warn('[Supabase] Tentative de secours avec les colonnes de base:', error.message);
+          const fallbackData = {
             date: normDate,
             magasin: store,
-            chauffeur: driver,
             matricule: vehicle,
             quantite: qty,
             status: newStatus,
             updated_at: new Date().toISOString()
           };
-
-          const upsertRes = await supabaseClient
-            .from('deliveries')
-            .upsert(upsertRow, { onConflict: 'delivery_id' });
-
-          if (upsertRes.error) {
-            // Fallback insert if table has default identity id
-            const cleanInsert = {
-              date: normDate,
-              magasin: store,
-              matricule: vehicle,
-              quantite: qty,
-              status: newStatus,
-              updated_at: new Date().toISOString()
-            };
-            await supabaseClient.from('deliveries').insert(cleanInsert);
+          const numericId = Number(deliveryId.replace(/\D/g, ''));
+          let fbRes = null;
+          if (numericId) {
+            fbRes = await supabaseClient
+              .from('deliveries')
+              .update(fallbackData)
+              .eq('id', numericId);
           }
-        } else if (updateRes.error && !/does not exist/i.test(updateRes.error.message)) {
-          throw updateRes.error;
+          if (!fbRes || fbRes.error) {
+            fbRes = await supabaseClient.from('deliveries').insert(fallbackData);
+          }
+          error = fbRes ? fbRes.error : null;
         }
 
-        updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
+        if (error) {
+          console.error('Supabase error:', error);
+          showNotification(`Erreur Supabase: ${error.message || 'Échec de synchronisation'}`, 'error');
+          updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
+          queueOfflineSync(upsertRecord);
+          return false;
+        }
+
+        updateSupabaseSyncBadge('success', 'Supabase Synchronisé ✓');
         return true;
       } catch (err) {
-        console.error('Supabase update error:', err);
+        console.error('Supabase error:', err);
+        showNotification(`Erreur Supabase: ${err.message || 'Échec réseau'}`, 'error');
         updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-        queueOfflineSync({ id: deliveryId, delivery_id: deliveryId, status: newStatus, chauffeur: driver, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
+        queueOfflineSync(upsertRecord);
         return false;
       }
     }
 
-    // Alias for backward compatibility
-    
     function queueOfflineSync(payload) {
       try {
         const raw = localStorage.getItem("pending_supabase_sync_queue");
@@ -12932,22 +12998,13 @@ const LOCAL_DELIVERY_DATA = [
 
         for (const item of queue) {
           try {
-            const delId = item.delivery_id || item.id || item.ID;
-            if (!delId) continue;
-            await supabaseClient
-              .from('deliveries')
-              .update({
-                status: item.status || item.Status || 'Livré',
-                chauffeur: item.chauffeur || item.Chauffeur,
-                updated_at: new Date().toISOString()
-              })
-              .eq('delivery_id', delId);
+            await syncDeliveryStatusToSupabase(item, item.status || 'Livré');
           } catch (qErr) {
             queueOfflineSync(item);
             break;
           }
         }
-        updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
+        updateSupabaseSyncBadge('success', 'Supabase Synchronisé ✓');
       } catch (e) {
         console.warn('[Supabase] Erreur flush file hors-ligne:', e);
       }
@@ -13882,7 +13939,7 @@ const LOCAL_DELIVERY_DATA = [
       if (DOM.detailModal) DOM.detailModal.classList.add("hidden");
     }
 
-    function initAuthenticatedApp() {
+    async function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
       initLocalDeliveryStates();
 
@@ -13953,8 +14010,11 @@ const LOCAL_DELIVERY_DATA = [
           });
       }
 
-      // Automatic Remote Sync: Immediately fetch latest server source of truth
-      fetchRemoteDeliveries(false);
+      // 1. Initial Seeding: Seed Supabase if the deliveries table is empty
+      await seedSupabaseIfEmpty();
+
+      // 2. Automatic Remote Sync: Immediately fetch latest server source of truth
+      await fetchRemoteDeliveries(false);
     }
 
     window.addEventListener("DOMContentLoaded", () => {
