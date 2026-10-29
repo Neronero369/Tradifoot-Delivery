@@ -11,4 +11,5 @@ delivery_september/
 *.log
 *.ps1
 __pycache__/
+node_modules/
 .vscode/
