@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr" class="h-full bg-slate-100 text-slate-800 antialiased">
 <head>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Tradifoot — Programme de Livraison &amp; Suivi des Tournées</title>
@@ -12404,7 +12407,7 @@ const LOCAL_DELIVERY_DATA = [
       const d = normalizeDate(item.date || item.Date);
       const m = normalizeText(item.magasin || item.Magasin || item.destination);
       const q = Number(item.quantite !== undefined ? item.quantite : (item.Quantite !== undefined ? item.Quantite : item.quantity)) || 0;
-      if (!d || !m || q <= 0) return "";
+      if (!d || !m || q < 0) return "";
       return `${d}|${m}|${q}`;
     }
 
@@ -12413,7 +12416,7 @@ const LOCAL_DELIVERY_DATA = [
       const d = normalizeDate(item.date || item.Date);
       const m = normalizeText(item.magasin || item.Magasin || item.destination);
       const q = Number(item.quantite !== undefined ? item.quantite : (item.Quantite !== undefined ? item.Quantite : item.quantity)) || 0;
-      return Boolean(d && m && q > 0);
+      return Boolean(d && m && q >= 0);
     }
 
     function getDeliveryKey(item) {
@@ -13896,6 +13899,43 @@ const LOCAL_DELIVERY_DATA = [
       if (DOM.detailModal) DOM.detailModal.classList.add("hidden");
     }
 
+
+    function setupRealtimeSubscription() {
+      if (!supabaseClient || typeof supabaseClient.channel !== 'function') return;
+
+      if (AppState.supabaseRealtimeChannel) {
+        try { supabaseClient.removeChannel(AppState.supabaseRealtimeChannel); } catch (e) {}
+        AppState.supabaseRealtimeChannel = null;
+      }
+
+      console.log('[Supabase Realtime] Inscription au canal public:deliveries...');
+      AppState.supabaseRealtimeChannel = supabaseClient
+        .channel('public:deliveries')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
+          console.log('[Supabase Realtime] Événement reçu:', payload);
+          fetchRemoteDeliveries(false);
+        })
+        .subscribe((status) => {
+          console.log('[Supabase Realtime] État souscription:', status);
+          if (status === 'SUBSCRIBED') {
+            updateSupabaseSyncBadge('success', 'Supabase En Direct 🟢');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            updateSupabaseSyncBadge('error', 'Supabase Déconnecté');
+          }
+        });
+    }
+
+    // Réveil mobile & reconnexion instantanée
+    ['visibilitychange', 'pageshow', 'focus', 'online'].forEach(evt => {
+      window.addEventListener(evt, () => {
+        if (AppState.currentUser) {
+          console.log(`[Lifecycle] Événement ${evt} détecté -> Réveil & Synchronisation`);
+          setupRealtimeSubscription();
+          fetchRemoteDeliveries(false);
+        }
+      });
+    });
+
     async function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
       initLocalDeliveryStates();
@@ -13949,23 +13989,7 @@ const LOCAL_DELIVERY_DATA = [
       startAutoPolling();
 
       // Subscribe to Supabase Postgres Real-Time WebSocket changes
-      if (supabaseClient && typeof supabaseClient.channel === 'function') {
-        if (AppState.supabaseRealtimeChannel) {
-          try { supabaseClient.removeChannel(AppState.supabaseRealtimeChannel); } catch (e) {}
-        }
-        AppState.supabaseRealtimeChannel = supabaseClient
-          .channel('public:deliveries')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
-            console.log('[Supabase Realtime] Event received:', payload);
-            fetchRemoteDeliveries(false);
-          })
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              console.log('[Supabase Realtime] WebSocket abonné aux mises à jour');
-              updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
-            }
-          });
-      }
+      setupRealtimeSubscription();
 
       // 1. Initial Seeding: Seed Supabase if the deliveries table is empty
       await seedSupabaseIfEmpty();
