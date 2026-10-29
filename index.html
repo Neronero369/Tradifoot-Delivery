@@ -218,8 +218,8 @@
           </div>
         </div>
 
-        <!-- Live Supabase Connection Status Badge (Click to Refresh) -->
-        <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition">
+        <!-- Live Supabase Connection Status Badge (Hidden) -->
+        <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="hidden" style="display: none !important;">
           <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
@@ -9318,23 +9318,20 @@ const LOCAL_DELIVERY_DATA = [
     function updateSupabaseSyncBadge(status, customText) {
       const statusTextEl = (DOM && DOM.supabaseStatusText) || document.getElementById('supabase-status-text');
       const badgeEl = (DOM && DOM.supabaseBadge) || document.getElementById('supabase-badge');
+      if (badgeEl) {
+        badgeEl.style.display = 'none';
+        if (!badgeEl.classList.contains('hidden')) {
+          badgeEl.classList.add('hidden');
+        }
+      }
       if (!statusTextEl) return;
 
       if (status === 'syncing') {
         statusTextEl.textContent = customText || "Synchronisation...";
-        if (badgeEl) {
-          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-blue-500/25 transition";
-        }
       } else if (status === 'success') {
         statusTextEl.textContent = customText || "Supabase En Direct 🟢";
-        if (badgeEl) {
-          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition";
-        }
       } else {
         statusTextEl.textContent = customText || "Supabase Reconnexion...";
-        if (badgeEl) {
-          badgeEl.className = "cursor-pointer flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] sm:text-xs font-semibold shadow-2xs hover:bg-amber-500/25 transition";
-        }
       }
     }
 
@@ -10616,7 +10613,7 @@ const LOCAL_DELIVERY_DATA = [
             <span class="text-base font-extrabold text-blue-950 font-mono">${Number(qty).toLocaleString()} Paires</span>
           </div>
 
-          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+          <div class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2" style="display: none !important;">
             <i class="fa-solid fa-database text-emerald-600"></i>
             <span>Synchronisation directe avec Supabase (Source de Vérité)</span>
           </div>
