@@ -12354,9 +12354,9 @@ const LOCAL_DELIVERY_DATA = [
 
     function clearAuthSession() {
       try {
-        localStorage.clear();
+        localStorage.removeItem('auth_session');
         if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.clear();
+          sessionStorage.removeItem('auth_session');
         }
       } catch (e) {}
     }
@@ -13020,7 +13020,7 @@ const LOCAL_DELIVERY_DATA = [
 
       if (!found) {
         if (errAlert) errAlert.classList.remove("hidden");
-        if (errText) errText.textContent = "wrong information has been given";
+        if (errText) errText.textContent = "Identifiant ou Code PIN incorrect.";
         if (pInput) pInput.value = "";
         return;
       }
@@ -13054,9 +13054,9 @@ const LOCAL_DELIVERY_DATA = [
 
       // 1. Nuclear wipe of all browser local storage
       try {
-        localStorage.clear();
+        localStorage.removeItem('auth_session');
         if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.clear();
+          sessionStorage.removeItem('auth_session');
         }
       } catch (e) {
         console.warn("[Auth] Failed to clear localStorage:", e);
@@ -13884,6 +13884,7 @@ const LOCAL_DELIVERY_DATA = [
 
     function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
+      initLocalDeliveryStates();
 
       const isAdmin = AppState.currentUser.role === 'admin';
 
