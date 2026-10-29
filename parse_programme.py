@@ -2,7 +2,7 @@
 """
 Tradifoot Logistics - Program Ingestion Parser, Validator & Upsert Engine
 Demonstrates reading, sanitizing, schema-validating, and transforming
-Excel delivery schedules into structured JSON ready for Google Apps Script & Dashboard sync
+Excel delivery schedules into structured JSON ready for Supabase & Dashboard sync
 with strict Status Preservation (Never Downgrade 'Livré').
 """
 
@@ -26,7 +26,9 @@ REQUIRED_HEADERS = [
     "ID", "Date", "Magasin", "Chauffeur", "Matricule", "Quantite", "Status", "Remarques"
 ]
 
-DEFAULT_GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbwqLs9WYjdjESCnX9avFBABv2bZdTXh1a43rYDC6N51l4uIO6em0wS51OaTyTuMAOY/exec"
+DEFAULT_SUPABASE_URL = "https://gmdgnzokgqyivlfeosdy.supabase.co"
+DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur"
+SUPABASE_DELIVERIES_ENDPOINT = f"{DEFAULT_SUPABASE_URL}/rest/v1/deliveries"
 
 
 def normalize_composite_key(date_str, store_str, driver_str):
@@ -215,12 +217,14 @@ def upsert_manifest_records(incoming_records, existing_records):
     return merged, stats
 
 
-def push_manifest_to_google_sheets(excel_path_or_records, web_app_url=None):
+def push_manifest_to_supabase(excel_path_or_records, supabase_url=None, anon_key=None):
     """
-    Ingests an Excel delivery manifest directly into Google Sheets
-    via the Google Apps Script Web App 'batch_upsert' action.
+    Ingests an Excel delivery manifest directly into the Supabase 'deliveries' table
+    using HTTPS REST API (PostgREST upsert with Prefer: resolution=merge-duplicates).
     """
-    url = web_app_url or DEFAULT_GOOGLE_APP_URL
+    base_url = (supabase_url or DEFAULT_SUPABASE_URL).rstrip("/")
+    url = f"{base_url}/rest/v1/deliveries"
+    key = anon_key or DEFAULT_SUPABASE_ANON_KEY
 
     if isinstance(excel_path_or_records, str):
         parsed = parse_delivery_excel(excel_path_or_records)
@@ -228,22 +232,46 @@ def push_manifest_to_google_sheets(excel_path_or_records, web_app_url=None):
     else:
         records = excel_path_or_records
 
-    payload = {
-        "action": "batch_upsert",
-        "deliveries": records
-    }
+    # Map records to canonical Supabase columns
+    rows = []
+    now_iso = datetime.now().isoformat()
+    for r in records:
+        del_id = str(r.get("id") or r.get("delivery_id") or "").strip()
+        rows.append({
+            "delivery_id": del_id,
+            "date": r.get("date"),
+            "magasin": r.get("magasin"),
+            "chauffeur": r.get("chauffeur"),
+            "matricule": r.get("matricule"),
+            "quantite": int(r.get("quantite") or 0),
+            "status": r.get("status") or "Non Livré",
+            "updated_at": now_iso
+        })
 
-    req_data = json.dumps(payload).encode("utf-8")
+    req_data = json.dumps(rows).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=req_data,
-        headers={"Content-Type": "application/json"}
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=representation"
+        },
+        method="POST"
     )
 
     try:
         with urllib.request.urlopen(req, timeout=45) as resp:
             resp_body = resp.read().decode("utf-8")
-            return json.loads(resp_body)
+            return {
+                "status": "success",
+                "count": len(rows),
+                "data": json.loads(resp_body) if resp_body else []
+            }
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="ignore")
+        return {"status": "error", "code": e.code, "message": str(e), "details": err_body}
     except urllib.error.URLError as e:
         return {"status": "error", "message": str(e)}
 

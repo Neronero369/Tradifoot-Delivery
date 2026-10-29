@@ -217,14 +217,14 @@
           </div>
         </div>
 
-        <!-- Live Google Sheets Connection Status Badge (Click to Refresh) -->
-        <div id="google-sheets-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition">
+        <!-- Live Supabase Connection Status Badge (Click to Refresh) -->
+        <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition">
           <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
           </span>
           <i class="fa-solid fa-database text-emerald-400"></i>
-          <span id="google-sheets-status-text">Supabase Connecté ✓</span>
+          <span id="supabase-status-text">Supabase Connecté ✓</span>
         </div>
 
         <!-- Right Controls: Today, Sync & Logout -->
@@ -12282,7 +12282,7 @@ const LOCAL_DELIVERY_DATA = [
       adminFilterDriver: 'ALL',
       adminFilterBoutique: 'ALL',
       adminFilterSearch: '',
-      isSyncingSheet: false,
+      isSyncingRemote: false,
       isFetchingRemote: false
     };
 
@@ -12330,8 +12330,8 @@ const LOCAL_DELIVERY_DATA = [
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
         toastContainer:       document.getElementById('toast-container'),
-        googleSheetsBadge:    document.getElementById('google-sheets-badge'),
-        googleSheetsStatusText: document.getElementById('google-sheets-status-text'),
+        supabaseBadge:        document.getElementById('supabase-badge'),
+        supabaseStatusText:   document.getElementById('supabase-status-text'),
         btnSyncRefresh:       document.getElementById('btn-sync-refresh'),
         syncRefreshIcon:      document.getElementById('sync-refresh-icon')
       };
@@ -12405,7 +12405,7 @@ const LOCAL_DELIVERY_DATA = [
 
     /**
      * Requirement 2: Fallback Fingerprint Matching (Date + Magasin + Quantite)
-     * Used when Sheet Chauffeur is 'NON SPÉCIFIÉ' or an admin name.
+     * Used when remote Chauffeur is 'NON SPÉCIFIÉ' or an admin name.
      */
     function getDeliveryFallbackKey(item) {
       if (!item) return "";
@@ -12522,30 +12522,34 @@ const LOCAL_DELIVERY_DATA = [
       }, 3500);
     }
 
-    function updateSheetSyncBadge(status, customText) {
-      if (!DOM.googleSheetsStatusText) return;
+    function updateSupabaseSyncBadge(status, customText) {
+      const statusTextEl = (DOM && DOM.supabaseStatusText) || document.getElementById('supabase-status-text');
+      const badgeEl = (DOM && DOM.supabaseBadge) || document.getElementById('supabase-badge');
+      if (!statusTextEl) return;
+
       if (status === 'syncing') {
-        DOM.googleSheetsStatusText.textContent = customText || "Synchronisation Supabase...";
-        if (DOM.googleSheetsBadge) {
-          DOM.googleSheetsBadge.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold shadow-2xs hover:bg-blue-500/25 transition";
+        statusTextEl.textContent = customText || "Synchronisation Supabase...";
+        if (badgeEl) {
+          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold shadow-2xs hover:bg-blue-500/25 transition";
         }
       } else if (status === 'success') {
-        DOM.googleSheetsStatusText.textContent = customText || "Supabase Connecté ✓";
-        if (DOM.googleSheetsBadge) {
-          DOM.googleSheetsBadge.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition";
+        statusTextEl.textContent = customText || "Supabase Connecté ✓";
+        if (badgeEl) {
+          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold shadow-2xs hover:bg-emerald-500/25 transition";
         }
       } else if (status === 'error') {
-        DOM.googleSheetsStatusText.textContent = customText || "Supabase Hors-ligne";
-        if (DOM.googleSheetsBadge) {
-          DOM.googleSheetsBadge.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-2xs hover:bg-amber-500/25 transition";
+        statusTextEl.textContent = customText || "Supabase Hors-ligne";
+        if (badgeEl) {
+          badgeEl.className = "cursor-pointer hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-2xs hover:bg-amber-500/25 transition";
         }
       }
     }
 
+    
     /**
-     * Requirement 2: Cross-Check Against Google Sheets on Every Load, Login, and Refresh.
-     * - Filters Google Sheet rows to ignore empty/corrupted rows (skip if Date AND Magasin empty or Quantite == 0).
-     * - For every delivery in dashboard: checks if matching row exists in Google Sheet by ID, Composite Fingerprint,
+     * Cross-Check Against Supabase Database on Every Load, Login, and Refresh.
+     * - Filters Supabase rows to ignore empty/corrupted rows (skip if Date AND Magasin empty or Quantite == 0).
+     * - For every delivery in dashboard: checks if matching row exists in Supabase by ID, Composite Fingerprint,
      *   or Fallback Key with Status === 'Livré'.
      * - If matched as 'Livré', FORCES delivery status to 'Livré' in dashboard state.
      */
@@ -12561,10 +12565,10 @@ const LOCAL_DELIVERY_DATA = [
       }).filter(Boolean);
 
       // 2. Build lookup maps of all valid rows from Supabase
-      const sheetPrimaryMap = new Map();
-      const sheetFallbackMap = new Map();
-      const sheetIdDateQtyMap = new Map();
-      const sheetIdMap = new Map();
+      const supabasePrimaryMap = new Map();
+      const supabaseFallbackMap = new Map();
+      const supabaseIdDateQtyMap = new Map();
+      const supabaseIdMap = new Map();
 
       remoteDeliveries.forEach(row => {
         if (!row) return;
@@ -12586,23 +12590,23 @@ const LOCAL_DELIVERY_DATA = [
         const isGenericDriver = !rowDriver || rowDriver === "NON SPECIFIE" || rowDriver === "NON SPÉCIFIÉ" || isAdminUser(rowDriver);
 
         if (pKey) {
-          if (!sheetPrimaryMap.has(pKey) || isLivre) {
-            sheetPrimaryMap.set(pKey, { isLivre, status, row });
+          if (!supabasePrimaryMap.has(pKey) || isLivre) {
+            supabasePrimaryMap.set(pKey, { isLivre, status, row });
           }
         }
         if (fKey) {
-          if (!sheetFallbackMap.has(fKey) || isLivre || isGenericDriver) {
-            sheetFallbackMap.set(fKey, { isLivre, status, row });
+          if (!supabaseFallbackMap.has(fKey) || isLivre || isGenericDriver) {
+            supabaseFallbackMap.set(fKey, { isLivre, status, row });
           }
         }
         if (idDateQtyKey) {
-          if (!sheetIdDateQtyMap.has(idDateQtyKey) || isLivre) {
-            sheetIdDateQtyMap.set(idDateQtyKey, { isLivre, status, row });
+          if (!supabaseIdDateQtyMap.has(idDateQtyKey) || isLivre) {
+            supabaseIdDateQtyMap.set(idDateQtyKey, { isLivre, status, row });
           }
         }
         if (rowId) {
-          if (!sheetIdMap.has(rowId) || isLivre) {
-            sheetIdMap.set(rowId, { isLivre, status, row });
+          if (!supabaseIdMap.has(rowId) || isLivre) {
+            supabaseIdMap.set(rowId, { isLivre, status, row });
           }
         }
       });
@@ -12619,14 +12623,14 @@ const LOCAL_DELIVERY_DATA = [
         const itemId = String(item.delivery_id || item.id || item.ID || "").trim().toUpperCase();
 
         let match = null;
-        if (itemId && sheetIdMap.has(itemId)) {
-          match = sheetIdMap.get(itemId);
-        } else if (pKey && sheetPrimaryMap.has(pKey)) {
-          match = sheetPrimaryMap.get(pKey);
-        } else if (idDateQtyKey && sheetIdDateQtyMap.has(idDateQtyKey)) {
-          match = sheetIdDateQtyMap.get(idDateQtyKey);
-        } else if (fKey && sheetFallbackMap.has(fKey)) {
-          match = sheetFallbackMap.get(fKey);
+        if (itemId && supabaseIdMap.has(itemId)) {
+          match = supabaseIdMap.get(itemId);
+        } else if (pKey && supabasePrimaryMap.has(pKey)) {
+          match = supabasePrimaryMap.get(pKey);
+        } else if (idDateQtyKey && supabaseIdDateQtyMap.has(idDateQtyKey)) {
+          match = supabaseIdDateQtyMap.get(idDateQtyKey);
+        } else if (fKey && supabaseFallbackMap.has(fKey)) {
+          match = supabaseFallbackMap.get(fKey);
         }
 
         if (match && match.isLivre) {
@@ -12708,7 +12712,7 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
-    function crossCheckWithSheet(remoteDeliveries) {
+    function crossCheckWithSupabase(remoteDeliveries) {
       applyServerSourceOfTruth(remoteDeliveries);
     }
 
@@ -12728,12 +12732,12 @@ const LOCAL_DELIVERY_DATA = [
       if (syncIcon && syncIcon.classList) syncIcon.classList.add('animate-spin');
       if (syncText) syncText.textContent = "Sync...";
 
-      updateSheetSyncBadge('syncing', 'Synchronisation Supabase...');
+      updateSupabaseSyncBadge('syncing', 'Synchronisation Supabase...');
 
       try {
         if (!supabaseClient) {
           console.warn('[Supabase] Client non initialisé.');
-          updateSheetSyncBadge('error', 'Supabase Non Configuré');
+          updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
           if (isManual) showNotification('Configuration Supabase requise.', 'error');
           return;
         }
@@ -12764,16 +12768,16 @@ const LOCAL_DELIVERY_DATA = [
           });
 
           applyServerSourceOfTruth(mappedData);
-          updateSheetSyncBadge('success', 'Supabase Connecté ✓');
+          updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
           if (isManual) {
             showNotification(`Synchronisation réussie (${mappedData.length} tournées vérifiées)`, 'success');
           }
         } else {
-          updateSheetSyncBadge('success', 'Supabase Connecté ✓');
+          updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
         }
       } catch (err) {
         console.error('Supabase fetch error:', err);
-        updateSheetSyncBadge('error', 'Supabase Hors-ligne');
+        updateSupabaseSyncBadge('error', 'Supabase Hors-ligne');
         if (isManual) {
           showNotification('Supabase injoignable. Mode hors-ligne actif.', 'error');
         }
@@ -12817,11 +12821,11 @@ const LOCAL_DELIVERY_DATA = [
       const vehicle = String(item.matricule || item.vehicle || '').trim();
       const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
 
-      updateSheetSyncBadge('syncing', `Envoi #${deliveryId} vers Supabase...`);
+      updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId} vers Supabase...`);
 
       try {
         if (!supabaseClient) {
-          updateSheetSyncBadge('error', 'Supabase Non Configuré');
+          updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
           queueOfflineSync({ id: deliveryId, delivery_id: deliveryId, status: newStatus, chauffeur: driver, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
           return false;
         }
@@ -12895,37 +12899,36 @@ const LOCAL_DELIVERY_DATA = [
           throw updateRes.error;
         }
 
-        updateSheetSyncBadge('success', 'Supabase Connecté ✓');
+        updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
         return true;
       } catch (err) {
         console.error('Supabase update error:', err);
-        updateSheetSyncBadge('error', 'Erreur de mise à jour');
+        updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
         queueOfflineSync({ id: deliveryId, delivery_id: deliveryId, status: newStatus, chauffeur: driver, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
         return false;
       }
     }
 
     // Alias for backward compatibility
-    const syncDeliveryStatusToSheet = syncDeliveryStatusToSupabase;
-
+    
     function queueOfflineSync(payload) {
       try {
-        const raw = localStorage.getItem("pending_sheet_sync_queue");
+        const raw = localStorage.getItem("pending_supabase_sync_queue");
         const queue = raw ? JSON.parse(raw) : [];
         queue.push(payload);
-        localStorage.setItem("pending_sheet_sync_queue", JSON.stringify(queue));
+        localStorage.setItem("pending_supabase_sync_queue", JSON.stringify(queue));
       } catch (e) {}
     }
 
     async function flushOfflineSyncQueue() {
       try {
-        const raw = localStorage.getItem("pending_sheet_sync_queue");
+        const raw = localStorage.getItem("pending_supabase_sync_queue");
         if (!raw) return;
         const queue = JSON.parse(raw);
         if (!Array.isArray(queue) || queue.length === 0) return;
         if (!supabaseClient) return;
 
-        localStorage.removeItem("pending_sheet_sync_queue");
+        localStorage.removeItem("pending_supabase_sync_queue");
 
         for (const item of queue) {
           try {
@@ -12944,7 +12947,7 @@ const LOCAL_DELIVERY_DATA = [
             break;
           }
         }
-        updateSheetSyncBadge('success', 'Supabase Connecté ✓');
+        updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
       } catch (e) {
         console.warn('[Supabase] Erreur flush file hors-ligne:', e);
       }
@@ -13678,7 +13681,7 @@ const LOCAL_DELIVERY_DATA = [
      * Chauffeur action handler:
      * - Enforces security check: if role !== 'chauffeur' return immediately.
      * - Optimistically updates UI to 'Livré'.
-     * - Transmits mutation to Google Sheets.
+     * - Transmits mutation to Supabase.
      */
     async function markAsDelivered(deliveryId, event) {
       if (event) event.stopPropagation();
@@ -13944,7 +13947,7 @@ const LOCAL_DELIVERY_DATA = [
           .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               console.log('[Supabase Realtime] WebSocket abonné aux mises à jour');
-              updateSheetSyncBadge('success', 'Supabase Connecté ✓');
+              updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
             }
           });
       }
