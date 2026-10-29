@@ -28,6 +28,8 @@ try:
     from parse_programme import (
         push_manifest_to_supabase,
         parse_delivery_excel,
+        fetch_supabase_records,
+        build_delivery_key,
         DEFAULT_SUPABASE_REST_URL,
         DEFAULT_SUPABASE_API_KEY
     )
@@ -36,6 +38,8 @@ except ImportError:
     from parse_programme import (
         push_manifest_to_supabase,
         parse_delivery_excel,
+        fetch_supabase_records,
+        build_delivery_key,
         DEFAULT_SUPABASE_REST_URL,
         DEFAULT_SUPABASE_API_KEY
     )
@@ -98,9 +102,11 @@ def parse_excel_file_for_supabase(fpath):
                 vehicle = "Camion Porteur"
 
             rec_id = f"DEL-{slug}-{idx:04d}"
+            dkey = build_delivery_key(del_date, store, qty)
             records.append({
                 "id": rec_id,
                 "delivery_id": rec_id,
+                "delivery_key": dkey,
                 "date": del_date,
                 "magasin": store,
                 "chauffeur": driver,
@@ -116,8 +122,8 @@ def parse_excel_file_for_supabase(fpath):
 
 def extract_routes_from_programs(programs, index_path=None):
     """
-    Extracts canonical delivery routes from parsed programs with Status Preservation.
-    Matches the schema expected by Supabase and the Calendar dashboard.
+    Extracts canonical delivery routes from parsed programs with Live Status Preservation.
+    Queries Supabase to retrieve the authoritative live status of all deliveries.
     """
     if index_path is None:
         index_path = os.path.join(WORKSPACE_DIR, "index.html")
@@ -127,9 +133,38 @@ def extract_routes_from_programs(programs, index_path=None):
     seen_route_keys = set()
     route_counter = 1
 
-    # Status Preservation: Read existing index.html to retain completed deliveries
+    # Status Preservation: Live Supabase source of truth (Primary) + local fallback
     existing_statuses_by_composite = {}
     existing_statuses_by_id = {}
+
+    # 1. Primary Source of Truth: Live Supabase Deliveries
+    try:
+        supabase_records = fetch_supabase_records()
+        for s_rec in supabase_records:
+            s_id = str(s_rec.get("delivery_id") or s_rec.get("id") or "").strip()
+            s_dkey = str(s_rec.get("delivery_key") or "").strip()
+            s_date = str(s_rec.get("date") or "").strip()
+            s_mag = " ".join(str(s_rec.get("magasin") or s_rec.get("destination") or "").strip().upper().split())
+            s_drv = " ".join(str(s_rec.get("chauffeur") or s_rec.get("driver") or "").strip().upper().split())
+            s_status = str(s_rec.get("status") or "")
+            s_completed = bool("livr" in s_status.lower() and "non" not in s_status.lower())
+            rec_info = {
+                "id": s_id,
+                "status": "Livré" if s_completed else "Non Livré",
+                "completed": s_completed,
+                "delivered_by": s_rec.get("delivered_by")
+            }
+            if s_id:
+                existing_statuses_by_id[s_id.upper()] = rec_info
+            if s_dkey:
+                existing_statuses_by_id[s_dkey] = rec_info
+            if s_date and s_mag:
+                existing_statuses_by_composite[(s_date, s_mag, s_drv)] = rec_info
+                existing_statuses_by_composite[(s_date, s_mag)] = rec_info
+    except Exception as e:
+        print(f"[!] Note: Fallback to local cache for statuses ({e})")
+
+    # 2. Local fallback from index.html (if not found in Supabase)
     if os.path.exists(index_path):
         with open(index_path, "r", encoding="utf-8", newline="") as f:
             html_content = f.read()
@@ -156,9 +191,9 @@ def extract_routes_from_programs(programs, index_path=None):
                                 "status": "Livré" if i_completed else "Non Livré",
                                 "completed": i_completed
                             }
-                            if i_id:
+                            if i_id and i_id.upper() not in existing_statuses_by_id:
                                 existing_statuses_by_id[i_id.upper()] = rec_info
-                            if i_date and i_mag:
+                            if i_date and i_mag and (i_date, i_mag, i_drv) not in existing_statuses_by_composite:
                                 existing_statuses_by_composite[(i_date, i_mag, i_drv)] = rec_info
                     except Exception:
                         pass
@@ -221,7 +256,14 @@ def extract_routes_from_programs(programs, index_path=None):
             time_str = f"Tournée {p_title}"
 
             route_comp_key = (deliv_date, store_clean, driver)
-            matched_rec = existing_statuses_by_composite.get(route_comp_key) or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
+            route_comp_key_store = (deliv_date, store_clean)
+            del_key = f"{deliv_date}|{store_clean}|{qty}"
+            matched_rec = (
+                existing_statuses_by_id.get(del_key)
+                or existing_statuses_by_composite.get(route_comp_key)
+                or existing_statuses_by_composite.get(route_comp_key_store)
+                or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
+            )
 
             if matched_rec and (matched_rec.get("status") == "Livré" or matched_rec.get("completed") is True):
                 final_status = "Livré"
@@ -260,12 +302,15 @@ def extract_routes_from_programs(programs, index_path=None):
 # -------------------------------------------------------------------------
 # OUTLOOK SYNC MODULE
 # -------------------------------------------------------------------------
-def sync_from_outlook(days_back=90, full_scan=False):
+def sync_from_outlook(days_back=3, full_scan=False):
     """
     Connects to Outlook Classic via COM and searches for delivery programs.
-    Downloads new Excel attachments into data/programs/.
+    - Optimized: Scans recent emails (default 3 days, sorted newest first).
+    - Skips already-downloaded files to prevent re-downloading old programs.
+    - Pushes ONLY genuinely new delivery programs to Supabase.
     """
-    print("[1/3] Connecting to Outlook Classic...")
+    lookback = 90 if full_scan else days_back
+    print(f"[1/3] Connecting to Outlook Classic (Scan window: {lookback} days)...")
     try:
         import win32com.client
         outlook = win32com.client.Dispatch("Outlook.Application")
@@ -283,17 +328,26 @@ def sync_from_outlook(days_back=90, full_scan=False):
     downloaded_files = []
     now = datetime.datetime.now()
 
+    # Pre-index existing files in PROGRAMS_DIR so old files are never re-downloaded
+    existing_programs = set(os.listdir(PROGRAMS_DIR))
+
     def scan_folder(folder, path):
         nonlocal downloaded_count
         try:
             items = folder.Items
+            try:
+                # Sort descending: newest emails first
+                items.Sort("[ReceivedTime]", True)
+            except Exception:
+                pass
+
             for item in items:
                 try:
                     rec_time = item.ReceivedTime
-                    # Convert pywintypes datetime to python datetime if needed
                     dt = datetime.datetime(rec_time.year, rec_time.month, rec_time.day, rec_time.hour, rec_time.minute)
-                    if not full_scan and (now - dt).days > days_back:
-                        continue
+                    if (now - dt).days > lookback:
+                        # Since items are sorted descending, stop scanning once past lookback window
+                        break
 
                     subj = str(item.Subject or "")
                     if item.Attachments and item.Attachments.Count > 0:
@@ -308,11 +362,16 @@ def sync_from_outlook(days_back=90, full_scan=False):
                                 date_str = dt.strftime("%Y%m%d_%H%M")
                                 safe_fn = f"{date_str}_{fn}".replace("/", "_").replace("\\", "_").replace(":", "_")
                                 save_path = os.path.join(PROGRAMS_DIR, safe_fn)
-                                if not os.path.exists(save_path):
-                                    att.SaveAsFile(save_path)
-                                    downloaded_count += 1
-                                    downloaded_files.append(save_path)
-                                    print(f"  [+] Downloaded: {safe_fn}")
+                                
+                                # Strictly skip if already downloaded
+                                if safe_fn in existing_programs or os.path.exists(save_path):
+                                    continue
+
+                                att.SaveAsFile(save_path)
+                                downloaded_count += 1
+                                downloaded_files.append(save_path)
+                                existing_programs.add(safe_fn)
+                                print(f"  [+] Downloaded new program: {safe_fn}")
                 except Exception:
                     pass
         except Exception:
@@ -329,19 +388,25 @@ def sync_from_outlook(days_back=90, full_scan=False):
             print(f"[*] Scanning {f.Name}...")
             scan_folder(f, f.Name)
 
-    print(f"[+] Outlook sync complete: {downloaded_count} new file(s) retrieved.")
+    if downloaded_count > 0:
+        print(f"[+] Outlook sync complete: {downloaded_count} new file(s) found.")
+    else:
+        print("[+] Outlook sync complete: 0 new file(s) found. All programs are up to date.")
 
-    # Immediately push any newly downloaded delivery programs to Supabase
+    # Immediately push ONLY newly downloaded delivery programs to Supabase
     if downloaded_files:
-        print(f"[*] Immediately pushing {len(downloaded_files)} new delivery file(s) to Supabase...")
+        print(f"[*] Ingesting and pushing {len(downloaded_files)} new delivery file(s) to Supabase...")
         for new_file in downloaded_files:
             try:
                 new_records = parse_excel_file_for_supabase(new_file)
                 if new_records:
-                    res = push_manifest_to_supabase(new_records)
-                    print(f"  [+] Pushed {len(new_records)} deliveries from '{os.path.basename(new_file)}' to Supabase.")
+                    res = push_manifest_to_supabase(new_records, only_new=True)
+                    pushed_n = res.get("count", 0)
+                    print(f"  [+] Synced {pushed_n} new delivery record(s) from '{os.path.basename(new_file)}' to Supabase.")
             except Exception as e:
                 print(f"  [-] Error pushing '{os.path.basename(new_file)}' to Supabase: {e}")
+    else:
+        print("[i] No new delivery programs in Outlook. Preserving existing database statuses.")
 
     return downloaded_count
 
@@ -629,19 +694,7 @@ def build_database():
 
     print(f"[+] Database updated: {len(programs)} programs indexed ({db_data['metadata']['total_dispatched_units']:,} total units).")
 
-    # Push live deliveries to Supabase backend
-    try:
-        print("[*] Synchronizing live delivery manifest with Supabase...")
-        routes_to_push = extract_routes_from_programs(programs)
-        if routes_to_push:
-            push_res = push_manifest_to_supabase(routes_to_push)
-            if push_res.get("status") == "success":
-                print(f"[+] Supabase database synchronized ({push_res.get('count', len(routes_to_push))} deliveries pushed).")
-            else:
-                print(f"[-] Supabase sync response: {push_res.get('message', push_res)}")
-    except Exception as e:
-        print(f"[!] Warning during Supabase push in build_database: {e}")
-
+    # Database compiled locally without overriding Supabase deliveries
     return db_data
 
 

@@ -276,27 +276,37 @@ def upsert_manifest_records(incoming_records, existing_records):
     return merged, stats
 
 
-def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
+def fetch_supabase_records(supabase_url=None, api_key=None):
+    """
+    Fetches all current deliveries from Supabase REST endpoint to protect existing
+    completed ('Livré') statuses and avoid duplicate processing.
+    """
+    url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
+    key = api_key or DEFAULT_SUPABASE_API_KEY
+    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by"
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}"
+    }
+    try:
+        req = urllib.request.Request(endpoint, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"[!] Note: fetch_supabase_records encountered notice ({e})")
+        return []
+
+
+def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new=True):
     """
     Pushes delivery records to Supabase REST endpoint via POST upsert
-    using standard Python urllib.request.
+    with STRICT STATUS PRESERVATION & DEDUPLICATION:
 
-    Mapped schema:
-    {
-        "delivery_id": r["id"],
-        "date": r["date"],
-        "magasin": r["magasin"],
-        "chauffeur": r["chauffeur"],
-        "matricule": r["matricule"],
-        "quantite": int(r.get("quantite", 0)),
-        "status": r["status"]
-    }
-
-    Headers for Upsert:
-    - apikey: <api_key>
-    - Authorization: Bearer <api_key>
-    - Content-Type: application/json
-    - Prefer: resolution=merge-duplicates
+    1. Queries existing records in Supabase before pushing.
+    2. Any existing delivery that is already 'Livré' is NEVER overwritten with 'Non Livré'.
+    3. If only_new is True, skips records that already exist in Supabase so old delivery
+       programs never get re-processed or override database records.
+    4. Only truly new deliveries (or non-duplicate updates) are pushed.
     """
     url = supabase_url or DEFAULT_SUPABASE_REST_URL
     key = api_key or DEFAULT_SUPABASE_API_KEY
@@ -309,7 +319,31 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
         print("[!] No records provided to push to Supabase.")
         return {"status": "success", "count": 0, "data": []}
 
+    # 1. Fetch live Supabase state for status preservation
+    existing_records = fetch_supabase_records(url, key)
+    existing_by_key = {}
+    existing_by_id = {}
+    existing_by_comp = {}
+
+    for row in existing_records:
+        dkey = str(row.get("delivery_key") or "").strip()
+        did = str(row.get("delivery_id") or row.get("id") or "").strip().upper()
+        r_date = str(row.get("date") or "").strip()
+        r_mag = " ".join(str(row.get("magasin") or "").strip().upper().split())
+        r_drv = " ".join(str(row.get("chauffeur") or "").strip().upper().split())
+
+        if dkey:
+            existing_by_key[dkey] = row
+        if did:
+            existing_by_id[did] = row
+        if r_date and r_mag:
+            existing_by_comp[(r_date, r_mag, r_drv)] = row
+            existing_by_comp[(r_date, r_mag)] = row
+
     payload = []
+    skipped_existing = 0
+    preserved_livre = 0
+
     for r in records:
         rec_id = r.get("id") or r.get("delivery_id")
         if not rec_id:
@@ -323,9 +357,39 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
         store = str(r.get("magasin") or "").strip()
         driver = str(r.get("chauffeur") or "").strip()
         matricule = str(r.get("matricule") or "").strip()
-        status = str(r.get("status") or "Non Livré").strip()
+        raw_status = str(r.get("status") or "Non Livré").strip()
 
         dkey = r.get("delivery_key") or build_delivery_key(deliv_date, store, qty)
+
+        norm_comp = (deliv_date, " ".join(store.upper().split()), " ".join(driver.upper().split()))
+        norm_comp_store = (deliv_date, " ".join(store.upper().split()))
+
+        existing_row = (
+            existing_by_key.get(dkey)
+            or existing_by_id.get(str(rec_id).strip().upper())
+            or existing_by_comp.get(norm_comp)
+            or existing_by_comp.get(norm_comp_store)
+        )
+
+        if existing_row:
+            s_stat = str(existing_row.get("status") or "")
+            is_already_livre = bool("livr" in s_stat.lower() and "non" not in s_stat.lower())
+
+            if is_already_livre:
+                preserved_livre += 1
+                # CRITICAL: Completed delivery in Supabase MUST NOT be downgraded to 'Non Livré'
+                if only_new:
+                    skipped_existing += 1
+                    continue
+                final_status = "Livré"
+            else:
+                if only_new:
+                    # Already present in Supabase, skip to avoid overrun
+                    skipped_existing += 1
+                    continue
+                final_status = raw_status
+        else:
+            final_status = raw_status
 
         mapped = {
             "delivery_id": str(rec_id).strip(),
@@ -334,14 +398,17 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
             "chauffeur": driver,
             "matricule": matricule,
             "quantite": qty,
-            "status": status,
+            "status": final_status,
             "delivery_key": dkey
         }
         payload.append(mapped)
 
+    if skipped_existing > 0:
+        print(f"[i] Status Preservation: Skipped {skipped_existing} existing deliveries ({preserved_livre} preserved as 'Livré').")
+
     if not payload:
-        print("[!] No valid records to push to Supabase after schema mapping.")
-        return {"status": "success", "count": 0, "data": []}
+        print("[i] All incoming records already exist in Supabase. Nothing new to push.")
+        return {"status": "success", "count": 0, "message": "All records up to date"}
 
     headers = {
         "apikey": key,
@@ -377,7 +444,7 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None):
                     raise he
             total_pushed += len(batch)
 
-        print(f"[+] Successfully pushed {total_pushed} records to Supabase.")
+        print(f"[+] Successfully pushed {total_pushed} new record(s) to Supabase.")
         return {"status": "success", "count": total_pushed}
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="ignore")
