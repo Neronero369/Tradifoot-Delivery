@@ -9099,17 +9099,19 @@ const LOCAL_DELIVERY_DATA = [
       if (!d) return null;
       const store = String(d.magasin || d.destination || "").trim();
       let driver = String(d.Chauffeur || d.chauffeur || d.driver || "").trim();
+      if (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(driver)) {
+        driver = "";
+      }
       let id = String(d.delivery_id || d.id || d.ID || "").trim();
 
       if (!id) {
         id = generateDeterministicId(d, index);
       }
 
-      // If incoming record has an admin name as chauffeur or is unassigned,
-      // recover the legitimate chauffeur from the delivery program manifest map
+      // If incoming record has an admin name as chauffeur, recover legitimate chauffeur
       if (id && (!driver || isAdminUser(driver) || driver === "All")) {
         const originalDriver = ORIGINAL_CHAUFFEUR_MAP.get(id.toUpperCase());
-        if (originalDriver) {
+        if (originalDriver && !isAdminUser(originalDriver) && !/non sp[ée]cifi[ée]|non assign[ée]/i.test(originalDriver)) {
           driver = originalDriver;
         }
       }
@@ -9463,11 +9465,16 @@ const LOCAL_DELIVERY_DATA = [
         const dKey = row.delivery_key || buildDeliveryKey(row);
         const rId = String(row.delivery_id || row.id || '').trim().toUpperCase();
 
+        let rawChauf = String(row.chauffeur || '').trim();
+        if (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawChauf)) {
+          rawChauf = '';
+        }
+
         const entry = {
           isLivre,
           status: isLivre ? 'Livré' : 'Non Livré',
           delivered_by: row.delivered_by || null,
-          chauffeur: row.chauffeur || '',
+          chauffeur: rawChauf,
           row
         };
 
@@ -9503,6 +9510,10 @@ const LOCAL_DELIVERY_DATA = [
         if (match) {
           if (match.row && match.row.photo_url) {
             item.photo_url = match.row.photo_url;
+          }
+          if (match.chauffeur !== undefined) {
+            item.chauffeur = match.chauffeur;
+            item.driver = match.chauffeur;
           }
           if (match.isLivre) {
             item.status = 'Livré';
@@ -9681,7 +9692,7 @@ const LOCAL_DELIVERY_DATA = [
               delivery_key: dKey,
               date: normalizeDate(row.date || row.Date),
               magasin: String(row.magasin || row.Magasin || row.destination || '').trim(),
-              chauffeur: String(row.chauffeur || row.Chauffeur || row.driver || '').trim(),
+              chauffeur: (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(String(row.chauffeur || row.Chauffeur || row.driver || '').trim())) ? '' : String(row.chauffeur || row.Chauffeur || row.driver || '').trim(),
               delivered_by: String(row.delivered_by || '').trim() || null,
               matricule: String(row.matricule || row.Matricule || row.vehicle || '').trim(),
               quantite: Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0,
@@ -10054,10 +10065,17 @@ const LOCAL_DELIVERY_DATA = [
         displayData = allData;
 
         if (AppState.adminFilterDriver && AppState.adminFilterDriver !== 'ALL') {
-          displayData = displayData.filter(delivery => {
-            const ch = delivery.chauffeur || delivery.driver || delivery.Chauffeur || "";
-            return isChauffeurMatch(ch, AppState.adminFilterDriver);
-          });
+          if (AppState.adminFilterDriver === 'UNASSIGNED') {
+            displayData = displayData.filter(delivery => {
+              const ch = String(delivery.chauffeur || delivery.driver || delivery.Chauffeur || "").trim();
+              return !ch || ch === "" || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(ch);
+            });
+          } else {
+            displayData = displayData.filter(delivery => {
+              const ch = delivery.chauffeur || delivery.driver || delivery.Chauffeur || "";
+              return isChauffeurMatch(ch, AppState.adminFilterDriver);
+            });
+          }
         }
 
         if (AppState.adminFilterBoutique && AppState.adminFilterBoutique !== 'ALL') {
@@ -10075,13 +10093,18 @@ const LOCAL_DELIVERY_DATA = [
             const mat = (delivery.matricule || delivery.vehicle || "").toLowerCase();
             const drv = (delivery.chauffeur || delivery.driver || delivery.Chauffeur || "").toLowerCase();
             const did = String(delivery.id || "").toLowerCase();
-            return mag.includes(q) || mat.includes(q) || drv.includes(q) || did.includes(q);
+            const isUnassignedMatch = (!drv || drv === "") && (q.includes("non") || q.includes("assign"));
+            return mag.includes(q) || mat.includes(q) || drv.includes(q) || did.includes(q) || isUnassignedMatch;
           });
         }
       } else if (currentUser.role === 'chauffeur') {
         const assignedName = (currentUser.chauffeurName || currentUser.username || "").trim();
         displayData = allData.filter(delivery => {
-          const rowDriver = delivery.chauffeur || delivery.driver || delivery.Chauffeur || "";
+          const rowDriver = String(delivery.chauffeur || delivery.driver || delivery.Chauffeur || "").trim();
+          // CRITICAL: Unassigned drops (empty, null, or placeholder) must NEVER match any chauffeur
+          if (!rowDriver || rowDriver === "" || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rowDriver)) {
+            return false;
+          }
           return isChauffeurMatch(rowDriver, assignedName);
         });
       }
@@ -10105,7 +10128,7 @@ const LOCAL_DELIVERY_DATA = [
 
       const sortedChauffeurs = Array.from(new Set(authorizedChauffeurs)).sort();
 
-      DOM.adminFilterChauffeur.innerHTML = '<option value="ALL">Tous les Chauffeurs</option>';
+      DOM.adminFilterChauffeur.innerHTML = '<option value="ALL">Tous les Chauffeurs</option><option value="UNASSIGNED">⚠️ Non assignés</option>';
       sortedChauffeurs.forEach(name => {
         const opt = document.createElement("option");
         opt.value = name;
@@ -10454,6 +10477,7 @@ const LOCAL_DELIVERY_DATA = [
 
       const currentUser = AppState.currentUser || getAuthSession();
       const isChauffeur = Boolean(currentUser && currentUser.role === 'chauffeur');
+      const isAdmin = Boolean(currentUser && currentUser.role === 'admin');
 
       let cardsHtml = '';
       filtered.forEach(item => {
@@ -10476,7 +10500,9 @@ const LOCAL_DELIVERY_DATA = [
         `;
 
         const storeName = item.magasin || item.destination || "Magasin";
-        const driverName = item.chauffeur || item.driver || "Non assigné";
+        const rawDriver = String(item.chauffeur || item.driver || "").trim();
+        const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+        const driverName = isUnassigned ? "Non assigné" : rawDriver;
         const matricule = item.matricule || item.vehicle || "Camion standard";
         const qty = item.quantite !== undefined ? item.quantite : item.quantity;
         const delivDate = item.date || "";
@@ -10522,7 +10548,13 @@ const LOCAL_DELIVERY_DATA = [
               ${!isChauffeur ? `
                 <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
                   <i class="fa-solid fa-user-tie text-blue-500 text-xs"></i>
-                  <strong>${driverName}</strong>
+                  ${isUnassigned ? `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
+                      <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-600"></i> Non assigné
+                    </span>
+                  ` : `
+                    <strong>${driverName}</strong>
+                  `}
                 </div>
               ` : ''}
 
@@ -10540,7 +10572,12 @@ const LOCAL_DELIVERY_DATA = [
                   <i class="fa-solid fa-check text-lg pointer-events-none"></i>
                   <span>LIVRER</span>
                 </button>
-              ` : '')}
+              ` : (isAdmin && isUnassigned ? `
+                <button type="button" data-action="admin-close-delivery" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-indigo-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[52px]">
+                  <i class="fa-solid fa-clipboard-check text-base pointer-events-none"></i>
+                  <span>Clôturer / Livré</span>
+                </button>
+              ` : ''))}
 
               <!-- Secondary Details Link (Understated, No Accidental Tap) -->
               <div class="mt-2 flex justify-end">
@@ -10853,6 +10890,121 @@ const LOCAL_DELIVERY_DATA = [
       if (modal) modal.classList.add('hidden');
     }
 
+    /**
+     * Admin Closure Action:
+     * - Allows Admins to close unassigned deliveries directly.
+     * - Strictly prevents Admins from closing deliveries with assigned drivers.
+     * - Updates Supabase with status = 'Livré' and updated_at.
+     */
+    async function adminCloseDelivery(deliveryId) {
+      const currentUser = AppState.currentUser || getAuthSession();
+      if (!currentUser || currentUser.role !== 'admin') {
+        console.warn("[RBAC] Seul un administrateur peut clôturer une livraison non assignée.");
+        return;
+      }
+
+      const idStr = String(deliveryId).trim();
+      const targetItem = AppState.rawDeliveries.find(d => String(d.id).trim() === idStr);
+
+      if (!targetItem) {
+        console.error(`[Admin Close] Tournée #${idStr} introuvable.`);
+        return;
+      }
+
+      // Security Check: Admins CANNOT close deliveries with an assigned driver
+      const rawDriver = String(targetItem.chauffeur || targetItem.driver || "").trim();
+      const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+      if (!isUnassigned) {
+        showNotification("Action refusée : Seul le chauffeur assigné peut valider cette livraison.", "error");
+        return;
+      }
+
+      if (targetItem.status === 'Livré' || targetItem.completed) {
+        showNotification("Cette livraison est déjà marquée comme Livrée.", "info");
+        return;
+      }
+
+      // 1. Optimistic local state update
+      targetItem.completed = true;
+      targetItem.status = 'Livré';
+
+      if (Array.isArray(AppState.deliveries)) {
+        const itemInView = AppState.deliveries.find(d => String(d.id).trim() === idStr);
+        if (itemInView) {
+          itemInView.completed = true;
+          itemInView.status = 'Livré';
+        }
+      }
+
+      AppState.completedDeliveryIds = loadDeliveredIds();
+      AppState.completedDeliveryIds.add(idStr);
+      saveDeliveredIds(AppState.completedDeliveryIds);
+
+      const pKey = getDeliveryKey(targetItem);
+      const fKey = getDeliveryFallbackKey(targetItem);
+      if (!AppState.deliveredKeys) AppState.deliveredKeys = new Set();
+      if (!AppState.deliveredFallbackKeys) AppState.deliveredFallbackKeys = new Set();
+      if (pKey) AppState.deliveredKeys.add(pKey);
+      if (fKey) AppState.deliveredFallbackKeys.add(fKey);
+      saveDeliveredCompositeKeys(AppState.deliveredKeys, AppState.deliveredFallbackKeys);
+
+      // Re-render UI components
+      renderDailyManifest();
+      renderCalendar();
+      updateAdminKPIs();
+      updateProgressUI();
+
+      showNotification(`Tournée #${idStr} clôturée avec succès (Livré).`, 'success');
+
+      // 2. Direct Supabase update: status = 'Livré', updated_at = now
+      const deliveryKey = targetItem.delivery_key || buildDeliveryKey(targetItem);
+      const updatePayload = {
+        status: 'Livré',
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        if (!supabaseClient) {
+          console.warn('[Admin Close] Supabase client non disponible.');
+          queueOfflineSync({ ...updatePayload, delivery_id: idStr, delivery_key: deliveryKey });
+          return;
+        }
+
+        updateSupabaseSyncBadge('syncing', `Clôture #${idStr}...`);
+
+        let { data, error } = await supabaseClient
+          .from('deliveries')
+          .update(updatePayload)
+          .eq('delivery_key', deliveryKey)
+          .select();
+
+        if (!error && (!data || data.length === 0)) {
+          const res2 = await supabaseClient
+            .from('deliveries')
+            .update(updatePayload)
+            .eq('delivery_id', idStr)
+            .select();
+          data = res2.data;
+          error = res2.error;
+        }
+
+        if (error) {
+          console.error('[Admin Close] Erreur Supabase:', error);
+          showNotification(`Erreur Supabase: ${error.message || 'Échec de synchronisation'}`, 'error');
+          updateSupabaseSyncBadge('error', 'Erreur de clôture');
+          queueOfflineSync({ ...updatePayload, delivery_id: idStr, delivery_key: deliveryKey });
+        } else {
+          console.log(`[Admin Close] Livraison #${idStr} clôturée sur Supabase:`, data);
+          updateSupabaseSyncBadge('success', 'Supabase Connecté ✓');
+        }
+      } catch (err) {
+        console.error('[Admin Close] Exception:', err);
+        showNotification(`Erreur: ${err.message || 'Échec'}`, 'error');
+        updateSupabaseSyncBadge('error', 'Erreur de clôture');
+        queueOfflineSync({ ...updatePayload, delivery_id: idStr, delivery_key: deliveryKey });
+      }
+    }
+
     function initDelegatedEventListeners() {
       if (DOM.calendarDaysGrid) {
         DOM.calendarDaysGrid.addEventListener('click', (e) => {
@@ -10869,6 +11021,12 @@ const LOCAL_DELIVERY_DATA = [
           if (toggleBtn && toggleBtn.dataset.id) {
             e.stopPropagation();
             markAsDelivered(toggleBtn.dataset.id, e);
+            return;
+          }
+          const adminCloseBtn = e.target.closest('[data-action="admin-close-delivery"]');
+          if (adminCloseBtn && adminCloseBtn.dataset.id) {
+            e.stopPropagation();
+            adminCloseDelivery(adminCloseBtn.dataset.id);
             return;
           }
           const detailBtn = e.target.closest('[data-action="view-details"]');
@@ -10925,9 +11083,12 @@ const LOCAL_DELIVERY_DATA = [
 
       const currentUser = AppState.currentUser || getAuthSession();
       const isChauffeur = Boolean(currentUser && currentUser.role === 'chauffeur');
+      const isAdmin = Boolean(currentUser && currentUser.role === 'admin');
       const isCompleted = isItemDelivered(item);
       const storeName = item.magasin || item.destination || "Magasin";
-      const driverName = item.chauffeur || item.driver || "Non assigné";
+      const rawDriver = String(item.chauffeur || item.driver || "").trim();
+      const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+      const driverName = isUnassigned ? "Non assigné" : rawDriver;
       const matricule = item.matricule || item.vehicle || "Camion standard";
       const qty = item.quantite !== undefined ? item.quantite : item.quantity;
 
@@ -10954,7 +11115,13 @@ const LOCAL_DELIVERY_DATA = [
           <div class="grid grid-cols-2 gap-3 text-xs">
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
               <i class="fa-solid fa-user-tie text-blue-600"></i>
-              <span class="font-bold text-slate-800">${driverName}</span>
+              ${isUnassigned ? `
+                <span class="inline-flex items-center gap-1 text-amber-700 font-semibold text-xs">
+                  <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-500"></i> Non assigné
+                </span>
+              ` : `
+                <span class="font-bold text-slate-800">${driverName}</span>
+              `}
             </div>
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
               <i class="fa-solid fa-truck text-slate-500"></i>
@@ -11018,7 +11185,20 @@ const LOCAL_DELIVERY_DATA = [
                 </div>
               `}
             </div>
-          ` : ''}
+          ` : (isAdmin && isUnassigned ? `
+            <div class="pt-2 flex flex-col gap-2">
+              ${!isCompleted ? `
+                <button onclick="closeModal(); adminCloseDelivery('${item.id}');" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[44px] flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                  <span>Clôturer / Livré (Admin)</span>
+                </button>
+              ` : `
+                <span class="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 self-start">
+                  <i class="fa-solid fa-check text-xs"></i> Livraison clôturée
+                </span>
+              `}
+            </div>
+          ` : '')}
         </div>
       `;
 

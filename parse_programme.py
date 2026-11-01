@@ -82,7 +82,7 @@ def parse_delivery_excel(file_path):
     CRITICAL COLUMN MAPPING:
       - Boutique   -> maps to magasin (String, uppercase, trimmed)
       - Globale    -> maps to quantite (Integer, default 0, skip row if 0/empty)
-      - Chauffeur  -> maps to chauffeur (String, uppercase, default 'NON SPÉCIFIÉ')
+      - Chauffeur  -> maps to chauffeur (String, uppercase, strictly "" if blank or missing)
       - Livraison  -> maps to date (Convert from DD/MM/YYYY to YYYY-MM-DD)
 
     Completely ignores all operational columns (Wilaya, Region, ACCESSOIRES,
@@ -161,11 +161,11 @@ def parse_delivery_excel(file_path):
         if not magasin or magasin.startswith("TOTAL") or magasin == "NONE" or qty <= 0:
             continue
 
-        # Column 3: Chauffeur -> chauffeur (String, uppercase, default 'NON SPÉCIFIÉ' if blank)
+        # Column 3: Chauffeur -> chauffeur (String, uppercase, strictly "" if blank/missing)
         raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
-        chauffeur = " ".join(raw_driver.upper().split()) if raw_driver else "NON SPÉCIFIÉ"
-        if chauffeur in ("", "NONE", "NULL", "-", "/"):
-            chauffeur = "NON SPÉCIFIÉ"
+        chauffeur = " ".join(raw_driver.upper().split()) if raw_driver else ""
+        if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
+            chauffeur = ""
 
         # Column 4: Livraison -> date (Convert from DD/MM/YYYY to YYYY-MM-DD)
         raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
@@ -174,7 +174,7 @@ def parse_delivery_excel(file_path):
         # Composite delivery_id: LIV-YYYYMMDD-STORE-CHAUF-INDEX
         ymd = normalized_date.replace("-", "")
         store_slug = re.sub(r'[^A-Z0-9]', '', magasin)[:12]
-        chauf_slug = re.sub(r'[^A-Z0-9]', '', chauffeur)[:8]
+        chauf_slug = re.sub(r'[^A-Z0-9]', '', chauffeur)[:8] if chauffeur else "NONE"
         delivery_id = f"LIV-{ymd}-{store_slug}-{chauf_slug}-{record_idx:04d}"
 
         # Matched schema payload for Supabase
