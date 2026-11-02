@@ -130,6 +130,40 @@
         padding: 4px !important;
       }
     }
+
+    /* Native Swipe-Right-to-Deliver UI */
+    .swipe-card-wrapper {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1rem;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .swipe-action-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      z-index: 0;
+      pointer-events: none;
+      color: white;
+    }
+    .swipe-card-front {
+      position: relative;
+      z-index: 10;
+      touch-action: pan-y;
+      will-change: transform;
+    }
+    .swipeable-card {
+      cursor: grab;
+    }
+    .swipeable-card:active {
+      cursor: grabbing;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-blue-50/30 to-slate-100 text-slate-800 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden">
@@ -345,7 +379,7 @@
 
           <!-- ADMIN TOOLBAR & FILTERS -->
           <div id="admin-toolbar" class="hidden pt-3 border-t border-slate-200/80 space-y-2.5">
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Volume Jour</span>
                 <span id="admin-kpi-packages" class="text-xs sm:text-sm font-extrabold text-blue-600 font-mono">0 Paires</span>
@@ -353,6 +387,10 @@
               <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Effectuées</span>
                 <span id="admin-kpi-delivered" class="text-xs sm:text-sm font-extrabold text-emerald-600 font-mono">0 / 0</span>
+              </div>
+              <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Litiges / Écarts</span>
+                <span id="admin-kpi-discrepancies" class="text-xs sm:text-sm font-extrabold text-amber-600 font-mono">0</span>
               </div>
               <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Taux Succès</span>
@@ -443,43 +481,198 @@
     </div>
   </div>
 
-  <!-- PROOF OF DELIVERY (PoD) CAMERA MODAL -->
+  <!-- PROOF OF DELIVERY (PoD) & DISCREPANCY / RETURN MODAL -->
   <div id="pod-camera-modal" class="fixed inset-0 z-50 bg-[#0B1F3F]/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
-    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       <!-- Modal Header -->
-      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60">
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60 shrink-0">
         <div class="flex items-center space-x-3">
-          <div class="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200">
-            <i class="fa-solid fa-camera text-base"></i>
+          <div class="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 shrink-0">
+            <i class="fa-solid fa-clipboard-check text-base"></i>
           </div>
-          <div>
-            <h4 class="text-sm font-bold text-slate-900 tracking-tight">Prendre en photo le Bon de Livraison (BL)</h4>
-            <p class="text-xs text-slate-500 font-medium truncate max-w-[220px] sm:max-w-xs" id="pod-modal-store-info">Sélectionnez ou prenez une photo</p>
+          <div class="min-w-0">
+            <h4 class="text-sm font-bold text-slate-900 tracking-tight">Validation de Livraison</h4>
+            <p class="text-xs text-slate-500 font-medium truncate max-w-[220px] sm:max-w-xs" id="pod-modal-store-info">Sélectionnez la conformité</p>
           </div>
         </div>
-        <button onclick="closePoDModal()" type="button" aria-label="Fermer" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition duration-150 active:scale-95 min-h-[44px] min-w-[44px]">
+        <button onclick="closePoDModal()" type="button" aria-label="Fermer" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition duration-150 active:scale-95 min-h-[44px] min-w-[44px] shrink-0">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
-      <!-- Modal Body -->
-      <div class="p-5 sm:p-6 space-y-4">
-        <!-- Hidden Camera Input (capture="environment" launches rear mobile camera) -->
-        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleCameraCapture(event)">
+      <!-- Modal Body (Scrollable for mobile keyboards) -->
+      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <!-- Hidden Camera Inputs (capture="environment" launches rear mobile camera) -->
+        <input type="file" id="camera-input-bl" accept="image/*" capture="environment" class="hidden" onchange="handleBlCapture(event)">
+        <input type="file" id="camera-input-recette" accept="image/*" capture="environment" class="hidden" onchange="handleRecetteCapture(event)">
+        <!-- Legacy alias to camera-input-bl -->
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleBlCapture(event)">
 
-        <!-- Initial Capture Prompt -->
+        <!-- Step 1: Discrepancy & Verification Step -->
         <div id="pod-step-capture" class="space-y-4">
-          <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-start gap-3">
-            <i class="fa-solid fa-circle-info text-blue-600 text-sm mt-0.5"></i>
-            <p class="text-xs text-slate-600 leading-relaxed">
-              Pour valider la livraison, veuillez photographier le <strong>Bon de Livraison (BL)</strong> signé ou tamponné par le magasin.
-            </p>
+          
+          <!-- Mode Selector (Conforme vs Réserve) -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-bold text-slate-700 block">État de la livraison</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" id="pod-choice-conforme" onclick="selectReserveChoice(false)" class="p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] active:scale-95 shadow-2xs">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+                <span>Livraison Conforme (100%)</span>
+              </button>
+              <button type="button" id="pod-choice-reserve" onclick="selectReserveChoice(true)" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-amber-50/50 text-slate-700 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] active:scale-95">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+                <span>Livré avec réserve</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Massive Camera Button -->
-          <button id="btn-trigger-camera" type="button" onclick="triggerCameraInput()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 text-white font-extrabold text-base flex items-center justify-center gap-3 shadow-lg shadow-blue-600/25 active:scale-[0.98] transition-all min-h-[56px]">
-            <i class="fa-solid fa-camera text-xl"></i>
-            <span>Prendre la photo</span>
+          <!-- Conforme Info Banner -->
+          <div id="pod-conforme-badge" class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-900 font-medium">
+            <i class="fa-solid fa-boxes-packing text-emerald-600 text-base shrink-0"></i>
+            <span id="pod-conforme-desc">Toutes les paires sont conformes et réceptionnées sans anomalie.</span>
+          </div>
+
+          <!-- Discrepancy Form (Expanded when "Avec réserve" is selected) -->
+          <div id="pod-reserve-form" class="hidden space-y-3.5 p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
+            <!-- Quantité reçue with Stepper -->
+            <div>
+              <div class="flex items-center justify-between pb-1">
+                <label class="text-xs font-bold text-amber-950">Quantité reçue (Paires)</label>
+                <span class="text-[11px] font-semibold text-slate-500" id="pod-total-planned-label">Total prévu : 0</span>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <button type="button" onclick="adjustQtyRecue(-1)" class="w-12 h-12 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-black text-xl flex items-center justify-center shadow-2xs select-none min-h-[48px] min-w-[48px]">
+                  -
+                </button>
+                <input type="number" id="pod-qty-recue" min="0" value="0" class="flex-1 h-12 text-center text-lg font-black text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none font-mono min-h-[48px]" oninput="handleQtyRecueInput(this)">
+                <button type="button" onclick="adjustQtyRecue(1)" class="w-12 h-12 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-black text-xl flex items-center justify-center shadow-2xs select-none min-h-[48px] min-w-[48px]">
+                  +
+                </button>
+              </div>
+              <!-- Live discrepancy preview badge -->
+              <div id="pod-discrepancy-preview" class="mt-2 p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-xs font-extrabold text-amber-950 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                  <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                  <span id="pod-litige-text">Écart calculé : 0 paire en litige</span>
+                </span>
+                <span id="pod-litige-badge" class="font-mono text-rose-700 bg-white px-2 py-0.5 rounded-lg border border-amber-200">0 p.</span>
+              </div>
+            </div>
+
+            <!-- Motif du litige (Chips) -->
+            <div>
+              <label class="text-xs font-bold text-amber-950 block pb-1.5">Motif du litige</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5" id="pod-motif-chips">
+                <button type="button" onclick="selectReserveMotif('Carton(s) manquant(s)')" data-motif="Carton(s) manquant(s)" class="pod-motif-chip p-2.5 rounded-xl border-2 border-amber-500 bg-amber-100 text-amber-950 text-xs font-bold text-left transition flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-box-open text-xs text-amber-700"></i>
+                  <span>Carton(s) manquant(s)</span>
+                </button>
+                <button type="button" onclick="selectReserveMotif('Marchandise endommagée / Mouillée')" data-motif="Marchandise endommagée / Mouillée" class="pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-burst text-xs text-amber-600"></i>
+                  <span>Marchandise endommagée / Mouillée</span>
+                </button>
+                <button type="button" onclick="selectReserveMotif('Article(s) refusé(s) par le magasin')" data-motif="Article(s) refusé(s) par le magasin" class="pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-ban text-xs text-rose-600"></i>
+                  <span>Article(s) refusé(s) par le magasin</span>
+                </button>
+                <button type="button" onclick="selectReserveMotif('Erreur référence / pointure')" data-motif="Erreur référence / pointure" class="pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-tags text-xs text-blue-600"></i>
+                  <span>Erreur référence / pointure</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Remarque Chauffeur -->
+            <div>
+              <label class="text-xs font-bold text-amber-950 block pb-1">Remarque Chauffeur (Optionnel)</label>
+              <textarea id="pod-remarque-chauffeur" rows="2" placeholder="Ex: Refus de 5 paires 42 Skechers boîte abîmée, validé par gérant" class="w-full text-xs p-3 rounded-xl border border-amber-200 bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none text-slate-800 placeholder-slate-400 min-h-[56px]"></textarea>
+            </div>
+          </div>
+
+          <!-- Photos & Pièces Jointes ("WhatsApp Style") -->
+          <div class="space-y-2.5 pt-1">
+            <label class="text-xs font-bold text-slate-700 flex items-center justify-between">
+              <span>Justificatifs & Recouvrement</span>
+              <span class="text-[11px] font-normal text-slate-400">Photo BL obligatoire</span>
+            </label>
+
+            <!-- Primary Attachment: BL (Mandatory) -->
+            <div id="pod-bl-container">
+              <button type="button" id="btn-trigger-bl" onclick="triggerBlInput()" class="w-full py-3.5 px-4 rounded-2xl border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/60 hover:bg-blue-50 text-blue-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 transition active:scale-[0.99] min-h-[50px]">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-camera text-blue-600 text-base"></i>
+                  <span>📸 Photo du Bon de Livraison (BL)</span>
+                </span>
+                <span class="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Requis</span>
+              </button>
+
+              <!-- Selected BL Preview Box (Hidden initially) -->
+              <div id="pod-bl-preview-box" class="hidden p-2.5 rounded-2xl bg-blue-50/80 border border-blue-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <img id="pod-bl-preview-thumb" src="" alt="BL" class="w-12 h-12 rounded-xl object-cover border border-blue-200 bg-slate-900 shrink-0">
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-blue-950 flex items-center gap-1.5 truncate">
+                      <i class="fa-solid fa-circle-check text-blue-600"></i>
+                      <span>Photo BL capturée</span>
+                    </div>
+                    <span id="pod-bl-file-info" class="text-[11px] text-slate-500 font-mono">Prête pour validation</span>
+                  </div>
+                </div>
+                <button type="button" onclick="triggerBlInput()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs shrink-0 active:scale-95 transition min-h-[38px]">
+                  Reprendre
+                </button>
+              </div>
+            </div>
+
+            <!-- Secondary Attachment: Recette (Optional & Subtle) -->
+            <div id="pod-recette-container">
+              <button type="button" id="btn-trigger-recette" onclick="triggerRecetteInput()" class="w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 hover:border-emerald-400 bg-slate-50/80 hover:bg-emerald-50/40 text-slate-600 hover:text-emerald-900 font-semibold text-xs flex items-center justify-center gap-2 transition active:scale-[0.99] min-h-[46px]">
+                <span>💵 + Ajouter photo de la recette (Optionnel)</span>
+              </button>
+
+              <!-- Selected Recette Preview Box (Hidden initially) -->
+              <div id="pod-recette-preview-box" class="hidden p-2.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <img id="pod-recette-preview-thumb" src="" alt="Recette" class="w-12 h-12 rounded-xl object-cover border border-emerald-200 bg-slate-900 shrink-0">
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-emerald-950 flex items-center gap-1.5 truncate">
+                      <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                      <span>Photo recette capturée</span>
+                    </div>
+                    <span id="pod-recette-file-info" class="text-[11px] text-slate-500 font-mono">Recouvrement actif</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button type="button" onclick="triggerRecetteInput()" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition min-h-[38px]">
+                    Changer
+                  </button>
+                  <button type="button" onclick="removeRecettePhoto()" class="w-9 h-9 rounded-xl bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-400 hover:text-rose-600 flex items-center justify-center active:scale-95 transition min-h-[38px] min-w-[38px]" title="Supprimer">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Recouvrement Amount Input (Revealed after Recette photo captured) -->
+            <div id="pod-recette-amount-box" class="hidden space-y-1 p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                  <i class="fa-solid fa-sack-dollar text-emerald-600"></i>
+                  <span>Montant encaissé (DZD)</span>
+                </label>
+                <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Optionnel</span>
+              </div>
+              <div class="relative mt-1">
+                <input type="number" id="pod-montant-recouvrement" min="0" step="any" placeholder="Ex: 50000" class="w-full h-11 pl-3 pr-14 text-sm font-black text-slate-900 bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono min-h-[44px]">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-emerald-700 pointer-events-none select-none">DZD</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Primary Submit Action: "Valider la livraison" -->
+          <button id="btn-validate-delivery" type="button" onclick="handleValidateDelivery()" class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:from-emerald-800 active:to-teal-800 text-white font-black text-base flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/25 active:scale-[0.98] transition-all min-h-[56px]">
+            <i class="fa-solid fa-check text-xl"></i>
+            <span>Valider la livraison</span>
           </button>
 
           <!-- Fallback Skip Option -->
@@ -510,10 +703,10 @@
             </div>
             <p id="pod-upload-error-msg" class="text-slate-600"></p>
             <div class="flex items-center gap-2 pt-1">
-              <button type="button" onclick="triggerCameraInput()" class="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs active:scale-95 transition">
+              <button type="button" onclick="triggerCameraInput()" class="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs active:scale-95 transition min-h-[44px]">
                 <i class="fa-solid fa-rotate-right mr-1"></i> Réessayer
               </button>
-              <button type="button" onclick="confirmDeliveryWithoutPhoto()" class="flex-1 py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-xs active:scale-95 transition">
+              <button type="button" onclick="confirmDeliveryWithoutPhoto()" class="flex-1 py-2 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-xs active:scale-95 transition min-h-[44px]">
                 Valider sans photo
               </button>
             </div>
@@ -522,7 +715,7 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-5 sm:px-6 py-3 border-t border-slate-200/80 bg-slate-50/60 flex items-center justify-end gap-2">
+      <div class="px-5 sm:px-6 py-3 border-t border-slate-200/80 bg-slate-50/60 flex items-center justify-end gap-2 shrink-0">
         <button onclick="closePoDModal()" type="button" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition duration-150 active:scale-95 text-xs sm:text-sm min-h-[44px]">
           Annuler
         </button>
@@ -534,8 +727,8 @@
   <div id="pod-image-viewer-modal" class="fixed inset-0 z-50 bg-[#0B1F3F]/85 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-300" onclick="closePhotoViewer()">
     <div class="relative max-w-3xl max-h-[92vh] w-full flex flex-col items-center justify-center" onclick="event.stopPropagation()">
       <div class="w-full flex items-center justify-between pb-3 text-white">
-        <span class="text-xs font-bold flex items-center gap-2">
-          <i class="fa-solid fa-file-invoice text-blue-400"></i> Bon de Livraison (BL)
+        <span class="text-xs font-bold flex items-center gap-2" id="pod-viewer-title">
+          <i class="fa-solid fa-file-invoice text-blue-400"></i> <span id="pod-viewer-title-text">Bon de Livraison (BL)</span>
         </span>
         <button onclick="closePhotoViewer()" type="button" aria-label="Fermer" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition active:scale-95">
           <i class="fa-solid fa-xmark text-sm"></i>
@@ -9122,6 +9315,9 @@ const LOCAL_DELIVERY_DATA = [
       const isLivre = Boolean(d.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
       const status = isLivre ? "Livré" : "Non Livré";
       const date = String(d.date || "").trim();
+      const qtyRecue = d.quantite_recue !== undefined && d.quantite_recue !== null ? Number(d.quantite_recue) : (isLivre ? qty : null);
+      const qtyLitige = d.quantite_litige !== undefined && d.quantite_litige !== null ? Number(d.quantite_litige) : 0;
+      const statReserve = d.statut_reserve || (isLivre ? (qtyLitige > 0 ? "Avec Réserve" : "Conforme") : null);
 
       return {
         ...d,
@@ -9138,7 +9334,15 @@ const LOCAL_DELIVERY_DATA = [
         quantity: qty,
         status: status,
         completed: isLivre,
-        photo_url: d.photo_url || d.photoUrl || null
+        photo_url: d.photo_url || d.photoUrl || null,
+        a_recouvrement: Boolean(d.a_recouvrement || d.photo_recouvrement_url || Number(d.montant_recouvrement) > 0),
+        photo_recouvrement_url: d.photo_recouvrement_url || null,
+        montant_recouvrement: d.montant_recouvrement !== undefined && d.montant_recouvrement !== null ? Number(d.montant_recouvrement) : 0,
+        quantite_recue: qtyRecue,
+        quantite_litige: qtyLitige,
+        statut_reserve: statReserve,
+        motif_reserve: d.motif_reserve || null,
+        remarque_chauffeur: d.remarque_chauffeur || null
       };
     }
 
@@ -9221,9 +9425,10 @@ const LOCAL_DELIVERY_DATA = [
         modalRouteName:       document.getElementById('modal-route-name'),
         modalRouteSub:        document.getElementById('modal-route-sub'),
         adminToolbar:         document.getElementById('admin-toolbar'),
-        adminKpiPackages:     document.getElementById('admin-kpi-packages'),
-        adminKpiDelivered:    document.getElementById('admin-kpi-delivered'),
-        adminKpiRate:         document.getElementById('admin-kpi-rate'),
+        adminKpiPackages:      document.getElementById('admin-kpi-packages'),
+        adminKpiDelivered:     document.getElementById('admin-kpi-delivered'),
+        adminKpiDiscrepancies: document.getElementById('admin-kpi-discrepancies'),
+        adminKpiRate:          document.getElementById('admin-kpi-rate'),
         adminFilterChauffeur: document.getElementById('admin-filter-chauffeur'),
         adminFilterBoutique:  document.getElementById('admin-filter-boutique'),
         adminFilterStore:     document.getElementById('admin-filter-store'),
@@ -9508,21 +9713,30 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         if (match) {
-          if (match.row && match.row.photo_url) {
-            item.photo_url = match.row.photo_url;
+          if (match.row) {
+            if (match.row.photo_url) item.photo_url = match.row.photo_url;
+            if (match.row.statut_reserve !== undefined) item.statut_reserve = match.row.statut_reserve;
+            if (match.row.quantite_recue !== undefined && match.row.quantite_recue !== null) item.quantite_recue = Number(match.row.quantite_recue);
+            if (match.row.quantite_litige !== undefined && match.row.quantite_litige !== null) item.quantite_litige = Number(match.row.quantite_litige);
+            if (match.row.motif_reserve !== undefined) item.motif_reserve = match.row.motif_reserve;
+            if (match.row.remarque_chauffeur !== undefined) item.remarque_chauffeur = match.row.remarque_chauffeur;
+            if (match.row.a_recouvrement !== undefined) item.a_recouvrement = Boolean(match.row.a_recouvrement);
+            if (match.row.photo_recouvrement_url !== undefined) item.photo_recouvrement_url = match.row.photo_recouvrement_url;
+            if (match.row.montant_recouvrement !== undefined && match.row.montant_recouvrement !== null) item.montant_recouvrement = Number(match.row.montant_recouvrement);
+            if (item.photo_recouvrement_url || Number(item.montant_recouvrement) > 0) item.a_recouvrement = true;
           }
           if (match.chauffeur !== undefined) {
             item.chauffeur = match.chauffeur;
             item.driver = match.chauffeur;
           }
           if (match.isLivre) {
-            item.status = 'Livré';
+            item.status = "Livré";
             item.completed = true;
             if (match.delivered_by) item.delivered_by = match.delivered_by;
             if (item.id) serverDeliveredIds.add(String(item.id).trim().toUpperCase());
             if (itemKey) serverDeliveredKeys.add(itemKey);
           } else {
-            item.status = 'Non Livré';
+            item.status = "Non Livré";
             item.completed = false;
           }
         }
@@ -9683,22 +9897,35 @@ const LOCAL_DELIVERY_DATA = [
 
         if (data && Array.isArray(data)) {
           const mappedData = data.map(row => {
-            const rawStatus = String(row.status || row.Status || '');
+            const rawStatus = String(row.status || row.Status || "");
             const isLivre = Boolean(row.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
             const dKey = row.delivery_key || buildDeliveryKey(row);
+            const qTotal = Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0;
+            const qRecue = row.quantite_recue !== undefined && row.quantite_recue !== null ? Number(row.quantite_recue) : (isLivre ? qTotal : null);
+            const qLitige = row.quantite_litige !== undefined && row.quantite_litige !== null ? Number(row.quantite_litige) : 0;
+            const statReserve = row.statut_reserve || (isLivre ? (qLitige > 0 ? "Avec Réserve" : "Conforme") : null);
+
             return {
-              id: String(row.delivery_id || row.id || '').trim(),
-              delivery_id: String(row.delivery_id || row.id || '').trim(),
+              id: String(row.delivery_id || row.id || "").trim(),
+              delivery_id: String(row.delivery_id || row.id || "").trim(),
               delivery_key: dKey,
               date: normalizeDate(row.date || row.Date),
-              magasin: String(row.magasin || row.Magasin || row.destination || '').trim(),
-              chauffeur: (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(String(row.chauffeur || row.Chauffeur || row.driver || '').trim())) ? '' : String(row.chauffeur || row.Chauffeur || row.driver || '').trim(),
-              delivered_by: String(row.delivered_by || '').trim() || null,
-              matricule: String(row.matricule || row.Matricule || row.vehicle || '').trim(),
-              quantite: Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0,
-              status: isLivre ? 'Livré' : 'Non Livré',
+              magasin: String(row.magasin || row.Magasin || row.destination || "").trim(),
+              chauffeur: (/non sp[écifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(String(row.chauffeur || row.Chauffeur || row.driver || "").trim())) ? "" : String(row.chauffeur || row.Chauffeur || row.driver || "").trim(),
+              delivered_by: String(row.delivered_by || "").trim() || null,
+              matricule: String(row.matricule || row.Matricule || row.vehicle || "").trim(),
+              quantite: qTotal,
+              status: isLivre ? "Livré" : "Non Livré",
               completed: isLivre,
               photo_url: row.photo_url || null,
+              a_recouvrement: Boolean(row.a_recouvrement || row.photo_recouvrement_url || Number(row.montant_recouvrement) > 0),
+              photo_recouvrement_url: row.photo_recouvrement_url || null,
+              montant_recouvrement: row.montant_recouvrement !== undefined && row.montant_recouvrement !== null ? Number(row.montant_recouvrement) : 0,
+              quantite_recue: qRecue,
+              quantite_litige: qLitige,
+              statut_reserve: statReserve,
+              motif_reserve: row.motif_reserve || null,
+              remarque_chauffeur: row.remarque_chauffeur || null,
               updated_at: row.updated_at || null
             };
           });
@@ -9741,54 +9968,82 @@ const LOCAL_DELIVERY_DATA = [
      * - Upserts delivery in Supabase table 'deliveries' with onConflict: 'delivery_id'
      * - Logs explicit errors to console and shows toast notification on error
      */
-    async function syncDeliveryStatusToSupabase(item, newStatus = 'Livré', photoUrl = null) {
+    async function syncDeliveryStatusToSupabase(item, newStatus = "Livré", photoUrl = null, reserveData = null, recouvrementData = null) {
       if (!item) return false;
 
       const currentUser = AppState.currentUser || getAuthSession();
-      if (!currentUser || currentUser.role !== 'chauffeur') {
-        console.warn('[RBAC] Seul un chauffeur authentifié peut valider une livraison.');
+      if (!currentUser || currentUser.role !== "chauffeur") {
+        console.warn("[RBAC] Seul un chauffeur authentifié peut valider une livraison.");
         return false;
       }
 
-      const deliveryId = String(item.delivery_id || item.id || '').trim();
+      const deliveryId = String(item.delivery_id || item.id || "").trim();
       const deliveryKey = item.delivery_key || buildDeliveryKey(item);
       const normDate = normalizeDate(item.date || item.Date || AppState.selectedDateStr);
-      const store = String(item.magasin || item.Magasin || item.destination || '').trim();
+      const store = String(item.magasin || item.Magasin || item.destination || "").trim();
 
-      const originalChauffeur = String(item.chauffeur || item.driver || '').trim().toUpperCase();
-      const isGeneric = !originalChauffeur || /non sp[ée]cifi[ée]/i.test(originalChauffeur) || isAdminUser(originalChauffeur);
+      const originalChauffeur = String(item.chauffeur || item.driver || "").trim().toUpperCase();
+      const isGeneric = !originalChauffeur || /non sp[écifi[ée]/i.test(originalChauffeur) || isAdminUser(originalChauffeur);
       const finalChauffeur = isGeneric ? currentUser.chauffeurName : (item.chauffeur || currentUser.chauffeurName);
 
-      const vehicle = String(item.matricule || item.vehicle || '').trim();
+      const vehicle = String(item.matricule || item.vehicle || "").trim();
       const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
       const targetPhotoUrl = photoUrl || item.photo_url || null;
 
-      updateSupabaseSyncBadge('syncing', `Envoi #${deliveryId}...`);
+      // Extract Discrepancy & Reserve attributes
+      const isReserve = reserveData ? Boolean(reserveData.isReserve) : (item.statut_reserve === "Avec Réserve");
+      const quantiteRecue = reserveData ? Number(reserveData.quantite_recue) : (item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isReserve ? 0 : qty));
+      const quantiteLitige = reserveData ? Number(reserveData.quantite_litige) : (item.quantite_litige !== undefined && item.quantite_litige !== null ? Number(item.quantite_litige) : (isReserve ? Math.max(0, qty - quantiteRecue) : 0));
+      const statutReserve = isReserve ? "Avec Réserve" : "Conforme";
+      const motifReserve = isReserve ? (reserveData ? reserveData.motif_reserve : item.motif_reserve) : null;
+      const remarqueChauffeur = isReserve ? (reserveData ? (reserveData.remarque_chauffeur || "").trim() : (item.remarque_chauffeur || "").trim()) : null;
+
+      // Extract Recouvrement attributes
+      const hasRecettePhoto = Boolean((recouvrementData && recouvrementData.photo_recouvrement_url) || item.photo_recouvrement_url);
+      const montantVal = (recouvrementData && recouvrementData.montant_recouvrement !== undefined && recouvrementData.montant_recouvrement !== null)
+        ? Number(recouvrementData.montant_recouvrement)
+        : (Number(item.montant_recouvrement) || 0);
+      const hasRecouvrement = Boolean(
+        (recouvrementData && (recouvrementData.a_recouvrement || hasRecettePhoto || montantVal > 0)) ||
+        item.a_recouvrement ||
+        hasRecettePhoto ||
+        montantVal > 0
+      );
+      const photoRecetteUrl = (recouvrementData && recouvrementData.photo_recouvrement_url) || item.photo_recouvrement_url || null;
+
+      updateSupabaseSyncBadge("syncing", "Envoi en cours...");
 
       const updatePayload = {
+        delivery_id: deliveryId,
         status: newStatus,
+        chauffeur: currentUser.chauffeurName,
         delivered_by: currentUser.chauffeurName,
-        chauffeur: finalChauffeur,
+        quantite_recue: Number(quantiteRecue),
+        quantite_litige: Number(quantiteLitige),
+        statut_reserve: statutReserve,
+        motif_reserve: motifReserve,
+        remarque_chauffeur: remarqueChauffeur,
+        photo_url: targetPhotoUrl,
+        a_recouvrement: hasRecouvrement,
+        photo_recouvrement_url: photoRecetteUrl,
+        montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
         updated_at: new Date().toISOString()
       };
-      if (targetPhotoUrl) {
-        updatePayload.photo_url = targetPhotoUrl;
-      }
 
       try {
         if (!supabaseClient) {
-          console.error('Supabase error: client non configuré');
-          updateSupabaseSyncBadge('error', 'Supabase Non Configuré');
-          showNotification('Supabase non configuré. Sauvegarde hors-ligne.', 'error');
-          queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty, photo_url: targetPhotoUrl });
+          console.error("Supabase error: client non configuré");
+          updateSupabaseSyncBadge("error", "Supabase Non Configuré");
+          showNotification("Supabase non configuré. Sauvegarde hors-ligne.", "error");
+          queueOfflineSync({ ...updatePayload, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
           return false;
         }
 
         // 1. Mise à jour directe par delivery_key
         let updateRes = await supabaseClient
-          .from('deliveries')
+          .from("deliveries")
           .update(updatePayload)
-          .eq('delivery_key', deliveryKey)
+          .eq("delivery_key", deliveryKey)
           .select();
 
         let data = updateRes.data;
@@ -9797,9 +10052,9 @@ const LOCAL_DELIVERY_DATA = [
         // 2. Si non trouvé par delivery_key, secours par delivery_id
         if (!error && (!data || data.length === 0)) {
           const res2 = await supabaseClient
-            .from('deliveries')
+            .from("deliveries")
             .update(updatePayload)
-            .eq('delivery_id', deliveryId)
+            .eq("delivery_id", deliveryId)
             .select();
           data = res2.data;
           error = res2.error;
@@ -9812,37 +10067,45 @@ const LOCAL_DELIVERY_DATA = [
             delivery_key: deliveryKey,
             date: normDate,
             magasin: store,
-            chauffeur: finalChauffeur,
+            chauffeur: currentUser.chauffeurName,
             delivered_by: currentUser.chauffeurName,
             matricule: vehicle,
             quantite: qty,
             status: newStatus,
+            quantite_recue: Number(quantiteRecue),
+            quantite_litige: Number(quantiteLitige),
+            statut_reserve: statutReserve,
+            motif_reserve: motifReserve,
+            remarque_chauffeur: remarqueChauffeur,
             photo_url: targetPhotoUrl,
+            a_recouvrement: hasRecouvrement,
+            photo_recouvrement_url: photoRecetteUrl,
+            montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
             updated_at: new Date().toISOString()
           };
           const res3 = await supabaseClient
-            .from('deliveries')
-            .upsert(upsertPayload, { onConflict: 'delivery_key' })
+            .from("deliveries")
+            .upsert(upsertPayload, { onConflict: "delivery_key" })
             .select();
           data = res3.data;
           error = res3.error;
         }
 
         if (error) {
-          console.error('Supabase error:', error);
-          showNotification(`Erreur Supabase: ${error.message || 'Échec de synchronisation'}`, 'error');
-          updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-          queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty, photo_url: targetPhotoUrl });
+          console.error("Supabase error:", error);
+          showNotification(`Erreur Supabase: ${error.message || "Échec de synchronisation"}`, "error");
+          updateSupabaseSyncBadge("error", "Erreur de mise à jour");
+          queueOfflineSync({ ...updatePayload, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
           return false;
         }
 
-        updateSupabaseSyncBadge('success', 'Supabase En Direct 🟢');
+        updateSupabaseSyncBadge("success", "Supabase En Direct 🟢");
         return true;
       } catch (err) {
-        console.error('Supabase error:', err);
-        showNotification(`Erreur Supabase: ${err.message || 'Échec réseau'}`, 'error');
-        updateSupabaseSyncBadge('error', 'Erreur de mise à jour');
-        queueOfflineSync({ ...updatePayload, delivery_id: deliveryId, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty, photo_url: targetPhotoUrl });
+        console.error("Supabase error:", err);
+        showNotification(`Erreur Supabase: ${err.message || "Échec réseau"}`, "error");
+        updateSupabaseSyncBadge("error", "Erreur de mise à jour");
+        queueOfflineSync({ ...updatePayload, delivery_key: deliveryKey, date: normDate, magasin: store, matricule: vehicle, quantite: qty });
         return false;
       }
     }
@@ -10169,7 +10432,7 @@ const LOCAL_DELIVERY_DATA = [
 
     function updateAdminKPIs() {
       if (!DOM.adminToolbar) return;
-      if (!AppState.currentUser || AppState.currentUser.role !== 'admin') {
+      if (!AppState.currentUser || AppState.currentUser.role !== "admin") {
         DOM.adminToolbar.classList.add("hidden");
         return;
       }
@@ -10177,11 +10440,18 @@ const LOCAL_DELIVERY_DATA = [
 
       const dayDeliveries = getUniqueDeliveries(AppState.deliveries.filter(deliv => deliv.date === AppState.selectedDateStr));
       const totalUnits = dayDeliveries.reduce((sum, item) => sum + (Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0), 0);
-      const deliveredCount = dayDeliveries.filter(isItemDelivered).length;
+      const deliveredDeliveries = dayDeliveries.filter(isItemDelivered);
+      const deliveredCount = deliveredDeliveries.length;
+      const reserveDeliveries = deliveredDeliveries.filter(d => d.statut_reserve === "Avec Réserve");
+      const totalDiscrepanciesCount = reserveDeliveries.length;
+      const totalDiscrepancyUnits = reserveDeliveries.reduce((sum, item) => sum + (Number(item.quantite_litige) || 0), 0);
       const rate = dayDeliveries.length > 0 ? Math.round((deliveredCount / dayDeliveries.length) * 100) : 0;
 
       if (DOM.adminKpiPackages) DOM.adminKpiPackages.textContent = `${totalUnits.toLocaleString()} Paires`;
       if (DOM.adminKpiDelivered) DOM.adminKpiDelivered.textContent = `${deliveredCount} / ${dayDeliveries.length}`;
+      if (DOM.adminKpiDiscrepancies) {
+        DOM.adminKpiDiscrepancies.textContent = totalDiscrepanciesCount > 0 ? `${totalDiscrepanciesCount} (${totalDiscrepancyUnits} p.)` : "0";
+      }
       if (DOM.adminKpiRate) DOM.adminKpiRate.textContent = `${rate}%`;
     }
 
@@ -10479,111 +10749,177 @@ const LOCAL_DELIVERY_DATA = [
       const isChauffeur = Boolean(currentUser && currentUser.role === 'chauffeur');
       const isAdmin = Boolean(currentUser && currentUser.role === 'admin');
 
-      let cardsHtml = '';
+      let cardsHtml = "";
       filtered.forEach(item => {
         const isCompleted = isItemDelivered(item);
+        const isReserve = isCompleted && item.statut_reserve === "Avec Réserve";
+        const litigeQty = Number(item.quantite_litige) || 0;
+        const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
+        const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isCompleted ? (qty - litigeQty) : qty);
+
         const cardClasses = `p-4 sm:p-5 rounded-2xl border transition-all duration-300 flex-shrink-0 flex flex-col justify-between ${
-          isCompleted 
-            ? 'bg-emerald-50/40 border-emerald-200/90 shadow-sm shadow-emerald-900/5' 
-            : 'bg-white border-slate-200/90 shadow-sm shadow-blue-950/5'
+          isReserve
+            ? "bg-amber-50/40 border-amber-200/90 shadow-sm shadow-amber-900/5"
+            : (isCompleted 
+                ? "bg-emerald-50/40 border-emerald-200/90 shadow-sm shadow-emerald-900/5" 
+                : "bg-white border-slate-200/90 shadow-sm shadow-blue-950/5")
         }`;
 
-        // Non-clickable status badges (amber for Non Livré, emerald for Livré)
-        const statusBadge = isCompleted ? `
-          <span class="inline-flex items-center gap-1.5 text-emerald-800 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré
-          </span>
-        ` : `
-          <span class="inline-flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs">
-            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Non Livré
-          </span>
-        `;
+        // Status badges: Amber for Non Livré, Amber warning for Livré avec réserve, Emerald for Livré Conforme
+        let statusBadge = "";
+        if (!isCompleted) {
+          statusBadge = `
+            <span class="inline-flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Non Livré
+            </span>
+          `;
+        } else if (isReserve) {
+          statusBadge = `
+            <span class="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300 shadow-2xs">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-[11px]"></i> Livré (Réserve: -${litigeQty} paires)
+            </span>
+          `;
+        } else {
+          statusBadge = `
+            <span class="inline-flex items-center gap-1.5 text-emerald-800 font-bold text-xs bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré
+            </span>
+          `;
+        }
 
         const storeName = item.magasin || item.destination || "Magasin";
         const rawDriver = String(item.chauffeur || item.driver || "").trim();
-        const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+        const isUnassigned = !rawDriver || /non assign[ée]|non spécifié|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
         const driverName = isUnassigned ? "Non assigné" : rawDriver;
         const matricule = item.matricule || item.vehicle || "Camion standard";
-        const qty = item.quantite !== undefined ? item.quantite : item.quantity;
         const delivDate = item.date || "";
 
+        const isSwipeable = !isCompleted && isChauffeur;
+
         cardsHtml += `
-          <div class="${cardClasses}" data-delivery-id="${item.id}">
-            <div>
-              <!-- 1. Header: Delivery ID + Date & Status Badge (Clean, Zero Overlap) -->
-              <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-900 text-xs font-bold font-mono border border-blue-200/70 shrink-0">
-                    #${item.id}
-                  </span>
-                  <span class="text-xs font-medium text-slate-400 truncate">
-                    ${delivDate}
-                  </span>
+          <div class="swipe-card-wrapper relative overflow-hidden rounded-2xl ${isSwipeable ? 'swipeable-card' : ''}" data-delivery-id="${item.id}">
+            ${isSwipeable ? `
+              <!-- Static Green Reveal Layer (iOS style call / archive slider) -->
+              <div class="swipe-action-bg absolute inset-0 bg-emerald-500 rounded-2xl flex items-center justify-between px-6 text-white font-extrabold select-none z-0 pointer-events-none">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl shadow-xs">
+                    <i class="fa-solid fa-check"></i>
+                  </div>
+                  <span class="text-sm sm:text-base font-black tracking-wider uppercase">Glisser pour livrer</span>
                 </div>
-                <div class="shrink-0 flex items-center gap-1.5">
-                  ${item.photo_url ? `
-                    <button type="button" onclick="event.stopPropagation(); openPhotoViewer('${item.photo_url}')" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 transition" title="Voir le Bon de Livraison">
-                      <i class="fa-solid fa-camera text-[10px]"></i> BL
-                    </button>
-                  ` : ''}
-                  ${statusBadge}
+                <div class="text-white/70 text-xs font-semibold hidden sm:flex items-center gap-1">
+                  <span>Relâcher</span>
+                  <i class="fa-solid fa-chevron-right text-xs"></i>
                 </div>
               </div>
+            ` : ""}
 
-              <!-- 2. Magasin (High Contrast, Large, Ultra-Readable for Drivers) -->
-              <div class="mt-3">
-                <h4 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-snug break-words">
-                  ${storeName}
-                </h4>
-              </div>
+            <!-- Sliding Front Layer -->
+            <div class="swipe-card-front ${cardClasses} relative z-10 w-full h-full ${!isCompleted ? 'bg-white' : ''}" style="touch-action: pan-y;">
+              <div>
+                <!-- 1. Header: Date & Status Badges (Clean, No Technical ID) -->
+                <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    ${delivDate ? `
+                      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
+                        <i class="fa-regular fa-calendar text-slate-400 text-xs shrink-0"></i>
+                        <span>${delivDate}</span>
+                      </span>
+                    ` : ""}
+                  </div>
+                  <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
+                    ${Boolean(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || item.photo_recouvrement_url) ? `
+                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
+                        💰 Recouvrement
+                      </span>
+                    ` : ""}
+                    ${item.photo_url ? `
+                      <button type="button" onclick="event.stopPropagation(); openPhotoViewer('${item.photo_url}', 'Bon de Livraison (BL)')" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 transition" title="Voir le Bon de Livraison">
+                        <i class="fa-solid fa-camera text-[10px]"></i> BL
+                      </button>
+                    ` : ""}
+                    ${statusBadge}
+                  </div>
+                </div>
 
-              <!-- 3. Quantité (High Contrast, Bold, Instantly Scannable) -->
-              <div class="mt-3 py-2 px-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center">
-                <span class="text-lg sm:text-xl font-black text-blue-900 font-mono flex items-center gap-2">
-                  <i class="fa-solid fa-box text-blue-600 text-sm"></i>
-                  ${Number(qty).toLocaleString()} <span class="text-xs font-bold text-blue-600">Paires</span>
-                </span>
-              </div>
+                <!-- 2. Magasin (High Contrast, Large, Ultra-Readable for Drivers) -->
+                <div class="mt-3">
+                  <h4 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight leading-snug break-words">
+                    ${storeName}
+                  </h4>
+                </div>
 
-              ${!isChauffeur ? `
-                <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
-                  <i class="fa-solid fa-user-tie text-blue-500 text-xs"></i>
-                  ${isUnassigned ? `
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
-                      <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-600"></i> Non assigné
+                <!-- 3. Quantité & Discrepancy details -->
+                <div class="mt-3 py-2 px-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                  <span class="text-lg sm:text-xl font-black text-blue-900 font-mono flex items-center gap-2">
+                    <i class="fa-solid fa-box text-blue-600 text-sm"></i>
+                    ${Number(qty).toLocaleString()} <span class="text-xs font-bold text-blue-600">Paires</span>
+                  </span>
+                  ${isReserve ? `
+                    <span class="text-xs font-bold text-amber-700 font-mono bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      Reçu: ${recueQty} p.
                     </span>
-                  ` : `
-                    <strong>${driverName}</strong>
-                  `}
+                  ` : ""}
                 </div>
-              ` : ''}
 
-            </div>
+                ${isReserve ? `
+                  <!-- Discrepancy Warning Banner in Card Body -->
+                  <div class="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 text-xs text-amber-900 space-y-1">
+                    <div class="font-bold flex items-center gap-1.5 leading-snug">
+                      <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs shrink-0"></i>
+                      <span>⚠️ Motif: ${item.motif_reserve || "Non spécifié"}${item.remarque_chauffeur ? ` — "${item.remarque_chauffeur}"` : ""}</span>
+                    </div>
+                  </div>
+                ` : ""}
 
-            <!-- 4. Massive Action Area (Foolproof Thumb Target, Min 48px Height) -->
-            <div class="mt-4 pt-3 border-t border-slate-100">
-              ${isCompleted ? `
-                <div class="w-full py-3.5 px-4 rounded-xl bg-emerald-100/90 text-emerald-800 border border-emerald-300 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 cursor-default opacity-95 select-none min-h-[50px] shadow-2xs">
-                  <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
-                  <span>Livré ✓</span>
+                ${!isChauffeur ? `
+                  <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-tie text-blue-500 text-xs"></i>
+                    ${isUnassigned ? `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
+                        <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-600"></i> Non assigné
+                      </span>
+                    ` : `
+                      <strong>${driverName}</strong>
+                    `}
+                  </div>
+                ` : ""}
+
+              </div>
+
+              <!-- 4. Massive Action Area -->
+              <div class="mt-4 pt-3 border-t border-slate-100">
+                ${isCompleted ? `
+                  <div class="w-full py-3.5 px-4 rounded-xl ${isReserve ? "bg-amber-100/90 text-amber-900 border border-amber-300" : "bg-emerald-100/90 text-emerald-800 border border-emerald-300"} font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 cursor-default opacity-95 select-none min-h-[50px] shadow-2xs">
+                    <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-circle-check text-emerald-600"} text-base"></i>
+                    <span>${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : "Livré ✓"}</span>
+                  </div>
+                ` : (isChauffeur ? `
+                  <div class="w-full flex items-center justify-between gap-2.5">
+                    <!-- Mobile / Tablet Swipe Prompt (Prevents accidental clicks while driving) -->
+                    <div class="flex-1 py-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200/90 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 select-none min-h-[48px] pointer-events-none">
+                      <i class="fa-solid fa-angles-right text-emerald-600 text-sm animate-pulse"></i>
+                      <span class="tracking-wide text-slate-700 font-semibold">Glisser pour livrer</span>
+                    </div>
+                    <!-- Desktop Click Fallback -->
+                    <button type="button" data-action="toggle-delivery" data-id="${item.id}" class="hidden md:inline-flex py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-sm tracking-wide shadow-sm shadow-emerald-600/30 transition-all items-center justify-center gap-2 min-h-[48px] shrink-0" title="Valider la livraison">
+                      <i class="fa-solid fa-check text-base pointer-events-none"></i>
+                      <span>LIVRER</span>
+                    </button>
+                  </div>
+                ` : (isAdmin && isUnassigned ? `
+                  <button type="button" data-action="admin-close-delivery" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-indigo-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[52px]">
+                    <i class="fa-solid fa-clipboard-check text-base pointer-events-none"></i>
+                    <span>Clôturer / Livré</span>
+                  </button>
+                ` : ""))}
+
+                <!-- Secondary Details Link (Understated, No Accidental Tap) -->
+                <div class="mt-2 flex justify-end">
+                  <button type="button" data-action="view-details" data-id="${item.id}" title="Détails" aria-label="Détails" class="text-slate-400 hover:text-blue-600 flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 transition min-h-[36px] min-w-[36px]">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                  </button>
                 </div>
-              ` : (isChauffeur ? `
-                <button type="button" data-action="toggle-delivery" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-base tracking-wide shadow-md shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 min-h-[52px]">
-                  <i class="fa-solid fa-check text-lg pointer-events-none"></i>
-                  <span>LIVRER</span>
-                </button>
-              ` : (isAdmin && isUnassigned ? `
-                <button type="button" data-action="admin-close-delivery" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-indigo-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[52px]">
-                  <i class="fa-solid fa-clipboard-check text-base pointer-events-none"></i>
-                  <span>Clôturer / Livré</span>
-                </button>
-              ` : ''))}
-
-              <!-- Secondary Details Link (Understated, No Accidental Tap) -->
-              <div class="mt-2 flex justify-end">
-                <button type="button" data-action="view-details" data-id="${item.id}" title="Détails" aria-label="Détails" class="text-slate-400 hover:text-blue-600 flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 transition min-h-[36px] min-w-[36px]">
-                  <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
-                </button>
               </div>
             </div>
           </div>
@@ -10608,39 +10944,322 @@ const LOCAL_DELIVERY_DATA = [
      * - Transmits mutation to Supabase.
      */
     let currentPoDItem = null;
+    let isReserveSelected = false;
+    let selectedReserveMotif = "Carton(s) manquant(s)";
+    let selectedBlFile = null;
+    let selectedRecetteFile = null;
+    let selectedBlPreviewUrl = null;
+    let selectedRecettePreviewUrl = null;
+
+    function triggerBlInput() {
+      const input = document.getElementById("camera-input-bl") || document.getElementById("camera-input");
+      if (input) input.click();
+    }
+
+    function triggerRecetteInput() {
+      const input = document.getElementById("camera-input-recette");
+      if (input) input.click();
+    }
+
+    function triggerCameraInput() {
+      triggerBlInput();
+    }
+
+    function handleBlCapture(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      selectedBlFile = file;
+      if (selectedBlPreviewUrl) {
+        try { URL.revokeObjectURL(selectedBlPreviewUrl); } catch (e) {}
+      }
+      selectedBlPreviewUrl = URL.createObjectURL(file);
+
+      const btnTrigger = document.getElementById("btn-trigger-bl");
+      const previewBox = document.getElementById("pod-bl-preview-box");
+      const thumbImg = document.getElementById("pod-bl-preview-thumb");
+      const fileInfo = document.getElementById("pod-bl-file-info");
+
+      if (thumbImg) thumbImg.src = selectedBlPreviewUrl;
+      if (fileInfo) {
+        const sizeKb = Math.round(file.size / 1024);
+        fileInfo.textContent = `${sizeKb} KB — Photo prête`;
+      }
+      if (btnTrigger) btnTrigger.classList.add("hidden");
+      if (previewBox) previewBox.classList.remove("hidden");
+    }
+
+    function handleRecetteCapture(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      selectedRecetteFile = file;
+      if (selectedRecettePreviewUrl) {
+        try { URL.revokeObjectURL(selectedRecettePreviewUrl); } catch (e) {}
+      }
+      selectedRecettePreviewUrl = URL.createObjectURL(file);
+
+      const btnTrigger = document.getElementById("btn-trigger-recette");
+      const previewBox = document.getElementById("pod-recette-preview-box");
+      const thumbImg = document.getElementById("pod-recette-preview-thumb");
+      const fileInfo = document.getElementById("pod-recette-file-info");
+      const amountBox = document.getElementById("pod-recette-amount-box");
+
+      if (thumbImg) thumbImg.src = selectedRecettePreviewUrl;
+      if (fileInfo) {
+        const sizeKb = Math.round(file.size / 1024);
+        fileInfo.textContent = `${sizeKb} KB — Recouvrement actif`;
+      }
+      if (btnTrigger) btnTrigger.classList.add("hidden");
+      if (previewBox) previewBox.classList.remove("hidden");
+      if (amountBox) amountBox.classList.remove("hidden");
+    }
+
+    function removeRecettePhoto() {
+      selectedRecetteFile = null;
+      if (selectedRecettePreviewUrl) {
+        try { URL.revokeObjectURL(selectedRecettePreviewUrl); } catch (e) {}
+        selectedRecettePreviewUrl = null;
+      }
+      const input = document.getElementById("camera-input-recette");
+      if (input) input.value = "";
+
+      const btnTrigger = document.getElementById("btn-trigger-recette");
+      const previewBox = document.getElementById("pod-recette-preview-box");
+      const amountBox = document.getElementById("pod-recette-amount-box");
+      const montantInput = document.getElementById("pod-montant-recouvrement");
+
+      if (previewBox) previewBox.classList.add("hidden");
+      if (btnTrigger) btnTrigger.classList.remove("hidden");
+      if (amountBox) amountBox.classList.add("hidden");
+      if (montantInput) montantInput.value = "";
+    }
+
+    function resetPoDModalState() {
+      selectedBlFile = null;
+      selectedRecetteFile = null;
+      if (selectedBlPreviewUrl) {
+        try { URL.revokeObjectURL(selectedBlPreviewUrl); } catch (e) {}
+        selectedBlPreviewUrl = null;
+      }
+      if (selectedRecettePreviewUrl) {
+        try { URL.revokeObjectURL(selectedRecettePreviewUrl); } catch (e) {}
+        selectedRecettePreviewUrl = null;
+      }
+
+      const camBl = document.getElementById("camera-input-bl");
+      const camRec = document.getElementById("camera-input-recette");
+      const camLegacy = document.getElementById("camera-input");
+      if (camBl) camBl.value = "";
+      if (camRec) camRec.value = "";
+      if (camLegacy) camLegacy.value = "";
+
+      const btnTriggerBl = document.getElementById("btn-trigger-bl");
+      const previewBoxBl = document.getElementById("pod-bl-preview-box");
+      if (btnTriggerBl) btnTriggerBl.classList.remove("hidden");
+      if (previewBoxBl) previewBoxBl.classList.add("hidden");
+
+      const btnTriggerRec = document.getElementById("btn-trigger-recette");
+      const previewBoxRec = document.getElementById("pod-recette-preview-box");
+      const amountBox = document.getElementById("pod-recette-amount-box");
+      const montantInput = document.getElementById("pod-montant-recouvrement");
+
+      if (btnTriggerRec) btnTriggerRec.classList.remove("hidden");
+      if (previewBoxRec) previewBoxRec.classList.add("hidden");
+      if (amountBox) amountBox.classList.add("hidden");
+      if (montantInput) montantInput.value = "";
+
+      const stepCapture = document.getElementById("pod-step-capture");
+      const stepUploading = document.getElementById("pod-step-uploading");
+      const errorBox = document.getElementById("pod-upload-error-box");
+      if (stepCapture) stepCapture.classList.remove("hidden");
+      if (stepUploading) stepUploading.classList.add("hidden");
+      if (errorBox) errorBox.classList.add("hidden");
+    }
 
     function openPoDModal(item) {
       if (!item) return;
       currentPoDItem = item;
+      isReserveSelected = false;
+      selectedReserveMotif = "Carton(s) manquant(s)";
 
-      const modal = document.getElementById('pod-camera-modal');
-      const storeInfo = document.getElementById('pod-modal-store-info');
-      const stepCapture = document.getElementById('pod-step-capture');
-      const stepUploading = document.getElementById('pod-step-uploading');
-      const errorBox = document.getElementById('pod-upload-error-box');
-      const camInput = document.getElementById('camera-input');
+      resetPoDModalState();
 
-      if (camInput) camInput.value = '';
-      if (storeInfo) {
-        const storeName = item.magasin || item.destination || "Magasin";
-        storeInfo.textContent = `${storeName} • #${item.id}`;
+      const modal = document.getElementById("pod-camera-modal");
+      const storeInfo = document.getElementById("pod-modal-store-info");
+      const totalPlannedLabel = document.getElementById("pod-total-planned-label");
+      const qtyRecueInput = document.getElementById("pod-qty-recue");
+      const remarqueInput = document.getElementById("pod-remarque-chauffeur");
+
+      if (remarqueInput) remarqueInput.value = "";
+
+      const totalQty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
+      if (qtyRecueInput) {
+        qtyRecueInput.value = totalQty;
+        qtyRecueInput.max = totalQty;
+        qtyRecueInput.min = 0;
+      }
+      if (totalPlannedLabel) {
+        totalPlannedLabel.textContent = `Total prévu : ${totalQty} p.`;
       }
 
-      if (stepCapture) stepCapture.classList.remove('hidden');
-      if (stepUploading) stepUploading.classList.add('hidden');
-      if (errorBox) errorBox.classList.add('hidden');
+      if (storeInfo) {
+        const storeName = item.magasin || item.destination || "Magasin";
+        storeInfo.textContent = `${storeName} (${totalQty} Paires)`;
+      }
 
-      if (modal) modal.classList.remove('hidden');
+      selectReserveChoice(false);
+      updateDiscrepancyCalc();
+
+      if (modal) modal.classList.remove("hidden");
     }
 
     function closePoDModal() {
-      const modal = document.getElementById('pod-camera-modal');
-      if (modal) modal.classList.add('hidden');
+      const modal = document.getElementById("pod-camera-modal");
+      if (modal) modal.classList.add("hidden");
       currentPoDItem = null;
+      isReserveSelected = false;
+      resetPoDModalState();
+    }
+
+    function selectReserveChoice(isReserve) {
+      isReserveSelected = Boolean(isReserve);
+      const btnConforme = document.getElementById("pod-choice-conforme");
+      const btnReserve = document.getElementById("pod-choice-reserve");
+      const conformeBadge = document.getElementById("pod-conforme-badge");
+      const reserveForm = document.getElementById("pod-reserve-form");
+      const btnCameraText = document.getElementById("pod-btn-camera-text");
+      const camInstruction = document.getElementById("pod-camera-instruction");
+
+      if (!isReserveSelected) {
+        // Conforme Active
+        if (btnConforme) {
+          btnConforme.className = "p-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] shadow-2xs active:scale-95";
+        }
+        if (btnReserve) {
+          btnReserve.className = "p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-amber-50/50 text-slate-700 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] active:scale-95";
+        }
+        if (conformeBadge) conformeBadge.classList.remove("hidden");
+        if (reserveForm) reserveForm.classList.add("hidden");
+        if (btnCameraText) btnCameraText.textContent = "Prendre la photo du BL";
+        if (camInstruction) {
+          camInstruction.innerHTML = "Photographiez le <strong>Bon de Livraison (BL)</strong> signé par le magasin pour valider la livraison conforme.";
+        }
+        if (currentPoDItem) {
+          const totalQty = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
+          const qtyRecueInput = document.getElementById("pod-qty-recue");
+          if (qtyRecueInput) qtyRecueInput.value = totalQty;
+        }
+      } else {
+        // Reserve Active
+        if (btnConforme) {
+          btnConforme.className = "p-3 rounded-2xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] active:scale-95";
+        }
+        if (btnReserve) {
+          btnReserve.className = "p-3 rounded-2xl border-2 border-amber-500 bg-amber-50 text-amber-950 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-all text-center min-h-[66px] shadow-2xs active:scale-95";
+        }
+        if (conformeBadge) conformeBadge.classList.add("hidden");
+        if (reserveForm) reserveForm.classList.remove("hidden");
+        if (btnCameraText) btnCameraText.textContent = "Prendre la photo du BL annoté";
+        if (camInstruction) {
+          camInstruction.innerHTML = "Photographiez le <strong>BL avec les réserves annotées</strong> et signées par le magasin.";
+        }
+        renderReserveMotifChips();
+      }
+      updateDiscrepancyCalc();
+    }
+
+    function selectReserveMotif(motif) {
+      selectedReserveMotif = motif;
+      renderReserveMotifChips();
+    }
+
+    function renderReserveMotifChips() {
+      const chips = document.querySelectorAll(".pod-motif-chip");
+      chips.forEach(chip => {
+        const m = chip.getAttribute("data-motif");
+        if (m === selectedReserveMotif) {
+          chip.className = "pod-motif-chip p-2.5 rounded-xl border-2 border-amber-500 bg-amber-100 text-amber-950 text-xs font-bold text-left transition flex items-center gap-2 min-h-[44px] shadow-2xs";
+        } else {
+          chip.className = "pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]";
+        }
+      });
+    }
+
+    function adjustQtyRecue(delta) {
+      if (!currentPoDItem) return;
+      const total = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
+      const input = document.getElementById("pod-qty-recue");
+      if (!input) return;
+      let val = Number(input.value) || 0;
+      val = Math.max(0, Math.min(total, val + delta));
+      input.value = val;
+      updateDiscrepancyCalc();
+    }
+
+    function handleQtyRecueInput(input) {
+      if (!currentPoDItem || !input) return;
+      const total = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
+      let val = Number(input.value);
+      if (isNaN(val)) val = 0;
+      if (val > total) val = total;
+      if (val < 0) val = 0;
+      input.value = val;
+      updateDiscrepancyCalc();
+    }
+
+    function updateDiscrepancyCalc() {
+      if (!currentPoDItem) return;
+      const total = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
+      const input = document.getElementById("pod-qty-recue");
+      const val = input ? Math.max(0, Math.min(total, Number(input.value) || 0)) : total;
+      const litige = Math.max(0, total - val);
+
+      const litigeText = document.getElementById("pod-litige-text");
+      const litigeBadge = document.getElementById("pod-litige-badge");
+      const previewBox = document.getElementById("pod-discrepancy-preview");
+
+      if (litigeText) {
+        if (litige === 0) {
+          litigeText.textContent = "Aucun écart (quantité complète reçue)";
+        } else {
+          litigeText.textContent = `Écart calculé : ${litige} paire(s) en litige`;
+        }
+      }
+      if (litigeBadge) {
+        litigeBadge.textContent = `-${litige} p.`;
+      }
+      if (previewBox) {
+        if (litige === 0) {
+          previewBox.className = "mt-2 p-2.5 rounded-xl bg-slate-100 border border-slate-300 text-xs font-semibold text-slate-700 flex items-center justify-between";
+        } else {
+          previewBox.className = "mt-2 p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-xs font-extrabold text-amber-950 flex items-center justify-between";
+        }
+      }
+    }
+
+    function getReservePayload() {
+      const isReserve = Boolean(isReserveSelected);
+      const totalPlanned = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
+      const qtyRecueInput = document.getElementById("pod-qty-recue");
+      let qtyRecue = isReserve ? Math.max(0, Math.min(totalPlanned, Number(qtyRecueInput ? qtyRecueInput.value : totalPlanned))) : totalPlanned;
+      if (isNaN(qtyRecue)) qtyRecue = totalPlanned;
+      const qtyLitige = isReserve ? Math.max(0, totalPlanned - qtyRecue) : 0;
+      const remarqueEl = document.getElementById("pod-remarque-chauffeur");
+      const remarqueText = remarqueEl ? remarqueEl.value : "";
+
+      return {
+        isReserve: isReserve,
+        quantite_recue: qtyRecue,
+        quantite_litige: qtyLitige,
+        statut_reserve: isReserve ? "Avec Réserve" : "Conforme",
+        motif_reserve: isReserve ? selectedReserveMotif : null,
+        remarque_chauffeur: isReserve ? (remarqueText || "").trim() : null
+      };
     }
 
     function triggerCameraInput() {
-      const camInput = document.getElementById('camera-input');
+      const camInput = document.getElementById("camera-input");
       if (camInput) {
         camInput.click();
       }
@@ -10648,22 +11267,15 @@ const LOCAL_DELIVERY_DATA = [
 
     /**
      * Ultra-Light Client-Side Compression (< 200 KB)
-     * Resizes image to max 1280px maintaining aspect ratio and outputs JPEG quality 0.7
+     * Resizes high-res camera captures on an in-memory canvas and converts to JPEG.
      */
     function compressImage(file, maxWidth = 1280, quality = 0.7) {
       return new Promise((resolve, reject) => {
-        if (!file) {
-          return reject(new Error("Aucun fichier sélectionné."));
-        }
-        if (!file.type || !file.type.startsWith('image/')) {
-          return reject(new Error("Le fichier sélectionné n'est pas une image."));
-        }
-
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Erreur de lecture du fichier image."));
-        reader.onload = (event) => {
+        reader.onerror = () => reject(new Error("Lecture du fichier photo impossible."));
+        reader.onload = (e) => {
           const img = new Image();
-          img.onerror = () => reject(new Error("Impossible de charger l'image."));
+          img.onerror = () => reject(new Error("Format de photo invalide."));
           img.onload = () => {
             let width = img.width;
             let height = img.height;
@@ -10673,142 +11285,217 @@ const LOCAL_DELIVERY_DATA = [
               width = maxWidth;
             }
 
-            const canvas = document.createElement('canvas');
+            const canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
 
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext("2d");
             if (!ctx) {
-              return reject(new Error("Canvas non supporté sur ce navigateur."));
+              reject(new Error("Initialisation du moteur graphique échouée."));
+              return;
             }
 
             ctx.drawImage(img, 0, 0, width, height);
-
             canvas.toBlob(
               (blob) => {
                 if (blob) {
                   resolve(blob);
                 } else {
-                  reject(new Error("Échec de compression de l'image."));
+                  reject(new Error("Échec de la compression de l'image."));
                 }
               },
-              'image/jpeg',
+              "image/jpeg",
               quality
             );
           };
-          img.src = event.target.result;
+          img.src = e.target.result;
         };
         reader.readAsDataURL(file);
       });
     }
 
-    /**
-     * Handles mobile camera capture event:
-     * - Compresses client-side (< 200 KB)
-     * - Uploads directly to Supabase Storage bucket 'delivery-proofs'
-     * - Retrieves public URL and updates delivery record
-     */
-    async function handleCameraCapture(event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
+    async function handleValidateDelivery() {
+      if (!currentPoDItem) return;
 
-      if (!currentPoDItem) {
-        showNotification("Aucune livraison active pour cette photo.", 'error');
+      const targetItem = currentPoDItem;
+      const reserveData = getReservePayload();
+
+      // Enforce mandatory BL photo unless skipped via fallback
+      if (!selectedBlFile) {
+        showNotification("Veuillez prendre la photo du Bon de Livraison (BL) avant de valider.", "warning");
+        triggerBlInput();
         return;
       }
 
-      const targetItem = currentPoDItem;
-      const stepCapture = document.getElementById('pod-step-capture');
-      const stepUploading = document.getElementById('pod-step-uploading');
-      const previewImg = document.getElementById('pod-preview-image');
-      const uploadOverlay = document.getElementById('pod-upload-overlay');
-      const statusText = document.getElementById('pod-upload-status-text');
-      const compInfo = document.getElementById('pod-compression-info');
-      const errorBox = document.getElementById('pod-upload-error-box');
-      const errorMsg = document.getElementById('pod-upload-error-msg');
+      const stepCapture = document.getElementById("pod-step-capture");
+      const stepUploading = document.getElementById("pod-step-uploading");
+      const previewImg = document.getElementById("pod-preview-image");
+      const uploadOverlay = document.getElementById("pod-upload-overlay");
+      const statusText = document.getElementById("pod-upload-status-text");
+      const compInfo = document.getElementById("pod-compression-info");
+      const errorBox = document.getElementById("pod-upload-error-box");
+      const errorMsg = document.getElementById("pod-upload-error-msg");
 
-      if (stepCapture) stepCapture.classList.add('hidden');
-      if (stepUploading) stepUploading.classList.remove('hidden');
-      if (uploadOverlay) uploadOverlay.classList.remove('hidden');
-      if (errorBox) errorBox.classList.add('hidden');
+      if (stepCapture) stepCapture.classList.add("hidden");
+      if (stepUploading) stepUploading.classList.remove("hidden");
+      if (errorBox) errorBox.classList.add("hidden");
+      if (uploadOverlay) uploadOverlay.classList.remove("hidden");
 
-      const localPreviewUrl = URL.createObjectURL(file);
-      if (previewImg) previewImg.src = localPreviewUrl;
+      if (previewImg && selectedBlPreviewUrl) {
+        previewImg.src = selectedBlPreviewUrl;
+      }
+
+      const montantInput = document.getElementById("pod-montant-recouvrement");
+      const montantVal = montantInput ? Number(montantInput.value) || 0 : 0;
 
       try {
-        if (statusText) statusText.textContent = "Compression de l'image (< 200 Ko)...";
+        if (!supabaseClient || !supabaseClient.storage) {
+          throw new Error("Supabase Storage non disponible.");
+        }
 
-        // 1. Client-side downscaling and compression (< 200 KB)
-        const compressedBlob = await compressImage(file, 1280, 0.7);
-        const compressedKb = Math.round(compressedBlob.size / 1024);
-        if (compInfo) compInfo.textContent = `Taille optimisée : ${compressedKb} Ko`;
+        if (statusText) statusText.textContent = "Compression des photos...";
+        if (compInfo) compInfo.textContent = "Optimisation JPEG via canvas (max 1280px)...";
 
-        if (statusText) statusText.textContent = "Envoi vers Supabase Storage...";
+        // 1. Dual-Compression Engine (<canvas> 1280px, quality 0.7)
+        const blBlobPromise = compressImage(selectedBlFile, 1280, 0.7);
+        const recetteBlobPromise = selectedRecetteFile ? compressImage(selectedRecetteFile, 1280, 0.7) : Promise.resolve(null);
 
-        // 2. Upload directly to Supabase Storage bucket 'delivery-proofs'
-        const filePath = `${targetItem.id || 'del'}_${Date.now()}.jpg`;
-        let photoUrl = null;
+        const [compressedBlBlob, compressedRecetteBlob] = await Promise.all([blBlobPromise, recetteBlobPromise]);
 
-        if (supabaseClient && supabaseClient.storage) {
-          const { data: uploadData, error: uploadErr } = await supabaseClient
+        const timestamp = Date.now();
+        const safeId = String(targetItem.delivery_id || targetItem.id).replace(/[^a-zA-Z0-9_\-]/g, "_");
+
+        if (statusText) statusText.textContent = "Téléversement des photos...";
+
+        // 2. Upload BL photo (Mandatory)
+        const blFileName = `${safeId}_BL_${timestamp}.jpg`;
+        const blPath = `proofs/${blFileName}`;
+        const { error: blUploadErr } = await supabaseClient
+          .storage
+          .from("delivery-proofs")
+          .upload(blPath, compressedBlBlob, {
+            contentType: "image/jpeg",
+            upsert: true
+          });
+
+        if (blUploadErr) {
+          console.error("[Storage] Erreur upload BL:", blUploadErr);
+          throw blUploadErr;
+        }
+
+        const { data: blUrlData } = supabaseClient
+          .storage
+          .from("delivery-proofs")
+          .getPublicUrl(blPath);
+        const blPhotoUrl = blUrlData ? blUrlData.publicUrl : null;
+
+        // 3. Upload Recette photo if present (Optional)
+        let recettePhotoUrl = null;
+        if (compressedRecetteBlob) {
+          const recetteFileName = `${safeId}_RECETTE_${timestamp}.jpg`;
+          const recettePath = `proofs/${recetteFileName}`;
+          const { error: recUploadErr } = await supabaseClient
             .storage
-            .from('delivery-proofs')
-            .upload(`proofs/${filePath}`, compressedBlob, {
-              contentType: 'image/jpeg',
+            .from("delivery-proofs")
+            .upload(recettePath, compressedRecetteBlob, {
+              contentType: "image/jpeg",
               upsert: true
             });
 
-          if (uploadErr) {
-            console.error('[PoD Storage] Erreur upload:', uploadErr);
-            throw uploadErr;
+          if (recUploadErr) {
+            console.error("[Storage] Erreur upload Recette:", recUploadErr);
+            throw recUploadErr;
           }
 
-          // Retrieve public URL
-          const { data: urlData } = supabaseClient
+          const { data: recUrlData } = supabaseClient
             .storage
-            .from('delivery-proofs')
-            .getPublicUrl(`proofs/${filePath}`);
-
-          photoUrl = urlData ? urlData.publicUrl : null;
-        } else {
-          throw new Error("Supabase Storage non disponible");
+            .from("delivery-proofs")
+            .getPublicUrl(recettePath);
+          recettePhotoUrl = recUrlData ? recUrlData.publicUrl : null;
         }
 
-        // 3. Mark delivery as completed with photo URL
-        await finalizeDelivery(targetItem, photoUrl);
+        // 4. Construct Recouvrement Data
+        const hasRecettePhoto = Boolean(recettePhotoUrl);
+        const recouvrementData = {
+          a_recouvrement: Boolean(hasRecettePhoto || montantVal > 0),
+          photo_recouvrement_url: recettePhotoUrl,
+          montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
+        };
 
-        // 4. Close modal
+        // 5. Finalize delivery and sync to Supabase
+        await finalizeDelivery(targetItem, blPhotoUrl, reserveData, recouvrementData);
+
+        // 6. Close Modal
         closePoDModal();
       } catch (err) {
-        console.error('[PoD] Échec traitement photo:', err);
-        if (uploadOverlay) uploadOverlay.classList.add('hidden');
+        console.error("[PoD] Échec traitement livraison:", err);
+        if (uploadOverlay) uploadOverlay.classList.add("hidden");
         if (errorBox) {
-          errorBox.classList.remove('hidden');
+          errorBox.classList.remove("hidden");
           if (errorMsg) {
             errorMsg.textContent = err.message || "Erreur de stockage. Vérifiez votre connexion ou les autorisations.";
           }
         }
-      } finally {
-        setTimeout(() => {
-          try { URL.revokeObjectURL(localPreviewUrl); } catch (e) {}
-        }, 5000);
       }
+    }
+
+    // Backward compatibility alias for any caller
+    function handleCameraCapture(event) {
+      handleBlCapture(event);
     }
 
     async function confirmDeliveryWithoutPhoto() {
       if (!currentPoDItem) return;
       const targetItem = currentPoDItem;
+      const reserveData = getReservePayload();
+
+      const montantInput = document.getElementById("pod-montant-recouvrement");
+      const montantVal = montantInput ? Number(montantInput.value) || 0 : 0;
+      const recouvrementData = {
+        a_recouvrement: montantVal > 0,
+        photo_recouvrement_url: null,
+        montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
+      };
+
       closePoDModal();
-      await finalizeDelivery(targetItem, null);
+      await finalizeDelivery(targetItem, null, reserveData, recouvrementData);
     }
 
-    async function finalizeDelivery(targetItem, photoUrl = null) {
+    async function finalizeDelivery(targetItem, photoUrl = null, reserveData = null, recouvrementData = null) {
       const currentUser = AppState.currentUser || getAuthSession();
       const idStr = String(targetItem.delivery_id || targetItem.id).trim();
 
+      const totalPlanned = Number(targetItem.quantite !== undefined ? targetItem.quantite : targetItem.quantity) || 0;
+      const isReserve = (reserveData && reserveData.isReserve) || targetItem.statut_reserve === "Avec Réserve";
+      const qtyRecue = reserveData ? Number(reserveData.quantite_recue) : (targetItem.quantite_recue !== undefined && targetItem.quantite_recue !== null ? Number(targetItem.quantite_recue) : totalPlanned);
+      const qtyLitige = reserveData ? Number(reserveData.quantite_litige) : (targetItem.quantite_litige !== undefined && targetItem.quantite_litige !== null ? Number(targetItem.quantite_litige) : (isReserve ? Math.max(0, totalPlanned - qtyRecue) : 0));
+      const motifReserve = isReserve ? (reserveData ? reserveData.motif_reserve : targetItem.motif_reserve) : null;
+      const remarqueChauffeur = isReserve ? (reserveData ? reserveData.remarque_chauffeur : targetItem.remarque_chauffeur) : null;
+      const statutReserve = isReserve ? "Avec Réserve" : "Conforme";
+
+      // Extract Recouvrement attributes
+      const hasRecettePhoto = Boolean(recouvrementData && recouvrementData.photo_recouvrement_url);
+      const montant = Number(recouvrementData && recouvrementData.montant_recouvrement) || 0;
+      const hasRecouvrement = Boolean(
+        (recouvrementData && (recouvrementData.a_recouvrement || hasRecettePhoto || montant > 0)) ||
+        targetItem.a_recouvrement ||
+        Boolean(targetItem.photo_recouvrement_url) ||
+        Number(targetItem.montant_recouvrement) > 0
+      );
+      const photoRecouvrementUrl = (recouvrementData && recouvrementData.photo_recouvrement_url) || targetItem.photo_recouvrement_url || null;
+      const montantRecouvrement = montant > 0 ? montant : (Number(targetItem.montant_recouvrement) || 0);
+
       // Optimistic UI state update: mark as Livré
       targetItem.completed = true;
-      targetItem.status = 'Livré';
+      targetItem.status = "Livré";
+      targetItem.statut_reserve = statutReserve;
+      targetItem.quantite_recue = qtyRecue;
+      targetItem.quantite_litige = qtyLitige;
+      targetItem.motif_reserve = motifReserve;
+      targetItem.remarque_chauffeur = remarqueChauffeur;
+      targetItem.a_recouvrement = hasRecouvrement;
+      targetItem.photo_recouvrement_url = photoRecouvrementUrl;
+      targetItem.montant_recouvrement = montantRecouvrement;
       if (photoUrl) {
         targetItem.photo_url = photoUrl;
       }
@@ -10817,7 +11504,15 @@ const LOCAL_DELIVERY_DATA = [
         const itemInView = AppState.deliveries.find(d => String(d.id).trim() === idStr);
         if (itemInView) {
           itemInView.completed = true;
-          itemInView.status = 'Livré';
+          itemInView.status = "Livré";
+          itemInView.statut_reserve = statutReserve;
+          itemInView.quantite_recue = qtyRecue;
+          itemInView.quantite_litige = qtyLitige;
+          itemInView.motif_reserve = motifReserve;
+          itemInView.remarque_chauffeur = remarqueChauffeur;
+          itemInView.a_recouvrement = hasRecouvrement;
+          itemInView.photo_recouvrement_url = photoRecouvrementUrl;
+          itemInView.montant_recouvrement = montantRecouvrement;
           if (photoUrl) {
             itemInView.photo_url = photoUrl;
           }
@@ -10838,17 +11533,21 @@ const LOCAL_DELIVERY_DATA = [
 
       renderDailyManifest();
       renderCalendar();
+      updateAdminKPIs();
+      updateProgressUI();
 
-      if (photoUrl) {
-        showNotification("Félicitations, la photo a été enregistrée avec succès !", 'success');
+      const notifStoreName = targetItem ? (targetItem.magasin || targetItem.destination || "Tournée") : "Tournée";
+      if (isReserve) {
+        showNotification(`${notifStoreName} validée avec réserve (-${qtyLitige} paires).`, "warning");
+      } else if (photoUrl) {
+        showNotification("Félicitations, la livraison a été enregistrée avec succès !", "success");
       } else {
-        showNotification(`Tournée #${idStr} marquée comme Livrée.`, 'success');
+        showNotification(`${notifStoreName} marquée comme Livrée.`, "success");
       }
 
-      // Sync status change to Supabase with full row details & photo_url
-      await syncDeliveryStatusToSupabase(targetItem, 'Livré', photoUrl);
+      // Sync status change to Supabase with full row details, reserve fields, photo_url & recouvrement
+      await syncDeliveryStatusToSupabase(targetItem, "Livré", photoUrl, reserveData, recouvrementData);
     }
-
     async function markAsDelivered(deliveryId, event, skipPoD = false) {
       if (event) event.stopPropagation();
 
@@ -10875,13 +11574,15 @@ const LOCAL_DELIVERY_DATA = [
       await finalizeDelivery(targetItem, null);
     }
 
-    function openPhotoViewer(url) {
+    function openPhotoViewer(url, title = "Bon de Livraison (BL)") {
       if (!url) return;
       const modal = document.getElementById('pod-image-viewer-modal');
       const img = document.getElementById('pod-viewer-img');
       const link = document.getElementById('pod-viewer-download');
+      const titleEl = document.getElementById('pod-viewer-title-text');
       if (img) img.src = url;
       if (link) link.href = url;
+      if (titleEl) titleEl.textContent = title;
       if (modal) modal.classList.remove('hidden');
     }
 
@@ -10925,14 +11626,25 @@ const LOCAL_DELIVERY_DATA = [
       }
 
       // 1. Optimistic local state update
+      const totalPlanned = Number(targetItem.quantite !== undefined ? targetItem.quantite : targetItem.quantity) || 0;
       targetItem.completed = true;
-      targetItem.status = 'Livré';
+      targetItem.status = "Livré";
+      targetItem.statut_reserve = "Conforme";
+      targetItem.quantite_recue = totalPlanned;
+      targetItem.quantite_litige = 0;
+      targetItem.motif_reserve = null;
+      targetItem.remarque_chauffeur = null;
 
       if (Array.isArray(AppState.deliveries)) {
         const itemInView = AppState.deliveries.find(d => String(d.id).trim() === idStr);
         if (itemInView) {
           itemInView.completed = true;
-          itemInView.status = 'Livré';
+          itemInView.status = "Livré";
+          itemInView.statut_reserve = "Conforme";
+          itemInView.quantite_recue = totalPlanned;
+          itemInView.quantite_litige = 0;
+          itemInView.motif_reserve = null;
+          itemInView.remarque_chauffeur = null;
         }
       }
 
@@ -10954,12 +11666,18 @@ const LOCAL_DELIVERY_DATA = [
       updateAdminKPIs();
       updateProgressUI();
 
-      showNotification(`Tournée #${idStr} clôturée avec succès (Livré).`, 'success');
+      const notifStoreName = targetItem ? (targetItem.magasin || targetItem.destination || "Tournée") : "Tournée";
+      showNotification(`${notifStoreName} clôturée avec succès (Livré).`, 'success');
 
       // 2. Direct Supabase update: status = 'Livré', updated_at = now
       const deliveryKey = targetItem.delivery_key || buildDeliveryKey(targetItem);
       const updatePayload = {
-        status: 'Livré',
+        status: "Livré",
+        quantite_recue: totalPlanned,
+        quantite_litige: 0,
+        statut_reserve: "Conforme",
+        motif_reserve: null,
+        remarque_chauffeur: null,
         updated_at: new Date().toISOString()
       };
 
@@ -10970,7 +11688,7 @@ const LOCAL_DELIVERY_DATA = [
           return;
         }
 
-        updateSupabaseSyncBadge('syncing', `Clôture #${idStr}...`);
+        updateSupabaseSyncBadge('syncing', "Clôture en cours...");
 
         let { data, error } = await supabaseClient
           .from('deliveries')
@@ -11037,7 +11755,170 @@ const LOCAL_DELIVERY_DATA = [
           }
         });
       }
+
+      // Initialize Native Swipe Right to Deliver gesture engine
+      SwipeGestureEngine.init();
     }
+
+    // =========================================================================
+    // Native Swipe-Right-to-Deliver Engine (Vanilla JS, Zero Dependencies)
+    // =========================================================================
+    const SwipeGestureEngine = {
+      _initialized: false,
+      state: {
+        isDragging: false,
+        isDirectionLocked: false,
+        isSwipeHorizontal: false,
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        wrapper: null,
+        front: null,
+        cardWidth: 0,
+        deliveryId: null
+      },
+
+      init() {
+        if (this._initialized || !DOM.cardsContainer) return;
+        this._initialized = true;
+
+        // Delegated start listeners on cardsContainer
+        DOM.cardsContainer.addEventListener('touchstart', (e) => this.handleStart(e, 'touch'), { passive: true });
+        DOM.cardsContainer.addEventListener('mousedown', (e) => this.handleStart(e, 'mouse'));
+
+        // Window-level tracking for continuous buttery smooth gesture
+        window.addEventListener('touchmove', (e) => this.handleMove(e, 'touch'), { passive: false });
+        window.addEventListener('mousemove', (e) => this.handleMove(e, 'mouse'));
+
+        window.addEventListener('touchend', (e) => this.handleEnd(e, 'touch'));
+        window.addEventListener('touchcancel', (e) => this.handleEnd(e, 'touch'));
+        window.addEventListener('mouseup', (e) => this.handleEnd(e, 'mouse'));
+      },
+
+      handleStart(e, type) {
+        // Strict ignore for clicks on buttons, icons, or links
+        if (e.target.closest('button, a, input, select, textarea, [data-action]')) return;
+
+        // RBAC Security Check: Admins cannot swipe cards
+        const currentUser = AppState.currentUser || (typeof getAuthSession === 'function' ? getAuthSession() : null);
+        if (!currentUser || currentUser.role !== 'chauffeur') return;
+
+        if (type === 'mouse' && e.button !== 0) return; // Left mouse button only
+
+        const wrapper = e.target.closest('.swipe-card-wrapper.swipeable-card');
+        if (!wrapper) return;
+
+        const front = wrapper.querySelector('.swipe-card-front');
+        if (!front) return;
+
+        const pt = type === 'touch' ? e.touches[0] : e;
+        const width = wrapper.offsetWidth || 320;
+
+        this.state = {
+          isDragging: true,
+          isDirectionLocked: false,
+          isSwipeHorizontal: false,
+          startX: pt.clientX,
+          startY: pt.clientY,
+          currentX: pt.clientX,
+          currentY: pt.clientY,
+          wrapper,
+          front,
+          cardWidth: width,
+          deliveryId: wrapper.dataset.deliveryId
+        };
+
+        front.style.transition = 'none';
+      },
+
+      handleMove(e, type) {
+        if (!this.state.isDragging || !this.state.front) return;
+
+        const pt = type === 'touch' ? (e.touches && e.touches[0]) : e;
+        if (!pt) return;
+
+        this.state.currentX = pt.clientX;
+        this.state.currentY = pt.clientY;
+
+        const deltaX = this.state.currentX - this.state.startX;
+        const deltaY = this.state.currentY - this.state.startY;
+
+        // Direction Locking (Preserves native vertical scrolling without jank)
+        if (!this.state.isDirectionLocked) {
+          const absX = Math.abs(deltaX);
+          const absY = Math.abs(deltaY);
+
+          if (absX > 8 || absY > 8) {
+            if (absY > absX) {
+              // Vertical scroll intent detected -> abort swipe completely
+              this.state.isDragging = false;
+              this.state.front = null;
+              return;
+            } else {
+              // Horizontal swipe intent detected -> lock swipe
+              this.state.isDirectionLocked = true;
+              this.state.isSwipeHorizontal = true;
+            }
+          }
+        }
+
+        if (this.state.isSwipeHorizontal) {
+          if (type === 'touch' && e.cancelable) {
+            e.preventDefault();
+          } else if (type === 'mouse') {
+            e.preventDefault();
+          }
+
+          // Disallow swiping left; only rightward swipe is permitted
+          const translateX = Math.max(0, deltaX);
+          this.state.front.style.transform = `translate3d(${translateX}px, 0, 0)`;
+        }
+      },
+
+      handleEnd(e, type) {
+        if (!this.state.isDragging || !this.state.front) return;
+
+        const frontEl = this.state.front;
+        const delivId = this.state.deliveryId;
+        const cardWidth = this.state.cardWidth;
+        const deltaX = this.state.currentX - this.state.startX;
+        const isHorizontal = this.state.isSwipeHorizontal;
+
+        // Clear tracking state
+        this.state.isDragging = false;
+        this.state.front = null;
+
+        // Threshold check: > 40% width or > 120px
+        const threshold = Math.min(cardWidth * 0.40, 150);
+        const isTriggered = isHorizontal && (deltaX >= threshold || deltaX >= 120);
+
+        if (isTriggered && delivId) {
+          // Success slide animation
+          frontEl.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          frontEl.style.transform = `translate3d(${cardWidth + 24}px, 0, 0)`;
+
+          setTimeout(() => {
+            if (frontEl) {
+              frontEl.style.transition = '';
+              frontEl.style.transform = '';
+            }
+            markAsDelivered(delivId);
+          }, 200);
+        } else {
+          // Snap back animation
+          frontEl.style.transition = 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)';
+          frontEl.style.transform = 'translate3d(0px, 0, 0)';
+
+          setTimeout(() => {
+            if (frontEl) {
+              frontEl.style.transition = '';
+              frontEl.style.transform = '';
+            }
+          }, 280);
+        }
+      }
+    };
 
     function selectDate(dateStr) {
       AppState.selectedDateStr = dateStr;
@@ -11082,29 +11963,43 @@ const LOCAL_DELIVERY_DATA = [
       if (!item || !DOM.detailModal || !DOM.modalBody) return;
 
       const currentUser = AppState.currentUser || getAuthSession();
-      const isChauffeur = Boolean(currentUser && currentUser.role === 'chauffeur');
-      const isAdmin = Boolean(currentUser && currentUser.role === 'admin');
+      const isChauffeur = Boolean(currentUser && currentUser.role === "chauffeur");
+      const isAdmin = Boolean(currentUser && currentUser.role === "admin");
       const isCompleted = isItemDelivered(item);
+      const isReserve = isCompleted && item.statut_reserve === "Avec Réserve";
       const storeName = item.magasin || item.destination || "Magasin";
       const rawDriver = String(item.chauffeur || item.driver || "").trim();
       const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
       const driverName = isUnassigned ? "Non assigné" : rawDriver;
       const matricule = item.matricule || item.vehicle || "Camion standard";
-      const qty = item.quantite !== undefined ? item.quantite : item.quantity;
+      const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
+      const litigeQty = Number(item.quantite_litige) || 0;
+      const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isCompleted ? (qty - litigeQty) : qty);
 
-      if (DOM.modalRouteName) DOM.modalRouteName.textContent = `Tournée #${item.id}`;
-      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Date programmée : ${item.date}`;
+      if (DOM.modalRouteName) DOM.modalRouteName.textContent = item.magasin || item.destination || "Détail de la Tournée";
+      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Date programmée : ${item.date || "Non spécifiée"}`;
 
       DOM.modalBody.innerHTML = `
         <div class="space-y-4">
+          <!-- Status Banner -->
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Statut actuel</span>
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${isCompleted ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}">
-              <span class="w-2 h-2 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
-              ${isCompleted ? 'Livré' : 'Non Livré'}
-            </span>
+            ${!isCompleted ? `
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Non Livré
+              </span>
+            ` : (isReserve ? `
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i> Livré avec réserve
+              </span>
+            ` : `
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré (Conforme)
+              </span>
+            `)}
           </div>
 
+          <!-- Store Card -->
           <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
             <div class="text-base font-bold text-slate-900 flex items-center gap-2">
               <i class="fa-solid fa-store text-blue-600"></i>
@@ -11112,6 +12007,7 @@ const LOCAL_DELIVERY_DATA = [
             </div>
           </div>
 
+          <!-- Driver & Vehicle -->
           <div class="grid grid-cols-2 gap-3 text-xs">
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
               <i class="fa-solid fa-user-tie text-blue-600"></i>
@@ -11129,66 +12025,169 @@ const LOCAL_DELIVERY_DATA = [
             </div>
           </div>
 
-          <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 flex items-center gap-2">
-            <i class="fa-solid fa-box text-blue-700 text-sm"></i>
-            <span class="text-base font-extrabold text-blue-950 font-mono">${Number(qty).toLocaleString()} Paires</span>
-          </div>
-
-          ${item.photo_url ? `
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
-              <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+          <!-- Quantity & Discrepancy Breakdown -->
+          ${isCompleted && isReserve ? `
+            <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
+              <div class="flex items-center justify-between text-xs font-bold text-amber-950 border-b border-amber-200/70 pb-2">
                 <span class="flex items-center gap-1.5">
-                  <i class="fa-solid fa-file-invoice text-blue-600"></i>
-                  <span>Bon de Livraison (BL)</span>
+                  <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                  <span>Détail du litige / Réserve</span>
                 </span>
-                <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  Photo validée ✓
+                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-rose-700 text-[11px] font-extrabold border border-amber-300">
+                  -${litigeQty} paires en litige
                 </span>
               </div>
-              <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-100 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_url}')">
-                <img src="${item.photo_url}" alt="Bon de Livraison" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
-                <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
-                  <i class="fa-solid fa-magnifying-glass-plus text-base"></i>
-                  <span>Agrandir</span>
+
+              <!-- 3-Pill Breakdown: Prévu vs Reçu vs Écart -->
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="bg-white p-2 rounded-xl border border-amber-200 shadow-2xs">
+                  <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Prévu</span>
+                  <span class="text-xs sm:text-sm font-extrabold text-slate-800 font-mono">${qty} p.</span>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-amber-200 shadow-2xs">
+                  <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Reçu</span>
+                  <span class="text-xs sm:text-sm font-extrabold text-emerald-700 font-mono">${recueQty} p.</span>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-amber-200 shadow-2xs">
+                  <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Écart</span>
+                  <span class="text-xs sm:text-sm font-extrabold text-rose-600 font-mono">-${litigeQty} p.</span>
                 </div>
               </div>
-              <div class="flex justify-end">
-                <a href="${item.photo_url}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 py-1">
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ouvrir l'image originale
-                </a>
+
+              <!-- Motif & Remarque -->
+              <div class="space-y-1.5 text-xs text-slate-700 pt-1">
+                <div class="flex items-start gap-1.5">
+                  <span class="font-bold text-amber-950 shrink-0">Motif :</span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-950 font-bold text-xs border border-amber-300">
+                    ${item.motif_reserve || "Non spécifié"}
+                  </span>
+                </div>
+                ${item.remarque_chauffeur ? `
+                  <div class="flex flex-col gap-1 pt-1">
+                    <span class="font-bold text-amber-950 text-xs">Remarque Chauffeur :</span>
+                    <p class="italic text-slate-800 bg-white p-2.5 rounded-xl border border-amber-200 text-xs leading-relaxed">
+                      "${item.remarque_chauffeur}"
+                    </p>
+                  </div>
+                ` : ""}
               </div>
             </div>
-          ` : ''}
+          ` : (isCompleted && !isReserve ? `
+            <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-box-check text-emerald-600 text-base"></i>
+                <span class="text-base font-extrabold text-emerald-950 font-mono">${qty.toLocaleString()} Paires</span>
+              </div>
+              <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                100% Conforme ✓
+              </span>
+            </div>
+          ` : `
+            <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-box text-blue-700 text-sm"></i>
+                <span class="text-base font-extrabold text-blue-950 font-mono">${Number(qty).toLocaleString()} Paires</span>
+              </div>
+              <span class="text-xs text-blue-700 font-semibold">Quantité prévue</span>
+            </div>
+          `)}
 
-          <div class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2" style="display: none !important;">
-            <i class="fa-solid fa-database text-emerald-600"></i>
-            <span>Synchronisation directe avec Supabase (Source de Vérité)</span>
-          </div>
+          <!-- Recouvrement (Cash Collection) Section if applicable -->
+          ${(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || Boolean(item.photo_recouvrement_url)) ? `
+            <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <i class="fa-solid fa-sack-dollar text-base"></i>
+                </div>
+                <div>
+                  <span class="text-[11px] font-bold text-emerald-900 block uppercase tracking-wide">Recouvrement Espèces</span>
+                  <span class="text-sm sm:text-base font-black text-emerald-950 font-mono">
+                    ${Number(item.montant_recouvrement) > 0 ? `Montant récupéré : ${Number(item.montant_recouvrement).toLocaleString()} DZD` : "Montant récupéré : Encaissé"}
+                  </span>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">
+                💰 Recouvrement
+              </span>
+            </div>
+          ` : ""}
 
+          <!-- Proof of Delivery Photos: BL & Recette side-by-side if both exist -->
+          ${(item.photo_url || item.photo_recouvrement_url) ? `
+            <div class="space-y-2">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Preuves de livraison</span>
+              <div class="grid ${(item.photo_url && item.photo_recouvrement_url) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"} gap-3">
+                ${item.photo_url ? `
+                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span class="flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-file-invoice text-blue-600"></i>
+                        <span>Bon de Livraison (BL)</span>
+                      </span>
+                      <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                        Validé ✓
+                      </span>
+                    </div>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_url}', 'Bon de Livraison (BL)')">
+                      <img src="${item.photo_url}" alt="Bon de Livraison" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
+                      <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
+                        <i class="fa-solid fa-magnifying-glass-plus text-base"></i>
+                        <span>Agrandir</span>
+                      </div>
+                    </div>
+                  </div>
+                ` : ""}
+
+                ${item.photo_recouvrement_url ? `
+                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span class="flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-money-bill-wave text-emerald-600"></i>
+                        <span>Photo de la Recette</span>
+                      </span>
+                      <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                        Encaissé ✓
+                      </span>
+                    </div>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_recouvrement_url}', 'Photo de la Recette')">
+                      <img src="${item.photo_recouvrement_url}" alt="Photo Recette" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
+                      <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
+                        <i class="fa-solid fa-magnifying-glass-plus text-base"></i>
+                        <span>Agrandir</span>
+                      </div>
+                    </div>
+                  </div>
+                ` : ""}
+              </div>
+            </div>
+          ` : ""}
+
+          <!-- Actions -->
           ${isChauffeur ? `
             <div class="pt-2 flex flex-col gap-2">
               ${!isCompleted ? `
-                <button onclick="closeModal(); markAsDelivered('${item.id}', event);" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[44px] flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-camera"></i>
-                  <span>Prendre en photo le BL & Livrer</span>
+                <button onclick="closeModal(); markAsDelivered('${item.id}', event);" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                  <span>Valider la Livraison (Conforme / Réserve)</span>
                 </button>
               ` : `
                 <div class="flex items-center justify-between">
-                  <span class="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5">
-                    <i class="fa-solid fa-check text-xs"></i> Tournée déjà effectuée
+                  <span class="px-4 py-2 rounded-xl ${isReserve ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"} border text-xs font-bold flex items-center gap-1.5">
+                    <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-check text-emerald-600"} text-xs"></i>
+                    ${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : "Tournée effectuée (Conforme)"}
                   </span>
                   ${!item.photo_url ? `
                     <button onclick="closeModal(); openPoDModal(AppState.rawDeliveries.find(d => String(d.id).trim() === '${item.id}'));" class="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 p-2">
                       <i class="fa-solid fa-camera"></i> Ajouter photo BL
                     </button>
-                  ` : ''}
+                  ` : ""}
                 </div>
               `}
             </div>
           ` : (isAdmin && isUnassigned ? `
             <div class="pt-2 flex flex-col gap-2">
               ${!isCompleted ? `
-                <button onclick="closeModal(); adminCloseDelivery('${item.id}');" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[44px] flex items-center justify-center gap-2">
+                <button onclick="closeModal(); adminCloseDelivery('${item.id}');" class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
                   <i class="fa-solid fa-clipboard-check"></i>
                   <span>Clôturer / Livré (Admin)</span>
                 </button>
@@ -11198,7 +12197,7 @@ const LOCAL_DELIVERY_DATA = [
                 </span>
               `}
             </div>
-          ` : '')}
+          ` : "")}
         </div>
       `;
 
@@ -11224,10 +12223,12 @@ const LOCAL_DELIVERY_DATA = [
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
           console.log('[Supabase Realtime] Événement reçu:', payload);
           const newRow = payload.new;
-          if (newRow && newRow.status === 'Livré') {
-            const driverTag = newRow.delivered_by || newRow.chauffeur || 'Chauffeur';
+          if (newRow && newRow.status === "Livré") {
+            const driverTag = newRow.delivered_by || newRow.chauffeur || "Chauffeur";
             const storeTag = newRow.magasin || newRow.delivery_id;
-            showNotification(`⚡ [En direct] ${storeTag} validé Livré par ${driverTag}`, 'success');
+            const isReserve = newRow.statut_reserve === "Avec Réserve";
+            const reserveTag = isReserve ? ` ⚠️ (Réserve: -${newRow.quantite_litige || 0} p.)` : " ✓";
+            showNotification(`⚡ [En direct] ${storeTag} validé Livré${reserveTag} par ${driverTag}`, isReserve ? "warning" : "success");
           }
           fetchRemoteDeliveries(false);
         })
