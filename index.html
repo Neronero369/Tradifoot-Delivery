@@ -9769,10 +9769,20 @@ const LOCAL_DELIVERY_DATA = [
     // =========================================================================
     // GLOBAL APPLICATION STATE & REPOSITORIES
     // =========================================================================
+    function getLiveTodayDateStr() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+
+    function getLiveFirstOfMonth() {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
     let DELIVERY_DATA = [];
     let completedCount = 0;
     let totalCount = 0;
-    let selectedDateStr = '2026-10-28';
+    let selectedDateStr = getLiveTodayDateStr();
     let activeManifestFilter = 'PENDING'; // Default left tab: "Non Livré"
 
     const ADMIN_USERNAMES = ["mounir", "BENAMAR NACIM", "MEKHLOUFI MOHAMMED", "ADMIN", "ALL"];
@@ -9808,7 +9818,7 @@ const LOCAL_DELIVERY_DATA = [
       const st = String(d.magasin || d.destination || "MAG").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
       const ch = String(d.chauffeur || d.driver || "CHAUF").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
       const rowNum = String((idx || 0) + 1).padStart(4, '0');
-      return `LIV-${dt || '2026'}-${st || 'STORE'}-${ch || 'CHAUF'}-${rowNum}`;
+      return `LIV-${dt || new Date().getFullYear()}-${st || 'STORE'}-${ch || 'CHAUF'}-${rowNum}`;
     }
 
     /**
@@ -9906,8 +9916,8 @@ const LOCAL_DELIVERY_DATA = [
       completedDeliveryIds: new Set(),
       deliveredKeys: new Set(),
       deliveredFallbackKeys: new Set(),
-      selectedDateStr: '2026-10-28',
-      currentViewDate: new Date(2026, 9, 1),
+      selectedDateStr: getLiveTodayDateStr(),
+      currentViewDate: getLiveFirstOfMonth(),
       activeManifestFilter: 'PENDING', // default left tab "Non Livré"
       totalCount: 0,
       completedCount: 0,
@@ -10788,7 +10798,8 @@ const LOCAL_DELIVERY_DATA = [
       AppState.deliveries = [];
       AppState.totalCount = 0;
       AppState.completedCount = 0;
-      AppState.selectedDateStr = '2026-10-28';
+      AppState.selectedDateStr = getLiveTodayDateStr();
+      AppState.currentViewDate = getLiveFirstOfMonth();
       AppState.activeManifestFilter = 'PENDING';
       AppState.adminFilterDriver = 'ALL';
       AppState.adminFilterBoutique = 'ALL';
@@ -12462,10 +12473,10 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function goToToday() {
-      const todayStr = "2026-10-28";
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       AppState.selectedDateStr = todayStr;
-      const [y, m] = todayStr.split("-").map(Number);
-      AppState.currentViewDate = new Date(y, m - 1, 1);
+      AppState.currentViewDate = new Date(now.getFullYear(), now.getMonth(), 1);
       renderCalendar();
       renderDailyManifest();
       showNotification("Affichage d'aujourd'hui", "info");
@@ -12812,19 +12823,38 @@ const LOCAL_DELIVERY_DATA = [
 
       computeActiveDeliveries();
 
-      const todayStr = "2026-10-28";
-      const availableDates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean).sort();
+      // Dynamic Date Resolution based on real system time
+      const now = new Date();
+      const liveTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      AppState.currentViewDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      if (availableDates.includes(todayStr)) {
-        AppState.selectedDateStr = todayStr;
+      const availableDates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean).sort();
+      const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const currentMonthDates = availableDates.filter(d => d && d.startsWith(currentMonthPrefix));
+
+      if (availableDates.includes(liveTodayStr)) {
+        // Selection Priority 1: Scheduled deliveries for today
+        AppState.selectedDateStr = liveTodayStr;
+      } else if (currentMonthDates.length > 0) {
+        // Selection Priority 2: Closest active delivery date in current month
+        const todayMs = new Date(liveTodayStr + "T00:00:00").getTime();
+        let closest = currentMonthDates[0];
+        let minDiff = Math.abs(new Date(closest + "T00:00:00").getTime() - todayMs);
+        for (let i = 1; i < currentMonthDates.length; i++) {
+          const diff = Math.abs(new Date(currentMonthDates[i] + "T00:00:00").getTime() - todayMs);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = currentMonthDates[i];
+          }
+        }
+        AppState.selectedDateStr = closest;
       } else if (availableDates.length > 0) {
+        // Selection Priority 3: Latest scheduled drop date available
         AppState.selectedDateStr = availableDates[availableDates.length - 1];
       } else {
-        AppState.selectedDateStr = todayStr;
+        // Selection Priority 4: Anchor on live today
+        AppState.selectedDateStr = liveTodayStr;
       }
-
-      const [y, m] = AppState.selectedDateStr.split("-").map(Number);
-      AppState.currentViewDate = new Date(y, m - 1, 1);
 
       renderCalendar();
       setManifestFilter('PENDING'); // Default to "Non Livré" left tab
