@@ -200,6 +200,7 @@ def extract_routes_from_programs(programs, index_path=None):
                     except Exception:
                         pass
 
+    occurrence_tracker = {}
     for p in programs:
         # Determine target delivery date fallback
         m_dd = re.search(r'(\d{1,2})[-_](\d{1,2})[-_](\d{4})', p["filename"])
@@ -237,9 +238,6 @@ def extract_routes_from_programs(programs, index_path=None):
             if not store_clean or store_clean.startswith("TOTAL"):
                 continue
 
-            # Guarantee every single destination row from Excel is an independent delivery
-            route_counter += 1
-
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
             vehicle = d.get("vehicle") or "Camion Porteur"
             if not vehicle or vehicle == "/":
@@ -254,29 +252,27 @@ def extract_routes_from_programs(programs, index_path=None):
             notes = d.get("remark") or d.get("retour") or f"Programme {p_title}"
             time_str = f"Tournée {p_title}"
 
-            route_comp_key = (deliv_date, store_clean, driver)
-            route_comp_key_store = (deliv_date, store_clean)
-            del_key = f"{deliv_date}|{store_clean}|{qty}"
-            matched_rec = (
-                existing_statuses_by_id.get(del_key)
-                or existing_statuses_by_composite.get(route_comp_key)
-                or existing_statuses_by_composite.get(route_comp_key_store)
-                or existing_statuses_by_id.get(f"DEL-{route_counter:04d}")
-            )
+            # 100% unique delivery_id via occurrence tracker
+            store_name = re.sub(r'[^A-Z0-9]', '', store_clean.upper())
+            chauf_for_id = driver if not re.search(r'non|sans|unassigned|^none$|^null$|^\-$|^\/$', driver, re.I) else ""
+            driver_name = re.sub(r'[^A-Z0-9]', '', chauf_for_id.upper()) if chauf_for_id else "NONE"
+            base_key = f"{deliv_date}_{store_name}_{driver_name}"
+            occurrence_tracker[base_key] = occurrence_tracker.get(base_key, 0) + 1
+            raw_delivery_id = f"LIV-{deliv_date}-{store_name}-{driver_name}-{occurrence_tracker[base_key]}"
+            route_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
+            del_key = route_id
 
+            matched_rec = existing_statuses_by_id.get(route_id.upper())
             if matched_rec and (matched_rec.get("status") == "Livré" or matched_rec.get("completed") is True):
                 final_status = "Livré"
                 final_completed = True
-                route_id = matched_rec.get("id") or f"DEL-{route_counter:04d}"
             else:
                 final_status = "Non Livré"
                 final_completed = False
-                route_id = f"DEL-{route_counter:04d}"
 
             if not deliv_date or not store_clean or qty <= 0:
                 continue
 
-            del_key = f"{deliv_date}|{store_clean}|{qty}|ROW{route_counter}"
             all_routes.append({
                 "id": route_id,
                 "delivery_id": route_id,

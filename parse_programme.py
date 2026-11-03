@@ -28,8 +28,8 @@ AUTHORIZED_CHAUFFEURS = {
 }
 
 
-def build_delivery_key(date_str, store_str, quantite, row_idx=None):
-    """Deterministic Composite Key per row (Date + Magasin + Quantite + Row)."""
+def build_delivery_key(date_str, store_str, quantite, occurrence=None):
+    """Deterministic Composite Key per row."""
     d = str(date_str or "").strip()
     m = " ".join(str(store_str or "").strip().upper().split())
     try:
@@ -38,16 +38,8 @@ def build_delivery_key(date_str, store_str, quantite, row_idx=None):
         q = 0
     if not d or not m:
         return ""
-    suffix = f"|ROW{row_idx}" if row_idx is not None else ""
+    suffix = f"|OCC{occurrence}" if occurrence is not None else ""
     return f"{d}|{m}|{q}{suffix}"
-
-
-def normalize_composite_key(date_str, store_str, driver_str):
-    """Generates a canonical composite key [Date + Magasin + Chauffeur]."""
-    d = str(date_str or "").strip()
-    m = " ".join(str(store_str or "").strip().upper().split())
-    c = " ".join(str(driver_str or "").strip().upper().split())
-    return f"{d}|||{m}|||{c}"
 
 
 def normalize_date_to_iso(val, fallback=""):
@@ -90,8 +82,11 @@ def parse_delivery_excel(file_path):
     CHAUSSETTES, SAC A DOS, FOOTWEAR, Sachet, P, OM, Retour, Chargement,
     Materiel, REMARQUE).
 
-    Generates composite delivery_id (LIV-YYYYMMDD-STORE-CHAUF-INDEX).
-    Sets status strictly to 'Non Livré' for all newly parsed rows.
+    Uses an occurrence tracker to guarantee EVERY row receives a 100% unique delivery_id
+    without depending on changing Excel row numbers:
+      base_key = f"{normalized_date}_{store_name}_{driver_name}"
+      occurrence_tracker[base_key] += 1
+      delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_name}-{occurrence_tracker[base_key]}"
     """
     wb = openpyxl.load_workbook(file_path, data_only=True)
 
@@ -137,6 +132,7 @@ def parse_delivery_excel(file_path):
 
     records = []
     errors = []
+    occurrence_tracker = {}
     record_idx = 1
 
     # 2. Iterate data rows starting immediately below the detected header row
@@ -172,12 +168,16 @@ def parse_delivery_excel(file_path):
         raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
         normalized_date = normalize_date_to_iso(raw_date)
 
-        # Guarantee delivery_id uniqueness by appending the actual Excel row number (LIV-YYYYMMDD-STORE-CHAUF-ROW{row_idx})
-        ymd = normalized_date.replace("-", "")
-        store_slug = re.sub(r'[^A-Z0-9]', '', magasin)[:12]
-        chauf_slug = re.sub(r'[^A-Z0-9]', '', chauffeur)[:8] if chauffeur else "NONE"
-        delivery_id = f"LIV-{ymd}-{store_slug}-{chauf_slug}-ROW{row_idx}"
-        delivery_key = f"{normalized_date}|{magasin}|{qty}|ROW{row_idx}"
+        # Occurrence tracker for 100% unique delivery_id without relying on Excel row numbers
+        store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
+        driver_name = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
+        base_key = f"{normalized_date}_{store_name}_{driver_name}"
+        occurrence_tracker[base_key] = occurrence_tracker.get(base_key, 0) + 1
+
+        raw_delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_name}-{occurrence_tracker[base_key]}"
+        # Clean spaces and special characters from the ID
+        delivery_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
+        delivery_key = delivery_id
 
         # Matched schema payload for Supabase
         record = {
@@ -309,15 +309,11 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
     # 1. Fetch live Supabase state for status preservation strictly by unique ID
     existing_records = fetch_supabase_records(url, key)
     existing_by_id = {}
-    existing_by_key = {}
 
     for row in existing_records:
         did = str(row.get("delivery_id") or row.get("id") or "").strip().upper()
-        dkey = str(row.get("delivery_key") or "").strip()
         if did:
             existing_by_id[did] = row
-        if dkey:
-            existing_by_key[dkey] = row
 
     payload = []
     preserved_livre = 0
@@ -337,13 +333,10 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         driver = str(r.get("chauffeur") or "").strip()
         matricule = str(r.get("matricule") or "").strip()
         raw_status = str(r.get("status") or "Non Livré").strip()
-        dkey = str(r.get("delivery_key") or "").strip()
-        if not dkey:
-            dkey = build_delivery_key(deliv_date, store, qty)
+        dkey = str(r.get("delivery_key") or "").strip() or rec_id
 
-        # Match existing row strictly by exact delivery_id or exact delivery_key
-        # Never match or group by composite store/driver
-        existing_row = existing_by_id.get(rec_id.upper()) or (existing_by_key.get(dkey) if dkey else None)
+        # Match existing row strictly by exact delivery_id
+        existing_row = existing_by_id.get(rec_id.upper())
 
         if existing_row:
             s_stat = str(existing_row.get("status") or "")
@@ -439,8 +432,8 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
 
 if __name__ == "__main__":
     test_files = [
-        "data/programs/20261029_1423_PROGRAMME 29-10-2026.xlsx",
-        "template_programme_de_livraison.xlsx"
+        "data/programs/20261102_2129_Programme 03-11-26.xlsx",
+        "data/programs/20261102_1354_PROGRAMME 01-11-2026.xlsx"
     ]
     for tf in test_files:
         if os.path.exists(tf):
@@ -448,4 +441,5 @@ if __name__ == "__main__":
             res = parse_delivery_excel(tf)
             print(f"Success: {res['success']}")
             print(f"Total Rows: {res['total_records']}")
-            print(f"Sample Parsed Record: {res['records'][0] if res['records'] else None}")
+            for r in res['records'][:5]:
+                print(f"  [{r['delivery_id']}] {r['magasin']} | {r['chauffeur']} | {r['quantite']} p")
