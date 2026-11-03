@@ -406,6 +406,22 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
     if skipped_existing > 0:
         print(f"[i] Status Preservation: Skipped {skipped_existing} existing deliveries ({preserved_livre} preserved as 'Livré').")
 
+    # Deduplicate payload by delivery_key within batch to prevent PostgreSQL 21000
+    deduped_payload = []
+    seen_keys = set()
+    for item in payload:
+        k = item.get("delivery_key") or item.get("delivery_id")
+        if k not in seen_keys:
+            seen_keys.add(k)
+            deduped_payload.append(item)
+        else:
+            alt_k = f"{k}|{item.get('chauffeur', '')}"
+            if alt_k not in seen_keys:
+                item["delivery_key"] = alt_k
+                seen_keys.add(alt_k)
+                deduped_payload.append(item)
+    payload = deduped_payload
+
     if not payload:
         print("[i] All incoming records already exist in Supabase. Nothing new to push.")
         return {"status": "success", "count": 0, "message": "All records up to date"}

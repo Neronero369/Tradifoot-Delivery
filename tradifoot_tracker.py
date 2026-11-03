@@ -114,6 +114,8 @@ def parse_excel_file_for_supabase(fpath):
                 "quantite": qty,
                 "status": "Non Livré"
             })
+        # Strict Date Boundary Safeguard: Ensure no records prior to 2026-11-01 are ingested
+        records = [r for r in records if str(r.get("date", "")).strip() >= "2026-11-01"]
         return records
     except Exception as e:
         print(f"[-] Error extracting Supabase records from {fpath}: {e}")
@@ -302,15 +304,17 @@ def extract_routes_from_programs(programs, index_path=None):
 # -------------------------------------------------------------------------
 # OUTLOOK SYNC MODULE
 # -------------------------------------------------------------------------
-def sync_from_outlook(days_back=3, full_scan=False):
+def sync_from_outlook(days_back=2, full_scan=False):
     """
     Connects to Outlook Classic via COM and searches for delivery programs.
-    - Optimized: Scans recent emails (default 3 days, sorted newest first).
+    - Optimized: Scans recent emails (default 2 days, sorted newest first).
+    - Strict Date Boundary: Only emails and delivery programs dated on or after November 1, 2026.
     - Skips already-downloaded files to prevent re-downloading old programs.
     - Pushes ONLY genuinely new delivery programs to Supabase.
     """
+    MIN_INGESTION_DATE = datetime.datetime(2026, 11, 1, 0, 0, 0)
     lookback = 90 if full_scan else days_back
-    print(f"[1/3] Connecting to Outlook Classic (Scan window: {lookback} days)...")
+    print(f"[1/3] Connecting to Outlook Classic (Scan window: {lookback} days, Minimum date: 2026-11-01)...")
     try:
         import win32com.client
         outlook = win32com.client.Dispatch("Outlook.Application")
@@ -349,6 +353,10 @@ def sync_from_outlook(days_back=3, full_scan=False):
                         # Since items are sorted descending, stop scanning once past lookback window
                         break
 
+                    # Strict Date Boundary: Ignore any email received prior to November 1, 2026
+                    if dt < MIN_INGESTION_DATE:
+                        break
+
                     subj = str(item.Subject or "")
                     if item.Attachments and item.Attachments.Count > 0:
                         for i in range(1, item.Attachments.Count + 1):
@@ -359,6 +367,21 @@ def sync_from_outlook(days_back=3, full_scan=False):
                             is_prog_subj = bool(re.search(r'programme|programe|livraison', subj, re.I)) and fn.lower().endswith(('.xlsx', '.xls'))
                             
                             if is_prog_file or is_prog_subj:
+                                # Strict Date Boundary: If filename specifies a date prior to November 1, 2026, ignore it
+                                m_d = re.search(r'(\d{1,2})[-_](\d{1,2})[-_](\d{2,4})', fn)
+                                if m_d:
+                                    try:
+                                        d_p, m_p, y_p = int(m_d.group(1)), int(m_d.group(2)), int(m_d.group(3))
+                                        if y_p < 100:
+                                            y_p += 2000
+                                        if m_p > 12 and d_p <= 12:
+                                            d_p, m_p = m_p, d_p
+                                        file_dt = datetime.datetime(y_p, m_p, d_p)
+                                        if file_dt < MIN_INGESTION_DATE:
+                                            continue
+                                    except Exception:
+                                        pass
+
                                 date_str = dt.strftime("%Y%m%d_%H%M")
                                 safe_fn = f"{date_str}_{fn}".replace("/", "_").replace("\\", "_").replace(":", "_")
                                 save_path = os.path.join(PROGRAMS_DIR, safe_fn)
@@ -606,27 +629,10 @@ def parse_delivery_file(fpath):
 
 def build_database():
     """
-    Scans data/programs and any workspace folders for delivery program Excel files,
+    Scans data/programs for delivery program Excel files (November 2026 onwards),
     parses them, and writes the complete structured JSON database.
     """
     print("[2/3] Building distribution database...")
-    all_files = glob.glob(os.path.join(PROGRAMS_DIR, "*.xls*"))
-    
-    # Also include existing files in all_delivery_programs or delivery_september if not yet copied
-    legacy_folders = [
-        os.path.join(WORKSPACE_DIR, "all_delivery_programs"),
-        os.path.join(WORKSPACE_DIR, "delivery_september")
-    ]
-    for leg in legacy_folders:
-        if os.path.exists(leg):
-            for lf in glob.glob(os.path.join(leg, "*.xls*")):
-                base = os.path.basename(lf)
-                target = os.path.join(PROGRAMS_DIR, base)
-                if not os.path.exists(target):
-                    import shutil
-                    shutil.copy2(lf, target)
-                    all_files.append(target)
-
     all_files = sorted(list(set(glob.glob(os.path.join(PROGRAMS_DIR, "*.xls*")))))
 
     programs = []
@@ -654,23 +660,31 @@ def build_database():
             continue
 
         res = parse_delivery_file(fpath)
-        if res and res["destinations_count"] > 0:
-            programs.append(res)
-            
-            # Aggregate stats
-            for d in res["destinations"]:
-                st = d["store"]
-                if st:
-                    if st not in store_stats:
-                        store_stats[st] = {"store": st, "total_units": 0, "deliveries_count": 0, "wilaya": d["wilaya"], "region": d["region"], "top_driver": d["driver"]}
-                    store_stats[st]["total_units"] += d["quantity"]
-                    store_stats[st]["deliveries_count"] += 1
+        if not res or res["destinations_count"] == 0:
+            continue
 
-            for dr in res["drivers"]:
-                driver_stats[dr] = driver_stats.get(dr, 0) + 1
+        # Strict Date Boundary: Ignore any program dated before November 1, 2026
+        prog_date = str(res.get("received_date", ""))[:10]
+        dest_dates = [str(d.get("delivery_date", "")).strip() for d in res.get("destinations", []) if d.get("delivery_date")]
+        max_dest_date = max(dest_dates) if dest_dates else prog_date
+        if max_dest_date and max_dest_date < "2026-11-01":
+            continue
+        programs.append(res)
+        
+        # Aggregate stats
+        for d in res["destinations"]:
+            st = d["store"]
+            if st:
+                if st not in store_stats:
+                    store_stats[st] = {"store": st, "total_units": 0, "deliveries_count": 0, "wilaya": d["wilaya"], "region": d["region"], "top_driver": d["driver"]}
+                store_stats[st]["total_units"] += d["quantity"]
+                store_stats[st]["deliveries_count"] += 1
 
-            for b, q in res["brands"].items():
-                brand_stats[b] = brand_stats.get(b, 0) + q
+        for dr in res["drivers"]:
+            driver_stats[dr] = driver_stats.get(dr, 0) + 1
+
+        for b, q in res["brands"].items():
+            brand_stats[b] = brand_stats.get(b, 0) + q
 
     # Sort programs chronologically descending
     programs.sort(key=lambda x: x["received_date"], reverse=True)
@@ -1326,7 +1340,7 @@ def main():
 
     # Step 1: Sync from Outlook if requested
     if args.sync or args.full:
-        sync_from_outlook(full_scan=args.full)
+        sync_from_outlook(days_back=2, full_scan=args.full)
 
     # Step 2: Build JSON DB
     db_data = build_database()
