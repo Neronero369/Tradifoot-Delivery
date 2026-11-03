@@ -122,8 +122,7 @@ def generate_master_template(output_path="template_programme_de_livraison.xlsx")
         "SAADI BILLEL",
         "SNOUCI SEIF-EDDINE",
         "BOUKHALFA ADEL",
-        "BALLA YOUCEF",
-        "BAHLOULI ADEL"
+        "BALLA YOUCEF"
     ]
     dv_chauffeur = DataValidation(
         type="list",

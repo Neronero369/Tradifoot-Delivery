@@ -23,8 +23,12 @@ AUTHORIZED_CHAUFFEURS = {
     "SAADI BILLEL",
     "SNOUCI SEIF-EDDINE",
     "BOUKHALFA ADEL",
-    "BALLA YOUCEF",
-    "BAHLOULI ADEL"
+    "BALLA YOUCEF"
+}
+
+BLACKLISTED_CHAUFFEURS = {
+    "BAHLOULI ADEL",
+    "BAHLOULI"
 }
 
 
@@ -160,7 +164,15 @@ def parse_delivery_excel(file_path):
 
         # Column 3: Chauffeur -> chauffeur (String, uppercase, strictly "" if blank/missing)
         raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
-        chauffeur = " ".join(raw_driver.upper().split()) if raw_driver else ""
+        driver_name = " ".join(raw_driver.split())
+
+        # CRITICAL: Strict Blacklist Check
+        # If driver matches 'bahlouli adel' (case-insensitive), completely skip appending this row
+        driver_normalized = driver_name.lower().strip()
+        if "bahlouli adel" in driver_normalized or "bahlouli" in driver_normalized or driver_name.upper() in BLACKLISTED_CHAUFFEURS:
+            continue
+
+        chauffeur = driver_name.upper() if driver_name else ""
         if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
             chauffeur = ""
 
@@ -225,6 +237,9 @@ def upsert_manifest_records(incoming_records, existing_records):
 
     final_list = []
     for item in incoming_records:
+        chauf_check = str(item.get("chauffeur") or "").strip().lower()
+        if "bahlouli adel" in chauf_check or "bahlouli" in chauf_check:
+            continue
         new_item = dict(item)
         in_id = str(item.get("delivery_id") or item.get("id") or "").strip().upper()
         matched = existing_by_id.get(in_id) if in_id else None
@@ -331,6 +346,8 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         deliv_date = str(r.get("date") or "").strip()
         store = str(r.get("magasin") or "").strip()
         driver = str(r.get("chauffeur") or "").strip()
+        if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower() or driver.upper() in BLACKLISTED_CHAUFFEURS:
+            continue
         matricule = str(r.get("matricule") or "").strip()
         raw_status = str(r.get("status") or "Non Livré").strip()
         dkey = str(r.get("delivery_key") or "").strip() or rec_id

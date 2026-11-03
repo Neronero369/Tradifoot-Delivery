@@ -97,6 +97,8 @@ def parse_excel_file_for_supabase(fpath):
                 del_date = fallback_date
 
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
+            if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
+                continue
             vehicle = d.get("vehicle") or "Camion Porteur"
             if not vehicle or vehicle == "/":
                 vehicle = "Camion Porteur"
@@ -239,6 +241,8 @@ def extract_routes_from_programs(programs, index_path=None):
                 continue
 
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
+            if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
+                continue
             vehicle = d.get("vehicle") or "Camion Porteur"
             if not vehicle or vehicle == "/":
                 vehicle = "Camion Porteur"
@@ -538,6 +542,8 @@ def parse_delivery_file(fpath):
         tot_units += row_qty
 
         driver = str(r[col_driver]).strip().upper() if col_driver is not None and r[col_driver] else ''
+        if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
+            continue
         vehicle = str(r[col_vehicle]).strip().upper() if col_vehicle is not None and r[col_vehicle] else ''
         if driver and 'TOTAL' not in driver: drivers_in_prog.add(driver)
         if vehicle and 'TOTAL' not in vehicle: vehicles_in_prog.add(vehicle)
