@@ -311,8 +311,17 @@
           </div>
           <div class="text-right">
             <span class="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Volume Prévu</span>
-            <span id="month-total-units" class="font-extrabold text-[#1B417E] text-sm font-mono">0</span>
-            <span class="text-slate-600 font-medium text-[11px]">paires</span>
+            <div class="inline-flex items-center justify-end">
+              <span id="month-total-units" class="font-extrabold text-[#1B417E] text-sm font-mono">0</span>
+              <span class="inline-flex items-center text-slate-500 ml-1" title="Paires">
+                <svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" />
+                  <path d="M14 13l1 -2" />
+                  <path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" />
+                  <path d="M10 12l1.5 -3" />
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -377,7 +386,17 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Volume Jour</span>
-                <span id="admin-kpi-packages" class="text-xs sm:text-sm font-extrabold text-[#3076BB] font-mono">0 Paires</span>
+                <span id="admin-kpi-packages" class="text-xs sm:text-sm font-extrabold text-[#3076BB] font-mono inline-flex items-center">
+                  0
+                  <span class="inline-flex items-center ml-1 text-[#3076BB]" title="Paires">
+                    <svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" />
+                      <path d="M14 13l1 -2" />
+                      <path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" />
+                      <path d="M10 12l1.5 -3" />
+                    </svg>
+                  </span>
+                </span>
               </div>
               <div class="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Effectuées</span>
@@ -439,7 +458,7 @@
         <div id="manifest-footer" class="p-3.5 sm:p-4 border-t border-slate-200/80 bg-white/70 shrink-0 flex items-center justify-between text-xs text-slate-500 font-medium">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-cube text-slate-400"></i>
-            <span>Volume cumulé : <strong id="manifest-total-qty" class="text-[#3076BB] font-bold">0</strong> paires</span>
+            <span class="inline-flex items-center">Volume cumulé :&nbsp;<strong id="manifest-total-qty" class="text-[#3076BB] font-bold">0</strong><span class="inline-flex items-center text-[#3076BB] ml-1" title="Paires"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" /><path d="M14 13l1 -2" /><path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" /><path d="M10 12l1.5 -3" /></svg></span></span>
           </div>
           <div class="text-xs text-slate-400 font-semibold">Dépôt Central Hamiz &bull; Tradifoot</div>
         </div>
@@ -2494,7 +2513,9 @@ const LOCAL_DELIVERY_DATA = [
       const totalDiscrepancyUnits = reserveDeliveries.reduce((sum, item) => sum + (Number(item.quantite_litige) || 0), 0);
       const rate = dayDeliveries.length > 0 ? Math.round((deliveredCount / dayDeliveries.length) * 100) : 0;
 
-      if (DOM.adminKpiPackages) DOM.adminKpiPackages.textContent = `${totalUnits.toLocaleString()} Paires`;
+      if (DOM.adminKpiPackages) {
+        DOM.adminKpiPackages.innerHTML = `${totalUnits.toLocaleString()}<span class="inline-flex items-center ml-1 text-[#3076BB]" title="Paires"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" /><path d="M14 13l1 -2" /><path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" /><path d="M10 12l1.5 -3" /></svg></span>`;
+      }
       if (DOM.adminKpiDelivered) DOM.adminKpiDelivered.textContent = `${deliveredCount} / ${dayDeliveries.length}`;
       if (DOM.adminKpiDiscrepancies) {
         DOM.adminKpiDiscrepancies.textContent = totalDiscrepanciesCount > 0 ? `${totalDiscrepanciesCount} (${totalDiscrepancyUnits} p.)` : "0";
@@ -2882,9 +2903,16 @@ const LOCAL_DELIVERY_DATA = [
 
                 <!-- 3. Quantité & Discrepancy details -->
                 <div class="mt-3 py-2 px-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span class="text-lg sm:text-xl font-black text-[#1B417E] font-mono flex items-center gap-2">
-                    <i class="fa-solid fa-box text-[#3076BB] text-sm"></i>
-                    ${Number(qty).toLocaleString()} <span class="text-xs font-bold text-[#3076BB]">Paires</span>
+                  <span class="text-lg sm:text-xl font-black text-[#1B417E] font-mono flex items-center">
+                    ${Number(qty).toLocaleString()}
+                    <span class="inline-flex items-center text-[#3076BB] ml-1.5" title="Paires">
+                      <svg class="w-5 h-5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" />
+                        <path d="M14 13l1 -2" />
+                        <path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" />
+                        <path d="M10 12l1.5 -3" />
+                      </svg>
+                    </span>
                   </span>
                   ${isReserve ? `
                     <span class="text-xs font-bold text-amber-700 font-mono bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
@@ -3136,7 +3164,7 @@ const LOCAL_DELIVERY_DATA = [
 
       if (storeInfo) {
         const storeName = item.magasin || item.destination || "Magasin";
-        storeInfo.textContent = `${storeName} (${totalQty} Paires)`;
+        storeInfo.innerHTML = `${storeName} (${totalQty}<span class="inline-flex items-center text-[#3076BB] ml-1" title="Paires"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" /><path d="M14 13l1 -2" /><path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" /><path d="M10 12l1.5 -3" /></svg></span>)`;
       }
 
       selectReserveChoice(false);
@@ -4107,7 +4135,17 @@ const LOCAL_DELIVERY_DATA = [
             <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-box-check text-emerald-600 text-base"></i>
-                <span class="text-base font-extrabold text-emerald-950 font-mono">${qty.toLocaleString()} Paires</span>
+                <span class="text-base font-extrabold text-emerald-950 font-mono inline-flex items-center">
+                  ${qty.toLocaleString()}
+                  <span class="inline-flex items-center ml-1.5 text-emerald-700" title="Paires">
+                    <svg class="w-4 h-4 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" />
+                      <path d="M14 13l1 -2" />
+                      <path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" />
+                      <path d="M10 12l1.5 -3" />
+                    </svg>
+                  </span>
+                </span>
               </div>
               <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 100% Conforme ✓
@@ -4117,7 +4155,17 @@ const LOCAL_DELIVERY_DATA = [
             <div class="bg-blue-50 p-3.5 rounded-xl border border-blue-200 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-box text-blue-700 text-sm"></i>
-                <span class="text-base font-extrabold text-blue-950 font-mono">${Number(qty).toLocaleString()} Paires</span>
+                <span class="text-base font-extrabold text-blue-950 font-mono inline-flex items-center">
+                  ${Number(qty).toLocaleString()}
+                  <span class="inline-flex items-center ml-1.5 text-[#3076BB]" title="Paires">
+                    <svg class="w-4 h-4 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 6h5.426a1 1 0 0 1 .863 .496l1.064 1.823a3 3 0 0 0 1.896 1.407l4.677 1.114a4 4 0 0 1 3.074 3.89v2.27a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1" />
+                      <path d="M14 13l1 -2" />
+                      <path d="M8 18v-1a4 4 0 0 0 -4 -4h-1" />
+                      <path d="M10 12l1.5 -3" />
+                    </svg>
+                  </span>
+                </span>
               </div>
               <span class="text-xs text-blue-700 font-semibold">Quantité prévue</span>
             </div>
