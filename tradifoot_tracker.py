@@ -237,11 +237,8 @@ def extract_routes_from_programs(programs, index_path=None):
             if not store_clean or store_clean.startswith("TOTAL"):
                 continue
 
-            # Strict deduplication: same date, same destination, same quantity
-            route_key = (deliv_date, store_clean, qty)
-            if route_key in seen_route_keys:
-                continue
-            seen_route_keys.add(route_key)
+            # Guarantee every single destination row from Excel is an independent delivery
+            route_counter += 1
 
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
             vehicle = d.get("vehicle") or "Camion Porteur"
@@ -279,7 +276,7 @@ def extract_routes_from_programs(programs, index_path=None):
             if not deliv_date or not store_clean or qty <= 0:
                 continue
 
-            del_key = f"{deliv_date}|{store_clean}|{qty}"
+            del_key = f"{deliv_date}|{store_clean}|{qty}|ROW{route_counter}"
             all_routes.append({
                 "id": route_id,
                 "delivery_id": route_id,

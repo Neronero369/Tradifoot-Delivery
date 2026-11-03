@@ -28,17 +28,18 @@ AUTHORIZED_CHAUFFEURS = {
 }
 
 
-def build_delivery_key(date_str, store_str, quantite):
-    """Deterministic Composite Fingerprint Matching (Date + Magasin + Quantite)."""
+def build_delivery_key(date_str, store_str, quantite, row_idx=None):
+    """Deterministic Composite Key per row (Date + Magasin + Quantite + Row)."""
     d = str(date_str or "").strip()
     m = " ".join(str(store_str or "").strip().upper().split())
     try:
         q = int(quantite)
     except (ValueError, TypeError):
         q = 0
-    if not d or not m or q <= 0:
+    if not d or not m:
         return ""
-    return f"{d}|{m}|{q}"
+    suffix = f"|ROW{row_idx}" if row_idx is not None else ""
+    return f"{d}|{m}|{q}{suffix}"
 
 
 def normalize_composite_key(date_str, store_str, driver_str):
@@ -171,11 +172,12 @@ def parse_delivery_excel(file_path):
         raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
         normalized_date = normalize_date_to_iso(raw_date)
 
-        # Composite delivery_id: LIV-YYYYMMDD-STORE-CHAUF-INDEX
+        # Guarantee delivery_id uniqueness by appending the actual Excel row number (LIV-YYYYMMDD-STORE-CHAUF-ROW{row_idx})
         ymd = normalized_date.replace("-", "")
         store_slug = re.sub(r'[^A-Z0-9]', '', magasin)[:12]
         chauf_slug = re.sub(r'[^A-Z0-9]', '', chauffeur)[:8] if chauffeur else "NONE"
-        delivery_id = f"LIV-{ymd}-{store_slug}-{chauf_slug}-{record_idx:04d}"
+        delivery_id = f"LIV-{ymd}-{store_slug}-{chauf_slug}-ROW{row_idx}"
+        delivery_key = f"{normalized_date}|{magasin}|{qty}|ROW{row_idx}"
 
         # Matched schema payload for Supabase
         record = {
@@ -187,7 +189,7 @@ def parse_delivery_excel(file_path):
             "matricule": "",
             "quantite": qty,
             "status": "Non Livré",
-            "delivery_key": build_delivery_key(normalized_date, magasin, qty)
+            "delivery_key": delivery_key
         }
         records.append(record)
         record_idx += 1
@@ -203,26 +205,15 @@ def parse_delivery_excel(file_path):
 
 def upsert_manifest_records(incoming_records, existing_records):
     """
-    Performs in-memory Upsert logic with strict Status Preservation.
-
-    CRITICAL STATUS PRESERVATION CONTRACT:
-    - If a delivery already exists and its current status is 'Livré', PRESERVE 'Livré'.
-      Never downgrade to 'Non Livré' or empty values.
-    - If a delivery exists with status 'Non Livré', update mutable fields (Quantité, Matricule)
-      but keep status as 'Non Livré' (unless incoming explicitly provides 'Livré').
-    - If a delivery is brand new, insert as 'Non Livré'.
+    Appends all incoming valid delivery records directly without grouping
+    or merging by Store, Driver, or Quantity. Status preservation relies
+    strictly on exact delivery_id.
     """
-    id_map = {}
-    comp_map = {}
-
+    existing_by_id = {}
     for rec in existing_records:
-        r_id = str(rec.get("id") or "").strip().upper()
+        r_id = str(rec.get("delivery_id") or rec.get("id") or "").strip().upper()
         if r_id:
-            id_map[r_id] = rec
-
-        ckey = normalize_composite_key(rec.get("date"), rec.get("magasin"), rec.get("chauffeur"))
-        if ckey:
-            comp_map[ckey] = rec
+            existing_by_id[r_id] = rec
 
     stats = {
         "total": len(incoming_records),
@@ -232,13 +223,11 @@ def upsert_manifest_records(incoming_records, existing_records):
         "inserted_new": 0
     }
 
-    merged = list(existing_records)
-
+    final_list = []
     for item in incoming_records:
-        in_id = str(item.get("id") or "").strip().upper()
-        ckey = normalize_composite_key(item.get("date"), item.get("magasin"), item.get("chauffeur"))
-
-        matched = id_map.get(in_id) or comp_map.get(ckey)
+        new_item = dict(item)
+        in_id = str(item.get("delivery_id") or item.get("id") or "").strip().upper()
+        matched = existing_by_id.get(in_id) if in_id else None
 
         if matched:
             curr_status = matched.get("status", "Non Livré")
@@ -254,26 +243,25 @@ def upsert_manifest_records(incoming_records, existing_records):
                 final_status = "Non Livré"
                 stats["updated_non_livre"] += 1
 
-            matched["status"] = final_status
-            matched["completed"] = (final_status == "Livré")
-            if item.get("quantite"):
-                matched["quantite"] = item["quantite"]
-            if item.get("matricule"):
-                matched["matricule"] = item["matricule"]
+            new_item["status"] = final_status
+            new_item["completed"] = (final_status == "Livré")
+            if matched.get("quantite_recue") is not None:
+                new_item["quantite_recue"] = matched["quantite_recue"]
+            if matched.get("quantite_litige") is not None:
+                new_item["quantite_litige"] = matched["quantite_litige"]
+            if matched.get("statut_reserve"):
+                new_item["statut_reserve"] = matched["statut_reserve"]
+            if matched.get("photo_url"):
+                new_item["photo_url"] = matched["photo_url"]
         else:
-            new_item = dict(item)
             if new_item.get("status") != "Livré":
                 new_item["status"] = "Non Livré"
             new_item["completed"] = (new_item["status"] == "Livré")
-            merged.append(new_item)
             stats["inserted_new"] += 1
 
-            if in_id:
-                id_map[in_id] = new_item
-            if ckey:
-                comp_map[ckey] = new_item
+        final_list.append(new_item)
 
-    return merged, stats
+    return final_list, stats
 
 
 def fetch_supabase_records(supabase_url=None, api_key=None):
@@ -297,16 +285,15 @@ def fetch_supabase_records(supabase_url=None, api_key=None):
         return []
 
 
-def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new=True):
+def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new=False):
     """
     Pushes delivery records to Supabase REST endpoint via POST upsert
-    with STRICT STATUS PRESERVATION & DEDUPLICATION:
+    with STRICT ROW-LEVEL INDEPENDENCE & STATUS PRESERVATION:
 
     1. Queries existing records in Supabase before pushing.
     2. Any existing delivery that is already 'Livré' is NEVER overwritten with 'Non Livré'.
-    3. If only_new is True, skips records that already exist in Supabase so old delivery
-       programs never get re-processed or override database records.
-    4. Only truly new deliveries (or non-duplicate updates) are pushed.
+    3. Every single valid row parsed from Excel is appended directly to the final payload list.
+    4. Guarantees 1:1 row independence without dictionary-based grouping or merging.
     """
     url = supabase_url or DEFAULT_SUPABASE_REST_URL
     key = api_key or DEFAULT_SUPABASE_API_KEY
@@ -319,33 +306,25 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         print("[!] No records provided to push to Supabase.")
         return {"status": "success", "count": 0, "data": []}
 
-    # 1. Fetch live Supabase state for status preservation
+    # 1. Fetch live Supabase state for status preservation strictly by unique ID
     existing_records = fetch_supabase_records(url, key)
-    existing_by_key = {}
     existing_by_id = {}
-    existing_by_comp = {}
+    existing_by_key = {}
 
     for row in existing_records:
-        dkey = str(row.get("delivery_key") or "").strip()
         did = str(row.get("delivery_id") or row.get("id") or "").strip().upper()
-        r_date = str(row.get("date") or "").strip()
-        r_mag = " ".join(str(row.get("magasin") or "").strip().upper().split())
-        r_drv = " ".join(str(row.get("chauffeur") or "").strip().upper().split())
-
-        if dkey:
-            existing_by_key[dkey] = row
+        dkey = str(row.get("delivery_key") or "").strip()
         if did:
             existing_by_id[did] = row
-        if r_date and r_mag:
-            existing_by_comp[(r_date, r_mag, r_drv)] = row
-            existing_by_comp[(r_date, r_mag)] = row
+        if dkey:
+            existing_by_key[dkey] = row
 
     payload = []
-    skipped_existing = 0
     preserved_livre = 0
 
+    # 2. Append EVERY valid parsed row directly to the final payload list
     for r in records:
-        rec_id = r.get("id") or r.get("delivery_id")
+        rec_id = str(r.get("delivery_id") or r.get("id") or "").strip()
         if not rec_id:
             continue
         try:
@@ -358,41 +337,27 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         driver = str(r.get("chauffeur") or "").strip()
         matricule = str(r.get("matricule") or "").strip()
         raw_status = str(r.get("status") or "Non Livré").strip()
+        dkey = str(r.get("delivery_key") or "").strip()
+        if not dkey:
+            dkey = build_delivery_key(deliv_date, store, qty)
 
-        dkey = r.get("delivery_key") or build_delivery_key(deliv_date, store, qty)
-
-        norm_comp = (deliv_date, " ".join(store.upper().split()), " ".join(driver.upper().split()))
-        norm_comp_store = (deliv_date, " ".join(store.upper().split()))
-
-        existing_row = (
-            existing_by_key.get(dkey)
-            or existing_by_id.get(str(rec_id).strip().upper())
-            or existing_by_comp.get(norm_comp)
-            or existing_by_comp.get(norm_comp_store)
-        )
+        # Match existing row strictly by exact delivery_id or exact delivery_key
+        # Never match or group by composite store/driver
+        existing_row = existing_by_id.get(rec_id.upper()) or (existing_by_key.get(dkey) if dkey else None)
 
         if existing_row:
             s_stat = str(existing_row.get("status") or "")
             is_already_livre = bool("livr" in s_stat.lower() and "non" not in s_stat.lower())
-
             if is_already_livre:
                 preserved_livre += 1
-                # CRITICAL: Completed delivery in Supabase MUST NOT be downgraded to 'Non Livré'
-                if only_new:
-                    skipped_existing += 1
-                    continue
                 final_status = "Livré"
             else:
-                if only_new:
-                    # Already present in Supabase, skip to avoid overrun
-                    skipped_existing += 1
-                    continue
                 final_status = raw_status
         else:
             final_status = raw_status
 
         mapped = {
-            "delivery_id": str(rec_id).strip(),
+            "delivery_id": rec_id,
             "date": deliv_date,
             "magasin": store,
             "chauffeur": driver,
@@ -401,30 +366,28 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             "status": final_status,
             "delivery_key": dkey
         }
+
+        if existing_row:
+            if existing_row.get("delivered_by"):
+                mapped["delivered_by"] = existing_row["delivered_by"]
+            if existing_row.get("quantite_recue") is not None:
+                mapped["quantite_recue"] = existing_row["quantite_recue"]
+            if existing_row.get("quantite_litige") is not None:
+                mapped["quantite_litige"] = existing_row["quantite_litige"]
+            if existing_row.get("statut_reserve"):
+                mapped["statut_reserve"] = existing_row["statut_reserve"]
+            if existing_row.get("photo_url"):
+                mapped["photo_url"] = existing_row["photo_url"]
+
+        # Every single valid row parsed from Excel MUST be appended directly to the final payload list
         payload.append(mapped)
 
-    if skipped_existing > 0:
-        print(f"[i] Status Preservation: Skipped {skipped_existing} existing deliveries ({preserved_livre} preserved as 'Livré').")
-
-    # Deduplicate payload by delivery_key within batch to prevent PostgreSQL 21000
-    deduped_payload = []
-    seen_keys = set()
-    for item in payload:
-        k = item.get("delivery_key") or item.get("delivery_id")
-        if k not in seen_keys:
-            seen_keys.add(k)
-            deduped_payload.append(item)
-        else:
-            alt_k = f"{k}|{item.get('chauffeur', '')}"
-            if alt_k not in seen_keys:
-                item["delivery_key"] = alt_k
-                seen_keys.add(alt_k)
-                deduped_payload.append(item)
-    payload = deduped_payload
+    if preserved_livre > 0:
+        print(f"[i] Status Preservation: {preserved_livre} delivery status(es) preserved as 'Livré'.")
 
     if not payload:
-        print("[i] All incoming records already exist in Supabase. Nothing new to push.")
-        return {"status": "success", "count": 0, "message": "All records up to date"}
+        print("[i] No records to push.")
+        return {"status": "success", "count": 0, "message": "No records to push"}
 
     headers = {
         "apikey": key,
