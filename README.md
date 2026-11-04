@@ -21,12 +21,12 @@ Le projet repose sur une architecture moderne sans dépendances locales lourdes,
        - `mounir` (PIN: `5290`)
        - `BENAMAR NACIM` (PIN: `3021`)
        - `MEKHLOUFI MOHAMMED` (PIN: `1234`)
+        - `BRAHIM MECHAI` (PIN: `0411`)
      - **Chauffeurs** (`role: 'chauffeur'`, accès exclusif à leurs tournées respectives) :
        - `SAADI BILLEL` (PIN: `9951`)
        - `SNOUCI SEIF-EDDINE` (PIN: `6427`)
        - `BOUKHALFA ADEL` (PIN: `6165`)
        - `BALLA YOUCEF` (PIN: `5763`)
-       - `BAHLOULI ADEL` (PIN: `3484`)
    - **Vues Spécifiques par Rôle** :
      - **Chauffeur** :
        - Badge d'en-tête personnalisé : *Espace Chauffeur • [Nom du Chauffeur]*.
