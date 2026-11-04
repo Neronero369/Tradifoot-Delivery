@@ -570,6 +570,10 @@
                   <i class="fa-solid fa-box-open text-xs text-amber-700"></i>
                   <span>Carton(s) manquant(s)</span>
                 </button>
+                <button type="button" onclick="selectReserveMotif('Surplus / Colis en trop')" data-motif="Surplus / Colis en trop" class="pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]">
+                  <i class="fa-solid fa-boxes-stacked text-xs text-blue-600"></i>
+                  <span>Surplus / Colis en trop</span>
+                </button>
                 <button type="button" onclick="selectReserveMotif('Marchandise endommagée / Mouillée')" data-motif="Marchandise endommagée / Mouillée" class="pod-motif-chip p-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-medium text-left transition flex items-center gap-2 min-h-[44px]">
                   <i class="fa-solid fa-burst text-xs text-amber-600"></i>
                   <span>Marchandise endommagée / Mouillée</span>
@@ -870,8 +874,9 @@ const LOCAL_DELIVERY_DATA = [];
       const status = isLivre ? "Livré" : "Non Livré";
       const date = String(d.date || "").trim();
       const qtyRecue = d.quantite_recue !== undefined && d.quantite_recue !== null ? Number(d.quantite_recue) : (isLivre ? qty : null);
-      const qtyLitige = d.quantite_litige !== undefined && d.quantite_litige !== null ? Number(d.quantite_litige) : 0;
-      const statReserve = d.statut_reserve || (isLivre ? (qtyLitige > 0 ? "Avec Réserve" : "Conforme") : null);
+      const qtyLitige = d.quantite_litige !== undefined && d.quantite_litige !== null ? Number(d.quantite_litige) : (qtyRecue !== null ? Math.abs(qty - qtyRecue) : 0);
+      const isDiscrepant = (qtyRecue !== null && qtyRecue !== qty) || qtyLitige > 0;
+      const statReserve = d.statut_reserve || (isLivre ? (isDiscrepant ? "Avec Réserve" : "Conforme") : null);
 
       return {
         ...d,
@@ -1419,8 +1424,9 @@ const LOCAL_DELIVERY_DATA = [];
             const dKey = row.delivery_key || buildDeliveryKey(row);
             const qTotal = Number(row.quantite !== undefined ? row.quantite : (row.Quantite !== undefined ? row.Quantite : row.quantity)) || 0;
             const qRecue = row.quantite_recue !== undefined && row.quantite_recue !== null ? Number(row.quantite_recue) : (isLivre ? qTotal : null);
-            const qLitige = row.quantite_litige !== undefined && row.quantite_litige !== null ? Number(row.quantite_litige) : 0;
-            const statReserve = row.statut_reserve || (isLivre ? (qLitige > 0 ? "Avec Réserve" : "Conforme") : null);
+            const qLitige = row.quantite_litige !== undefined && row.quantite_litige !== null ? Number(row.quantite_litige) : (qRecue !== null ? Math.abs(qTotal - qRecue) : 0);
+            const isDiscrepant = (qRecue !== null && qRecue !== qTotal) || qLitige > 0;
+            const statReserve = row.statut_reserve || (isLivre ? (isDiscrepant ? "Avec Réserve" : "Conforme") : null);
 
             return {
               id: String(row.delivery_id || row.id || "").trim(),
@@ -1540,9 +1546,14 @@ const LOCAL_DELIVERY_DATA = [];
       const targetPhotoUrl = photoUrl || item.photo_url || null;
 
       // Extract Discrepancy & Reserve attributes
-      const isReserve = reserveData ? Boolean(reserveData.isReserve) : (item.statut_reserve === "Avec Réserve");
-      const quantiteRecue = reserveData ? Number(reserveData.quantite_recue) : (item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isReserve ? 0 : qty));
-      const quantiteLitige = reserveData ? Number(reserveData.quantite_litige) : (item.quantite_litige !== undefined && item.quantite_litige !== null ? Number(item.quantite_litige) : (isReserve ? Math.max(0, qty - quantiteRecue) : 0));
+      const quantiteRecue = reserveData 
+        ? Number(reserveData.quantite_recue) 
+        : (item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (item.statut_reserve === "Avec Réserve" ? 0 : qty));
+      const hasDiscrepancy = (quantiteRecue !== qty);
+      const isReserve = reserveData ? Boolean(reserveData.isReserve) : (item.statut_reserve === "Avec Réserve" || hasDiscrepancy);
+      const quantiteLitige = reserveData 
+        ? Number(reserveData.quantite_litige) 
+        : (item.quantite_litige !== undefined && item.quantite_litige !== null ? Number(item.quantite_litige) : (isReserve ? Math.abs(qty - quantiteRecue) : 0));
       const statutReserve = isReserve ? "Avec Réserve" : "Conforme";
       const motifReserve = isReserve ? (reserveData ? reserveData.motif_reserve : item.motif_reserve) : null;
       const remarqueChauffeur = isReserve ? (reserveData ? (reserveData.remarque_chauffeur || "").trim() : (item.remarque_chauffeur || "").trim()) : null;
@@ -2317,10 +2328,15 @@ const LOCAL_DELIVERY_DATA = [];
       let cardsHtml = "";
       filtered.forEach(item => {
         const isCompleted = isItemDelivered(item);
-        const isReserve = isCompleted && item.statut_reserve === "Avec Réserve";
-        const litigeQty = Number(item.quantite_litige) || 0;
         const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
-        const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isCompleted ? (qty - litigeQty) : qty);
+        const litigeQty = Number(item.quantite_litige) || 0;
+        const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null 
+          ? Number(item.quantite_recue) 
+          : (isCompleted ? (item.statut_reserve === "Avec Réserve" && litigeQty ? (qty - litigeQty) : qty) : qty);
+        const hasDiscrepancy = isCompleted && (recueQty !== qty);
+        const isReserve = isCompleted && (item.statut_reserve === "Avec Réserve" || hasDiscrepancy);
+        const variance = isCompleted ? (recueQty - qty) : 0;
+        const varianceStr = variance > 0 ? `+${variance}` : `${variance}`;
 
         const cardClasses = `p-4 sm:p-5 rounded-2xl border transition-all duration-300 flex-shrink-0 flex flex-col justify-between ${
           isReserve
@@ -2351,7 +2367,7 @@ const LOCAL_DELIVERY_DATA = [];
         } else if (isReserve) {
           statusBadge = `
             <span class="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300 shadow-2xs">
-              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-[11px]"></i> Livré (Réserve: -${litigeQty} paires)
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-[11px]"></i> Livré avec réserve [${varianceStr}]
             </span>
           `;
         } else {
@@ -2425,16 +2441,16 @@ const LOCAL_DELIVERY_DATA = [];
                 </div>
 
                 <!-- 3. Quantité & Discrepancy details -->
-                <div class="mt-3 py-2 px-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span class="text-lg sm:text-xl font-black text-[#1B417E] font-mono flex items-center">
-                    ${Number(qty).toLocaleString()}
-                    <span class="inline-flex items-center text-[#3076BB] ml-1.5" title="Paires">
+                <div class="mt-3 py-2 px-3 rounded-xl ${isReserve ? 'bg-amber-50/70 border-amber-200' : 'bg-slate-50 border-slate-100'} border flex items-center justify-between">
+                  <span class="text-lg sm:text-xl font-black ${isReserve ? 'text-amber-950' : 'text-[#1B417E]'} font-mono flex items-center">
+                    ${isReserve ? `${recueQty}` : Number(qty).toLocaleString()}
+                    <span class="inline-flex items-center ${isReserve ? 'text-amber-700' : 'text-[#3076BB]'} ml-1.5" title="Paires">
                       ${SNEAKER_ICON_LG}
                     </span>
                   </span>
                   ${isReserve ? `
-                    <span class="text-xs font-bold text-amber-700 font-mono bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                      Reçu: ${recueQty} p.
+                    <span class="text-xs font-bold ${variance > 0 ? 'text-blue-800 bg-blue-100 border-blue-300' : 'text-amber-900 bg-amber-100 border-amber-300'} font-mono px-2 py-0.5 rounded-md border">
+                      ${recueQty} (Prévu: ${qty}) [${varianceStr}]
                     </span>
                   ` : ""}
                 </div>
@@ -2476,7 +2492,7 @@ const LOCAL_DELIVERY_DATA = [];
                 ${isCompleted ? `
                   <div class="w-full py-3.5 px-4 rounded-xl ${isReserve ? "bg-amber-100/90 text-amber-900 border border-amber-300" : "bg-[#EBF3FA] text-[#1B417E] border border-[#3076BB]/40"} font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 cursor-default opacity-95 select-none min-h-[50px] shadow-2xs">
                     <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-circle-check text-[#3076BB]"} text-base"></i>
-                    <span>${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : (isRetrait ? "Retrait Validé ✓" : "Livré ✓")}</span>
+                    <span>${isReserve ? `Livré avec réserve (${varianceStr} p.)` : (isRetrait ? "Retrait Validé ✓" : "Livré ✓")}</span>
                   </div>
                 ` : (isRetrait ? `
                   <button type="button" data-action="validate-retrait" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-blue-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[50px]" title="Valider le retrait client">
@@ -2685,7 +2701,7 @@ const LOCAL_DELIVERY_DATA = [];
       const totalQty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
       if (qtyRecueInput) {
         qtyRecueInput.value = totalQty;
-        qtyRecueInput.max = totalQty;
+        qtyRecueInput.removeAttribute("max");
         qtyRecueInput.min = 0;
       }
       if (totalPlannedLabel) {
@@ -2792,8 +2808,15 @@ const LOCAL_DELIVERY_DATA = [];
       const input = document.getElementById("pod-qty-recue");
       if (!input) return;
       let val = Number(input.value) || 0;
-      val = Math.max(0, Math.min(total, val + delta));
+      val = Math.max(0, val + delta);
       input.value = val;
+      if (val > total && selectedReserveMotif === "Carton(s) manquant(s)") {
+        selectedReserveMotif = "Surplus / Colis en trop";
+        renderReserveMotifChips();
+      } else if (val < total && selectedReserveMotif === "Surplus / Colis en trop") {
+        selectedReserveMotif = "Carton(s) manquant(s)";
+        renderReserveMotifChips();
+      }
       updateDiscrepancyCalc();
     }
 
@@ -2801,10 +2824,15 @@ const LOCAL_DELIVERY_DATA = [];
       if (!currentPoDItem || !input) return;
       const total = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
       let val = Number(input.value);
-      if (isNaN(val)) val = 0;
-      if (val > total) val = total;
-      if (val < 0) val = 0;
+      if (isNaN(val) || val < 0) val = 0;
       input.value = val;
+      if (val > total && selectedReserveMotif === "Carton(s) manquant(s)") {
+        selectedReserveMotif = "Surplus / Colis en trop";
+        renderReserveMotifChips();
+      } else if (val < total && selectedReserveMotif === "Surplus / Colis en trop") {
+        selectedReserveMotif = "Carton(s) manquant(s)";
+        renderReserveMotifChips();
+      }
       updateDiscrepancyCalc();
     }
 
@@ -2812,26 +2840,39 @@ const LOCAL_DELIVERY_DATA = [];
       if (!currentPoDItem) return;
       const total = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
       const input = document.getElementById("pod-qty-recue");
-      const val = input ? Math.max(0, Math.min(total, Number(input.value) || 0)) : total;
-      const litige = Math.max(0, total - val);
+      const val = input ? Math.max(0, Number(input.value) || 0) : total;
+      const variance = val - total;
 
       const litigeText = document.getElementById("pod-litige-text");
       const litigeBadge = document.getElementById("pod-litige-badge");
       const previewBox = document.getElementById("pod-discrepancy-preview");
 
       if (litigeText) {
-        if (litige === 0) {
+        if (variance === 0) {
           litigeText.textContent = "Aucun écart (quantité complète reçue)";
+        } else if (variance > 0) {
+          litigeText.textContent = `Surplus constaté : +${variance} paire(s) en surplus`;
         } else {
-          litigeText.textContent = `Écart calculé : ${litige} paire(s) en litige`;
+          litigeText.textContent = `Manquant constaté : ${variance} paire(s) manquante(s)`;
         }
       }
       if (litigeBadge) {
-        litigeBadge.textContent = `-${litige} p.`;
+        if (variance === 0) {
+          litigeBadge.textContent = "0 p.";
+          litigeBadge.className = "font-mono text-slate-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200";
+        } else if (variance > 0) {
+          litigeBadge.textContent = `+${variance} p.`;
+          litigeBadge.className = "font-mono text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-300 font-black";
+        } else {
+          litigeBadge.textContent = `${variance} p.`;
+          litigeBadge.className = "font-mono text-rose-700 bg-white px-2 py-0.5 rounded-lg border border-amber-300 font-black";
+        }
       }
       if (previewBox) {
-        if (litige === 0) {
+        if (variance === 0) {
           previewBox.className = "mt-2 p-2.5 rounded-xl bg-slate-100 border border-slate-300 text-xs font-semibold text-slate-700 flex items-center justify-between";
+        } else if (variance > 0) {
+          previewBox.className = "mt-2 p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs font-extrabold text-blue-950 flex items-center justify-between";
         } else {
           previewBox.className = "mt-2 p-2.5 rounded-xl bg-amber-100 border border-amber-300 text-xs font-extrabold text-amber-950 flex items-center justify-between";
         }
@@ -2839,21 +2880,29 @@ const LOCAL_DELIVERY_DATA = [];
     }
 
     function getReservePayload() {
-      const isReserve = Boolean(isReserveSelected);
       const totalPlanned = Number(currentPoDItem.quantite !== undefined ? currentPoDItem.quantite : currentPoDItem.quantity) || 0;
       const qtyRecueInput = document.getElementById("pod-qty-recue");
-      let qtyRecue = isReserve ? Math.max(0, Math.min(totalPlanned, Number(qtyRecueInput ? qtyRecueInput.value : totalPlanned))) : totalPlanned;
+      let qtyRecue = qtyRecueInput ? Math.max(0, Number(qtyRecueInput.value)) : totalPlanned;
       if (isNaN(qtyRecue)) qtyRecue = totalPlanned;
-      const qtyLitige = isReserve ? Math.max(0, totalPlanned - qtyRecue) : 0;
+
+      const hasDiscrepancy = (qtyRecue !== totalPlanned);
+      const isReserve = Boolean(isReserveSelected || hasDiscrepancy);
+      const finalQtyRecue = isReserve ? qtyRecue : totalPlanned;
+      const qtyLitige = Math.abs(totalPlanned - finalQtyRecue);
       const remarqueEl = document.getElementById("pod-remarque-chauffeur");
       const remarqueText = remarqueEl ? remarqueEl.value : "";
 
+      let motif = selectedReserveMotif;
+      if (isReserve && !motif) {
+        motif = finalQtyRecue > totalPlanned ? "Surplus / Colis en trop" : "Carton(s) manquant(s)";
+      }
+
       return {
         isReserve: isReserve,
-        quantite_recue: qtyRecue,
+        quantite_recue: finalQtyRecue,
         quantite_litige: qtyLitige,
         statut_reserve: isReserve ? "Avec Réserve" : "Conforme",
-        motif_reserve: isReserve ? selectedReserveMotif : null,
+        motif_reserve: isReserve ? motif : null,
         remarque_chauffeur: isReserve ? (remarqueText || "").trim() : null
       };
     }
@@ -3077,9 +3126,10 @@ const LOCAL_DELIVERY_DATA = [];
       const idStr = String(targetItem.delivery_id || targetItem.id).trim();
 
       const totalPlanned = Number(targetItem.quantite !== undefined ? targetItem.quantite : targetItem.quantity) || 0;
-      const isReserve = (reserveData && reserveData.isReserve) || targetItem.statut_reserve === "Avec Réserve";
       const qtyRecue = reserveData ? Number(reserveData.quantite_recue) : (targetItem.quantite_recue !== undefined && targetItem.quantite_recue !== null ? Number(targetItem.quantite_recue) : totalPlanned);
-      const qtyLitige = reserveData ? Number(reserveData.quantite_litige) : (targetItem.quantite_litige !== undefined && targetItem.quantite_litige !== null ? Number(targetItem.quantite_litige) : (isReserve ? Math.max(0, totalPlanned - qtyRecue) : 0));
+      const hasDiscrepancy = (qtyRecue !== totalPlanned);
+      const isReserve = (reserveData && reserveData.isReserve) || targetItem.statut_reserve === "Avec Réserve" || hasDiscrepancy;
+      const qtyLitige = reserveData ? Number(reserveData.quantite_litige) : (targetItem.quantite_litige !== undefined && targetItem.quantite_litige !== null ? Number(targetItem.quantite_litige) : (isReserve ? Math.abs(totalPlanned - qtyRecue) : 0));
       const motifReserve = isReserve ? (reserveData ? reserveData.motif_reserve : targetItem.motif_reserve) : null;
       const remarqueChauffeur = isReserve ? (reserveData ? reserveData.remarque_chauffeur : targetItem.remarque_chauffeur) : null;
       const statutReserve = isReserve ? "Avec Réserve" : "Conforme";
@@ -3160,7 +3210,9 @@ const LOCAL_DELIVERY_DATA = [];
       const notifStoreName = targetItem ? (targetItem.magasin || targetItem.destination || "Tournée") : "Tournée";
       const isRetrait = isRetraitDepot(targetItem);
       if (isReserve) {
-        showNotification(`${notifStoreName} validée avec réserve (-${qtyLitige} paires).`, "warning");
+        const variance = qtyRecue - totalPlanned;
+        const varStr = variance > 0 ? `+${variance}` : `${variance}`;
+        showNotification(`${notifStoreName} validée avec réserve (${varStr} paires).`, "warning");
       } else if (photoUrl) {
         showNotification(isRetrait ? "Félicitations, le retrait client a été enregistré avec succès !" : "Félicitations, la livraison a été enregistrée avec succès !", "success");
       } else {
@@ -3616,15 +3668,20 @@ const LOCAL_DELIVERY_DATA = [];
       const isAdmin = Boolean(currentUser && currentUser.role === "admin");
       const isCompleted = isItemDelivered(item);
       const isRetrait = isRetraitDepot(item);
-      const isReserve = isCompleted && item.statut_reserve === "Avec Réserve";
+      const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
+      const litigeQty = Number(item.quantite_litige) || 0;
+      const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null 
+        ? Number(item.quantite_recue) 
+        : (isCompleted ? (item.statut_reserve === "Avec Réserve" && litigeQty ? (qty - litigeQty) : qty) : qty);
+      const hasDiscrepancy = isCompleted && (recueQty !== qty);
+      const isReserve = isCompleted && (item.statut_reserve === "Avec Réserve" || hasDiscrepancy);
+      const variance = isCompleted ? (recueQty - qty) : 0;
+      const varianceStr = variance > 0 ? `+${variance}` : `${variance}`;
       const storeName = item.magasin || item.destination || "Magasin";
       const rawDriver = String(item.chauffeur || item.driver || "").trim();
       const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
       const driverName = isUnassigned ? "Non assigné" : rawDriver;
       const matricule = item.matricule || item.vehicle || "Camion standard";
-      const qty = Number(item.quantite !== undefined ? item.quantite : item.quantity) || 0;
-      const litigeQty = Number(item.quantite_litige) || 0;
-      const recueQty = item.quantite_recue !== undefined && item.quantite_recue !== null ? Number(item.quantite_recue) : (isCompleted ? (qty - litigeQty) : qty);
 
       if (DOM.modalRouteName) DOM.modalRouteName.textContent = item.magasin || item.destination || "Détail de la Tournée";
       if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Date programmée : ${item.date || "Non spécifiée"}`;
@@ -3644,7 +3701,7 @@ const LOCAL_DELIVERY_DATA = [];
               </span>
             `) : (isReserve ? `
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i> Livré avec réserve
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i> Livré avec réserve [${varianceStr}]
               </span>
             ` : `
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -3704,8 +3761,8 @@ const LOCAL_DELIVERY_DATA = [];
                   <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
                   <span>Détail du litige / Réserve</span>
                 </span>
-                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-rose-700 text-[11px] font-extrabold border border-amber-300">
-                  -${litigeQty} paires en litige
+                <span class="px-2 py-0.5 rounded-full ${variance > 0 ? "bg-blue-100 text-blue-800 border-blue-300" : "bg-amber-100 text-rose-700 border-amber-300"} text-[11px] font-extrabold border">
+                  ${variance > 0 ? `+${variance} paires en surplus` : `${variance} paires en manquant`}
                 </span>
               </div>
 
@@ -3721,8 +3778,13 @@ const LOCAL_DELIVERY_DATA = [];
                 </div>
                 <div class="bg-white p-2 rounded-xl border border-amber-200 shadow-2xs">
                   <span class="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Écart</span>
-                  <span class="text-xs sm:text-sm font-extrabold text-rose-600 font-mono">-${litigeQty} p.</span>
+                  <span class="text-xs sm:text-sm font-extrabold ${variance > 0 ? "text-blue-700" : "text-rose-600"} font-mono">${varianceStr} p.</span>
                 </div>
+              </div>
+
+              <!-- Clear Variance Summary Banner -->
+              <div class="p-2.5 rounded-xl bg-white border border-amber-200 text-center font-mono font-bold text-xs sm:text-sm ${variance > 0 ? 'text-blue-900' : 'text-amber-950'}">
+                Bilan : <span class="underline decoration-2">${recueQty} (Prévu: ${qty}) [${varianceStr}]</span>
               </div>
 
               <!-- Motif & Remarque -->
@@ -3922,7 +3984,7 @@ const LOCAL_DELIVERY_DATA = [];
               <div class="flex items-center justify-between">
                 <span class="px-4 py-2 rounded-xl ${isReserve ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"} border text-xs font-bold flex items-center gap-1.5">
                   <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-check text-emerald-600"} text-xs"></i>
-                  ${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : (isRetrait ? "Retrait effectué (Conforme)" : "Tournée effectuée (Conforme)")}
+                  ${isReserve ? `Livré avec réserve (${varianceStr} p.)` : (isRetrait ? "Retrait effectué (Conforme)" : "Tournée effectuée (Conforme)")}
                 </span>
                 ${!item.photo_url ? `
                   <button onclick="closeModal(); openPoDModal(AppState.rawDeliveries.find(d => String(d.id).trim() === '${item.id}'));" class="text-xs font-bold text-[#3076BB] hover:text-[#1B417E] flex items-center gap-1 p-2">
@@ -3931,8 +3993,8 @@ const LOCAL_DELIVERY_DATA = [];
                 ` : ""}
               </div>
             ` : (isAdmin ? `
-              <span class="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 self-start">
-                <i class="fa-solid fa-check text-xs"></i> ${isRetrait ? "Retrait client clôturé" : "Livraison clôturée"}
+              <span class="px-4 py-2 rounded-xl ${isReserve ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"} text-xs font-bold flex items-center gap-1.5 self-start">
+                <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-check text-emerald-600"} text-xs"></i> ${isReserve ? `Clôturé avec réserve (${varianceStr} p.)` : (isRetrait ? "Retrait client clôturé" : "Livraison clôturée")}
               </span>
             ` : ""))}
           </div>
@@ -3964,8 +4026,12 @@ const LOCAL_DELIVERY_DATA = [];
           if (newRow && newRow.status === "Livré") {
             const driverTag = newRow.delivered_by || newRow.chauffeur || "Chauffeur";
             const storeTag = newRow.magasin || newRow.delivery_id;
-            const isReserve = newRow.statut_reserve === "Avec Réserve";
-            const reserveTag = isReserve ? ` ⚠️ (Réserve: -${newRow.quantite_litige || 0} p.)` : " ✓";
+            const qPlanned = Number(newRow.quantite !== undefined ? newRow.quantite : newRow.quantity) || 0;
+            const qRec = newRow.quantite_recue !== undefined && newRow.quantite_recue !== null ? Number(newRow.quantite_recue) : qPlanned;
+            const rVariance = qRec - qPlanned;
+            const rVarStr = rVariance > 0 ? `+${rVariance}` : (rVariance < 0 ? `${rVariance}` : `±${newRow.quantite_litige || 0}`);
+            const isReserve = newRow.statut_reserve === "Avec Réserve" || (qRec !== qPlanned);
+            const reserveTag = isReserve ? ` ⚠️ (Réserve: ${rVarStr} p.)` : " ✓";
             showNotification(`⚡ [En direct] ${storeTag} validé Livré${reserveTag} par ${driverTag}`, isReserve ? "warning" : "success");
           }
           fetchRemoteDeliveries(false);
