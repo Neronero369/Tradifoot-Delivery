@@ -1924,9 +1924,9 @@ const LOCAL_DELIVERY_DATA = [
         }
       }
 
-      const rawMateriel = d.materiel !== undefined && d.materiel !== null ? String(d.materiel).trim() : "";
+      const rawMateriel = String(d.materiel || d.Materiel || d.matricule || d.vehicle || "").trim();
       const cleanMateriel = (rawMateriel && !/^(nan|none|null|-|\/)$/i.test(rawMateriel)) ? rawMateriel : null;
-      const vehicle = cleanMateriel || String(d.matricule || d.vehicle || "").trim();
+      const vehicle = cleanMateriel || "";
       const qty = Number(d.quantite !== undefined ? d.quantite : (d.quantity !== undefined ? d.quantity : 0)) || 0;
       const rawStatus = String(d.status || "");
       const isLivre = Boolean(d.completed === true || (/livr/i.test(rawStatus) && !/non/i.test(rawStatus)));
@@ -1947,7 +1947,7 @@ const LOCAL_DELIVERY_DATA = [
         chauffeur: isRetrait ? "RETRAIT DÉPÔT" : driver,
         Chauffeur: isRetrait ? "RETRAIT DÉPÔT" : driver,
         driver: isRetrait ? "RETRAIT DÉPÔT" : driver,
-        materiel: cleanMateriel || d.materiel || null,
+        materiel: cleanMateriel,
         matricule: vehicle,
         vehicle: vehicle,
         quantite: qty,
@@ -2490,7 +2490,7 @@ const LOCAL_DELIVERY_DATA = [
             const isDiscrepant = (qRecue !== null && qRecue !== qTotal) || qLitige > 0;
             const statReserve = row.statut_reserve || (isLivre ? (isDiscrepant ? "Avec Réserve" : "Conforme") : null);
 
-            const rawMat = String(row.materiel || row.Materiel || "").trim();
+            const rawMat = String(row.materiel || row.Materiel || row.matricule || row.Matricule || row.vehicle || "").trim();
             const cleanMat = (rawMat && !/^(nan|none|null|-|\/)$/i.test(rawMat)) ? rawMat : null;
             const vehicleVal = cleanMat || String(row.matricule || row.Matricule || row.vehicle || "").trim();
 
@@ -3467,7 +3467,7 @@ const LOCAL_DELIVERY_DATA = [
         const rawDriver = String(item.chauffeur || item.driver || "").trim();
         const isUnassigned = !rawDriver || /non assign[ée]|non spécifié|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
         const driverName = isUnassigned ? "Non assigné" : rawDriver;
-        const matricule = item.materiel || item.matricule || item.vehicle || "Véhicule non spécifié";
+        const matricule = item.materiel || "Véhicule non spécifié";
         const delivDate = item.date || "";
 
         const isSwipeable = !isCompleted && isChauffeur && !isRetrait;
@@ -3589,13 +3589,13 @@ const LOCAL_DELIVERY_DATA = [
                     </div>
                     <div class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 shrink-0">
                       <i class="fa-solid fa-truck text-slate-400 text-[10px]"></i>
-                      <span class="truncate max-w-[130px] font-mono text-[11px] text-slate-700 font-semibold">${matricule}</span>
+                      <span class="truncate max-w-[130px] font-mono text-[11px] text-slate-700 font-semibold">${item.materiel || 'Véhicule non spécifié'}</span>
                     </div>
                   </div>
                 ` : `
                   <div class="mt-2 text-xs text-slate-600 font-medium truncate flex items-center gap-1.5">
                     <i class="fa-solid fa-truck text-slate-400 text-xs"></i>
-                    <span class="truncate font-mono text-slate-700 font-semibold">${matricule}</span>
+                    <span class="truncate font-mono text-slate-700 font-semibold">${item.materiel || 'Véhicule non spécifié'}</span>
                   </div>
                 `)}
 
@@ -4801,7 +4801,7 @@ const LOCAL_DELIVERY_DATA = [
       const rawDriver = String(item.chauffeur || item.driver || "").trim();
       const isUnassigned = !rawDriver || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
       const driverName = isUnassigned ? "Non assigné" : rawDriver;
-      const matricule = item.materiel || item.matricule || item.vehicle || "Véhicule non spécifié";
+      const matricule = item.materiel || "Véhicule non spécifié";
 
       let detailTime = "";
       if (isCompleted && item.updated_at) {
@@ -4879,7 +4879,7 @@ const LOCAL_DELIVERY_DATA = [
             </div>
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
               <i class="fa-solid fa-truck text-slate-500"></i>
-              <span class="font-bold text-slate-800 font-mono">${matricule}</span>
+              <span class="font-bold text-slate-800 font-mono">${item.materiel || 'Véhicule non spécifié'}</span>
             </div>
           </div>
 

@@ -292,31 +292,25 @@ def parse_delivery_excel(file_path):
                         break
             normalized_date = normalize_date_to_iso(raw_date)
 
-            # Column 5: Materiel -> robust extraction & null handling
-            # Safe .get() checking variations just in case (e.g., row.get('Materiel'))
-            raw_materiel = row.get('Materiel')
-            if raw_materiel is None or (isinstance(raw_materiel, float) and np.isnan(raw_materiel)) or str(raw_materiel).strip().lower() in ("nan", "none", "null", ""):
+            # Column 5: Materiel -> safe extraction & handling potential invisible spaces
+            mat_val = str(row.get('Materiel', str(row.get('Materiel ', '')))).strip()
+            if not mat_val or mat_val.lower() == 'nan':
                 for key_cand in ['Matériel', 'MATERIEL', 'MATÉRIEL', 'materiel', 'matériel', 'Vehicule', 'Véhicule', 'VEHICULE', 'Camion', 'CAMION', 'Engin', 'ENGIN']:
                     if key_cand in df.columns:
                         val_m = row.get(key_cand)
-                        if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)) and str(val_m).strip().lower() not in ("nan", "none", "null", ""):
-                            raw_materiel = val_m
-                            break
+                        if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)):
+                            cand_s = str(val_m).strip()
+                            if cand_s and cand_s.lower() not in ("nan", "none", "null", "-", "/"):
+                                mat_val = cand_s
+                                break
+                if (not mat_val or mat_val.lower() == 'nan') and col_materiel is not None and col_materiel in df.columns:
+                    val_m = row.get(col_materiel)
+                    if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)):
+                        cand_s = str(val_m).strip()
+                        if cand_s and cand_s.lower() not in ("nan", "none", "null", "-", "/"):
+                            mat_val = cand_s
 
-            if (raw_materiel is None or (isinstance(raw_materiel, float) and np.isnan(raw_materiel))) and col_materiel is not None and col_materiel in df.columns:
-                val_m = row.get(col_materiel)
-                if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)):
-                    raw_materiel = val_m
-
-            # Clean extracted value: strip whitespace, convert empty/NaN/None/"nan" to None
-            materiel = None
-            if raw_materiel is not None and pd.notna(raw_materiel):
-                if isinstance(raw_materiel, str):
-                    cleaned_mat = raw_materiel.strip()
-                else:
-                    cleaned_mat = str(raw_materiel).strip()
-                if cleaned_mat and cleaned_mat.lower() not in ("nan", "none", "null", "-", "/"):
-                    materiel = cleaned_mat
+            materiel = mat_val if mat_val and mat_val.lower() != 'nan' and mat_val.lower() not in ("none", "null", "-", "/") else None
 
             # Occurrence tracker for deterministic unique delivery_id
             store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
@@ -501,17 +495,10 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         else:
             final_status = raw_status
 
-        raw_mat = r.get("materiel")
-        materiel_val = None
-        if raw_mat is not None:
-            if isinstance(raw_mat, float) and np.isnan(raw_mat):
-                materiel_val = None
-            else:
-                mat_clean = str(raw_mat).strip()
-                if not mat_clean or mat_clean.lower() in ("nan", "none", "null", "-", "/"):
-                    materiel_val = None
-                else:
-                    materiel_val = mat_clean
+        mat_val = str(r.get("materiel") or r.get("Materiel") or r.get("Materiel ") or "").strip()
+        materiel_val = mat_val if mat_val and mat_val.lower() != "nan" and mat_val.lower() not in ("none", "null", "-", "/") else None
+        if not materiel_val and existing_row and existing_row.get("materiel"):
+            materiel_val = existing_row["materiel"]
 
         mapped = {
             "delivery_id": rec_id,
@@ -522,28 +509,16 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             "materiel": materiel_val,
             "quantite": qty,
             "status": final_status,
-            "delivery_key": dkey
+            "delivery_key": dkey,
+            "delivered_by": existing_row.get("delivered_by") if existing_row else None,
+            "quantite_recue": existing_row.get("quantite_recue") if existing_row else None,
+            "quantite_litige": existing_row.get("quantite_litige") if existing_row else None,
+            "statut_reserve": existing_row.get("statut_reserve") if existing_row else None,
+            "photo_url": existing_row.get("photo_url") if existing_row else None,
+            "recouvrement_url": existing_row.get("recouvrement_url") if existing_row else None,
+            "latitude": existing_row.get("latitude") if existing_row else None,
+            "longitude": existing_row.get("longitude") if existing_row else None,
         }
-
-        if existing_row:
-            if existing_row.get("delivered_by"):
-                mapped["delivered_by"] = existing_row["delivered_by"]
-            if existing_row.get("quantite_recue") is not None:
-                mapped["quantite_recue"] = existing_row["quantite_recue"]
-            if existing_row.get("quantite_litige") is not None:
-                mapped["quantite_litige"] = existing_row["quantite_litige"]
-            if existing_row.get("statut_reserve"):
-                mapped["statut_reserve"] = existing_row["statut_reserve"]
-            if existing_row.get("photo_url"):
-                mapped["photo_url"] = existing_row["photo_url"]
-            if existing_row.get("recouvrement_url"):
-                mapped["recouvrement_url"] = existing_row["recouvrement_url"]
-            if existing_row.get("latitude") is not None:
-                mapped["latitude"] = existing_row["latitude"]
-            if existing_row.get("longitude") is not None:
-                mapped["longitude"] = existing_row["longitude"]
-            if not mapped.get("materiel") and existing_row.get("materiel"):
-                mapped["materiel"] = existing_row["materiel"]
 
         payload.append(mapped)
 

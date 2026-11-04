@@ -117,6 +117,7 @@ def parse_excel_file_for_supabase(fpath):
                 "magasin": store,
                 "chauffeur": driver,
                 "matricule": vehicle,
+                "materiel": vehicle,
                 "quantite": qty,
                 "status": "Non Livré"
             })
@@ -256,6 +257,7 @@ def extract_routes_from_programs(programs, index_path=None):
                 "driver": driver,
                 "matricule": vehicle,
                 "vehicle": vehicle,
+                "materiel": vehicle,
                 "quantite": qty,
                 "quantity": qty,
                 "status": final_status,
