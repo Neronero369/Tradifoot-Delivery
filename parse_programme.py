@@ -129,6 +129,7 @@ def parse_delivery_excel(file_path):
         col_chauffeur = None
         col_livraison = None
         col_remarque = None
+        col_materiel = None
         raw_headers = []
 
         for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
@@ -150,6 +151,8 @@ def parse_delivery_excel(file_path):
                         col_livraison = c_idx
                     elif ("remarque" in h or "note" in h or "observation" in h) and col_remarque is None:
                         col_remarque = c_idx
+                    elif ("materiel" in h or "matériel" in h or "vehicule" in h or "véhicule" in h or "camion" in h or "engin" in h) and col_materiel is None:
+                        col_materiel = c_idx
                 break
 
         if header_row_idx is None or col_boutique is None:
@@ -226,6 +229,13 @@ def parse_delivery_excel(file_path):
             raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
             normalized_date = normalize_date_to_iso(raw_date)
 
+            # Column 5: Materiel -> materiel (Clean string, default to None if empty or NaN)
+            raw_materiel = str(row[col_materiel] or "").strip() if col_materiel is not None and col_materiel < len(row) and row[col_materiel] is not None else ""
+            materiel_cleaned = " ".join(raw_materiel.split())
+            if materiel_cleaned.lower() in ("nan", "none", "null", "-", "/"):
+                materiel_cleaned = ""
+            materiel = materiel_cleaned if materiel_cleaned else None
+
             # Occurrence tracker for deterministic unique delivery_id
             store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
             driver_key_part = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
@@ -242,7 +252,8 @@ def parse_delivery_excel(file_path):
                 "date": normalized_date,
                 "magasin": magasin,
                 "chauffeur": chauffeur,
-                "matricule": "",
+                "matricule": materiel or "",
+                "materiel": materiel,
                 "quantite": qty,
                 "status": "Non Livré",
                 "delivery_key": delivery_key
@@ -313,6 +324,10 @@ def upsert_manifest_records(incoming_records, existing_records):
                 new_item["statut_reserve"] = matched["statut_reserve"]
             if matched.get("photo_url"):
                 new_item["photo_url"] = matched["photo_url"]
+            if matched.get("recouvrement_url"):
+                new_item["recouvrement_url"] = matched["recouvrement_url"]
+            if matched.get("materiel") and not new_item.get("materiel"):
+                new_item["materiel"] = matched["materiel"]
         else:
             if new_item.get("status") != "Livré":
                 new_item["status"] = "Non Livré"
@@ -331,7 +346,7 @@ def fetch_supabase_records(supabase_url=None, api_key=None):
     """
     url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
     key = api_key or DEFAULT_SUPABASE_API_KEY
-    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by"
+    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by,materiel"
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}"
@@ -405,12 +420,23 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         else:
             final_status = raw_status
 
+        raw_mat = r.get("materiel")
+        if raw_mat is not None:
+            mat_clean = str(raw_mat).strip()
+            if not mat_clean or mat_clean.lower() in ("nan", "none", "null", "-", "/"):
+                materiel_val = None
+            else:
+                materiel_val = mat_clean
+        else:
+            materiel_val = None
+
         mapped = {
             "delivery_id": rec_id,
             "date": deliv_date,
             "magasin": store,
             "chauffeur": driver,
-            "matricule": matricule,
+            "matricule": matricule or (materiel_val or ""),
+            "materiel": materiel_val,
             "quantite": qty,
             "status": final_status,
             "delivery_key": dkey
@@ -427,6 +453,14 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
                 mapped["statut_reserve"] = existing_row["statut_reserve"]
             if existing_row.get("photo_url"):
                 mapped["photo_url"] = existing_row["photo_url"]
+            if existing_row.get("recouvrement_url"):
+                mapped["recouvrement_url"] = existing_row["recouvrement_url"]
+            if existing_row.get("latitude") is not None:
+                mapped["latitude"] = existing_row["latitude"]
+            if existing_row.get("longitude") is not None:
+                mapped["longitude"] = existing_row["longitude"]
+            if not mapped.get("materiel") and existing_row.get("materiel"):
+                mapped["materiel"] = existing_row["materiel"]
 
         payload.append(mapped)
 
