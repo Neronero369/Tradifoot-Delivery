@@ -3472,6 +3472,21 @@ const LOCAL_DELIVERY_DATA = [
 
         const isSwipeable = !isCompleted && isChauffeur && !isRetrait;
 
+        // Completion Time Parsing (HH:mm)
+        let formattedTime = "";
+        const isDeliveryDone = isCompleted || (item.status && String(item.status).startsWith("Livré"));
+        const timeSource = item.updated_at || item.completed_at || item.delivery_time;
+        if (isDeliveryDone && timeSource) {
+          try {
+            const dateObj = new Date(timeSource);
+            if (!isNaN(dateObj.getTime())) {
+              formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+          } catch (e) {
+            formattedTime = "";
+          }
+        }
+
         cardsHtml += `
           <div class="swipe-card-wrapper relative overflow-hidden rounded-2xl ${isSwipeable ? 'swipeable-card' : ''}" data-delivery-id="${item.id}">
             ${isSwipeable ? `
@@ -3495,12 +3510,15 @@ const LOCAL_DELIVERY_DATA = [
               <div>
                 <!-- 1. Header: Date & Status Badges (Clean, No Technical ID) -->
                 <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-                  <div class="flex items-center gap-1.5 min-w-0">
+                  <div class="flex flex-col items-start min-w-0">
                     ${delivDate ? `
                       <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
                         <i class="fa-regular fa-calendar text-slate-400 text-xs shrink-0"></i>
                         <span>${delivDate}</span>
                       </span>
+                    ` : ""}
+                    ${formattedTime ? `
+                      <div class="text-xs text-gray-500 mt-0.5 font-medium">⏱ ${formattedTime}</div>
                     ` : ""}
                   </div>
                   <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
@@ -4243,6 +4261,7 @@ const LOCAL_DELIVERY_DATA = [
       const montantRecouvrement = montant > 0 ? montant : (Number(targetItem.montant_recouvrement) || 0);
 
       // Optimistic UI state update: mark as Livré
+      const completedTimestamp = new Date().toISOString();
       targetItem.completed = true;
       targetItem.status = "Livré";
       targetItem.statut_reserve = statutReserve;
@@ -4254,6 +4273,7 @@ const LOCAL_DELIVERY_DATA = [
       targetItem.recouvrement_url = photoRecouvrementUrl;
       targetItem.photo_recouvrement_url = photoRecouvrementUrl;
       targetItem.montant_recouvrement = montantRecouvrement;
+      targetItem.updated_at = completedTimestamp;
       if (gpsCoords) {
         targetItem.latitude = gpsCoords.latitude;
         targetItem.longitude = gpsCoords.longitude;
@@ -4276,6 +4296,7 @@ const LOCAL_DELIVERY_DATA = [
           itemInView.recouvrement_url = photoRecouvrementUrl;
           itemInView.photo_recouvrement_url = photoRecouvrementUrl;
           itemInView.montant_recouvrement = montantRecouvrement;
+          itemInView.updated_at = completedTimestamp;
           if (gpsCoords) {
             itemInView.latitude = gpsCoords.latitude;
             itemInView.longitude = gpsCoords.longitude;
@@ -4418,6 +4439,7 @@ const LOCAL_DELIVERY_DATA = [
 
       // 1. Optimistic local state update
       const totalPlanned = Number(targetItem.quantite !== undefined ? targetItem.quantite : targetItem.quantity) || 0;
+      const completedTimestamp = new Date().toISOString();
       targetItem.completed = true;
       targetItem.status = "Livré";
       targetItem.statut_reserve = "Conforme";
@@ -4425,6 +4447,7 @@ const LOCAL_DELIVERY_DATA = [
       targetItem.quantite_litige = 0;
       targetItem.motif_reserve = null;
       targetItem.remarque_chauffeur = null;
+      targetItem.updated_at = completedTimestamp;
 
       if (Array.isArray(AppState.deliveries)) {
         const itemInView = AppState.deliveries.find(d => String(d.id).trim() === idStr);
@@ -4436,6 +4459,7 @@ const LOCAL_DELIVERY_DATA = [
           itemInView.quantite_litige = 0;
           itemInView.motif_reserve = null;
           itemInView.remarque_chauffeur = null;
+          itemInView.updated_at = completedTimestamp;
         }
       }
 
@@ -4779,8 +4803,18 @@ const LOCAL_DELIVERY_DATA = [
       const driverName = isUnassigned ? "Non assigné" : rawDriver;
       const matricule = item.materiel || item.matricule || item.vehicle || "Véhicule non spécifié";
 
+      let detailTime = "";
+      if (isCompleted && item.updated_at) {
+        try {
+          const d = new Date(item.updated_at);
+          if (!isNaN(d.getTime())) {
+            detailTime = ` • ⏱ ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          }
+        } catch (e) {}
+      }
+
       if (DOM.modalRouteName) DOM.modalRouteName.textContent = item.magasin || item.destination || "Détail de la Tournée";
-      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Date programmée : ${item.date || "Non spécifiée"}`;
+      if (DOM.modalRouteSub) DOM.modalRouteSub.textContent = `Date programmée : ${item.date || "Non spécifiée"}${detailTime}`;
 
       DOM.modalBody.innerHTML = `
         <div class="space-y-4">
