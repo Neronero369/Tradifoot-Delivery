@@ -1298,8 +1298,8 @@ const LOCAL_DELIVERY_DATA = [
     "vehicle": "MERCEDES",
     "quantite": 616,
     "quantity": 616,
-    "status": "Non Livré",
-    "completed": false
+    "status": "Livré",
+    "completed": true
   },
   {
     "id": "LIV-2026-11-03-MRABETMOUSSA-SNOUCISEIFEDDINE-1",
@@ -1891,11 +1891,28 @@ const LOCAL_DELIVERY_DATA = [
      * Guarantees all expected properties are present with proper defaults.
      * Strictly preserves le chauffeur du programme de livraison and binds Unique ID.
      */
+    function isRetraitDepot(item) {
+      if (!item) return false;
+      const ch = String(item.chauffeur || item.driver || item.Chauffeur || "").trim().toUpperCase();
+      const rem = String(item.remarque || item.notes || item.observation || item.remark || item.Remarque || "").trim().toUpperCase();
+      const id = String(item.delivery_id || item.id || "").trim().toUpperCase();
+
+      if (ch.includes("RETRAIT") || ch.includes("RAMASSAGE") || ch.includes("RAMMASAGE")) return true;
+      if (rem.includes("RAMASSAGE") || rem.includes("RAMMASAGE") || rem.includes("RETRAIT")) return true;
+      if ((ch === "AUTER" || ch === "AUTRE" || ch === "AUTRES") && (rem.includes("CLIENT") || rem.includes("RAMASSAGE") || !rem)) return true;
+      if (id.includes("RETRAITDPT") || id.includes("RETRAITDEPOT") || id.includes("RETRAIT-DEPOT")) return true;
+      return false;
+    }
+
     function normalizeDeliveryRecord(d, index = 0) {
       if (!d) return null;
       const store = String(d.magasin || d.destination || "").trim();
       let driver = String(d.Chauffeur || d.chauffeur || d.driver || "").trim();
-      if (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(driver)) {
+
+      const isRetrait = isRetraitDepot(d);
+      if (isRetrait) {
+        driver = "RETRAIT DÉPÔT";
+      } else if (/non sp[ée]cifi[ée]|non assign[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(driver)) {
         driver = "";
       }
       let id = String(d.delivery_id || d.id || "").trim();
@@ -1929,9 +1946,9 @@ const LOCAL_DELIVERY_DATA = [
         date: date,
         magasin: store,
         destination: store,
-        chauffeur: driver,
-        Chauffeur: driver,
-        driver: driver,
+        chauffeur: isRetrait ? "RETRAIT DÉPÔT" : driver,
+        Chauffeur: isRetrait ? "RETRAIT DÉPÔT" : driver,
+        driver: isRetrait ? "RETRAIT DÉPÔT" : driver,
         matricule: vehicle,
         vehicle: vehicle,
         quantite: qty,
@@ -2273,7 +2290,13 @@ const LOCAL_DELIVERY_DATA = [
       let baseDeliveries;
       if (remoteDeliveries && remoteDeliveries.length > 0) {
         // Display exactly what the database sends, row for row, with zero frontend filtering
-        baseDeliveries = remoteDeliveries.map((d, idx) => normalizeDeliveryRecord(d, idx)).filter(Boolean);
+        baseDeliveries = remoteDeliveries
+          .filter(d => {
+            const did = String(d.delivery_id || d.id || '').toUpperCase();
+            return !did.includes('-AUTER-') && !did.includes('-AUTRE-');
+          })
+          .map((d, idx) => normalizeDeliveryRecord(d, idx))
+          .filter(Boolean);
       } else {
         baseDeliveries = LOCAL_DELIVERY_DATA
           .filter(isValidDeliveryItem)
@@ -3440,13 +3463,15 @@ const LOCAL_DELIVERY_DATA = [
                   </div>
                 ` : ""}
 
-                ${!isChauffeur ? `
+                ${isRetrait ? `
                   <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
-                    ${isRetrait ? `
-                      <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200">
-                        <i class="fa-solid fa-warehouse text-blue-600 text-[10px]"></i> RETRAIT DÉPÔT (Client)
-                      </span>
-                    ` : (isUnassigned ? `
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-200 shadow-2xs">
+                      <i class="fa-solid fa-warehouse text-blue-600 text-[10px]"></i> RETRAIT DÉPÔT (Client)
+                    </span>
+                  </div>
+                ` : (!isChauffeur ? `
+                  <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
+                    ${isUnassigned ? `
                       <i class="fa-solid fa-user-tie text-[#3076BB] text-xs"></i>
                       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
                         <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-600"></i> Non assigné
@@ -3454,9 +3479,9 @@ const LOCAL_DELIVERY_DATA = [
                     ` : `
                       <i class="fa-solid fa-user-tie text-[#3076BB] text-xs"></i>
                       <strong>${driverName}</strong>
-                    `)}
+                    `}
                   </div>
-                ` : ""}
+                ` : "")}
 
               </div>
 
@@ -4601,17 +4626,21 @@ const LOCAL_DELIVERY_DATA = [
           <!-- Status Banner -->
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Statut actuel</span>
-            ${!isCompleted ? `
+            ${!isCompleted ? (isRetrait ? `
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                <span>📦</span> À Récupérer
+              </span>
+            ` : `
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span> Non Livré
               </span>
-            ` : (isReserve ? `
+            `) : (isReserve ? `
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
                 <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs"></i> Livré avec réserve
               </span>
             ` : `
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Livré (Conforme)
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ${isRetrait ? "Retiré (Dépôt)" : "Livré (Conforme)"}
               </span>
             `)}
           </div>
@@ -4627,14 +4656,16 @@ const LOCAL_DELIVERY_DATA = [
           <!-- Driver & Vehicle -->
           <div class="grid grid-cols-2 gap-3 text-xs">
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
-              <i class="fa-solid fa-user-tie text-blue-600"></i>
-              ${isUnassigned ? `
+              <i class="fa-solid ${isRetrait ? "fa-warehouse text-blue-600" : "fa-user-tie text-blue-600"}"></i>
+              ${isRetrait ? `
+                <span class="font-bold text-blue-800">RETRAIT DÉPÔT (Client)</span>
+              ` : (isUnassigned ? `
                 <span class="inline-flex items-center gap-1 text-amber-700 font-semibold text-xs">
                   <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-500"></i> Non assigné
                 </span>
               ` : `
                 <span class="font-bold text-slate-800">${driverName}</span>
-              `}
+              `)}
             </div>
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center gap-2">
               <i class="fa-solid fa-truck text-slate-500"></i>
@@ -4800,41 +4831,40 @@ const LOCAL_DELIVERY_DATA = [
           ` : ""}
 
           <!-- Actions -->
-          ${isChauffeur ? `
-            <div class="pt-2 flex flex-col gap-2">
-              ${!isCompleted ? `
-                <button onclick="closeModal(); markAsDelivered('${item.id}', event);" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-clipboard-check"></i>
-                  <span>Valider la Livraison (Conforme / Réserve)</span>
-                </button>
-              ` : `
-                <div class="flex items-center justify-between">
-                  <span class="px-4 py-2 rounded-xl ${isReserve ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"} border text-xs font-bold flex items-center gap-1.5">
-                    <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-check text-emerald-600"} text-xs"></i>
-                    ${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : "Tournée effectuée (Conforme)"}
-                  </span>
-                  ${!item.photo_url ? `
-                    <button onclick="closeModal(); openPoDModal(AppState.rawDeliveries.find(d => String(d.id).trim() === '${item.id}'));" class="text-xs font-bold text-[#3076BB] hover:text-[#1B417E] flex items-center gap-1 p-2">
-                      <i class="fa-solid fa-camera"></i> Ajouter photo BL
-                    </button>
-                  ` : ""}
-                </div>
-              `}
-            </div>
-          ` : (isAdmin && isUnassigned ? `
-            <div class="pt-2 flex flex-col gap-2">
-              ${!isCompleted ? `
-                <button onclick="closeModal(); adminCloseDelivery('${item.id}');" class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-clipboard-check"></i>
-                  <span>Clôturer / Livré (Admin)</span>
-                </button>
-              ` : `
-                <span class="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 self-start">
-                  <i class="fa-solid fa-check text-xs"></i> Livraison clôturée
+          <div class="pt-2 flex flex-col gap-2">
+            ${!isCompleted ? (isRetrait ? `
+              <button onclick="closeModal(); validateRetrait('${item.id}', event);" class="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-box-archive"></i>
+                <span>Valider le Retrait Client</span>
+              </button>
+            ` : (isChauffeur ? `
+              <button onclick="closeModal(); markAsDelivered('${item.id}', event);" class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <span>Valider la Livraison (Conforme / Réserve)</span>
+              </button>
+            ` : (isAdmin && isUnassigned ? `
+              <button onclick="closeModal(); adminCloseDelivery('${item.id}');" class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 min-h-[48px] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <span>Clôturer / Livré (Admin)</span>
+              </button>
+            ` : ""))) : (isChauffeur ? `
+              <div class="flex items-center justify-between">
+                <span class="px-4 py-2 rounded-xl ${isReserve ? "bg-amber-50 border-amber-300 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"} border text-xs font-bold flex items-center gap-1.5">
+                  <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-check text-emerald-600"} text-xs"></i>
+                  ${isReserve ? `Livré avec réserve (-${litigeQty} p.)` : (isRetrait ? "Retrait effectué (Conforme)" : "Tournée effectuée (Conforme)")}
                 </span>
-              `}
-            </div>
-          ` : "")}
+                ${!item.photo_url ? `
+                  <button onclick="closeModal(); openPoDModal(AppState.rawDeliveries.find(d => String(d.id).trim() === '${item.id}'));" class="text-xs font-bold text-[#3076BB] hover:text-[#1B417E] flex items-center gap-1 p-2">
+                    <i class="fa-solid fa-camera"></i> Ajouter photo BL
+                  </button>
+                ` : ""}
+              </div>
+            ` : (isAdmin ? `
+              <span class="px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-1.5 self-start">
+                <i class="fa-solid fa-check text-xs"></i> ${isRetrait ? "Retrait client clôturé" : "Livraison clôturée"}
+              </span>
+            ` : ""))}
+          </div>
         </div>
       `;
 

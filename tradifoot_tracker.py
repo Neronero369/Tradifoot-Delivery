@@ -97,6 +97,9 @@ def parse_excel_file_for_supabase(fpath):
                 del_date = fallback_date
 
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
+            row_notes = " ".join([str(v or "").lower() for v in (d.get("remark"), d.get("remarque"), d.get("notes"), d.get("retour"), d.get("driver"), d.get("store")) if v])
+            if "ramassage" in row_notes or "rammasage" in row_notes or "retrait depot" in row_notes or "retrait dépôt" in row_notes or "retrait" in driver.lower():
+                driver = "RETRAIT DÉPÔT"
             if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
                 continue
             vehicle = d.get("vehicle") or "Camion Porteur"
@@ -543,8 +546,18 @@ def parse_delivery_file(fpath):
 
         driver = str(r[col_driver]).strip().upper() if col_driver is not None and r[col_driver] else ''
         rem = str(r[col_rem]).strip() if col_rem is not None and r[col_rem] else ''
+        row_text = " ".join([str(c or "").strip().lower() for c in r if c is not None])
         d_low = driver.lower()
-        if (d_low in ('autre', 'auter', 'autres') or 'autre' in d_low or 'auter' in d_low) and ('ramassage' in rem.lower() or 'rammasage' in rem.lower()):
+        is_ramassage_pickup = (
+            "ramassage" in row_text or
+            "rammasage" in row_text or
+            "retrait depot" in row_text or
+            "retrait dépôt" in row_text or
+            "retrait" in d_low or
+            ((d_low in ('autre', 'auter', 'autres') or 'autre' in d_low or 'auter' in d_low) and
+             ('client' in row_text or 'ramassage' in row_text or not rem))
+        )
+        if is_ramassage_pickup:
             driver = 'RETRAIT DÉPÔT'
         if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
             continue

@@ -170,14 +170,26 @@ def parse_delivery_excel(file_path):
         driver_name = " ".join(raw_driver.split())
 
         # Customer Pickup (Ramassage) Workflow:
-        # Inspect Chauffeur and REMARQUE columns.
-        # If Chauffeur (case-insensitive) equals "autre" (or "auter") AND REMARQUE contains "rammasage" or "ramassage" (case-insensitive):
-        # Override driver name: driver_name = 'RETRAIT DÉPÔT'
+        # Inspect Chauffeur and REMARQUE columns, as well as entire row.
+        # Make sure EVERY "Ramassage par le client" is set to "RETRAIT DÉPÔT"
         raw_remarque = str(row[col_remarque] or "").strip() if col_remarque is not None and col_remarque < len(row) and row[col_remarque] is not None else ""
         remarque_clean = " ".join(raw_remarque.split()).lower()
-
         driver_lower = driver_name.lower()
-        if (driver_lower in ("autre", "auter", "autres") or "autre" in driver_lower or "auter" in driver_lower) and ("ramassage" in remarque_clean or "rammasage" in remarque_clean):
+        row_text = " ".join([str(c or "").strip().lower() for c in row if c is not None])
+
+        is_ramassage_pickup = (
+            "ramassage" in remarque_clean or
+            "rammasage" in remarque_clean or
+            "ramassage" in row_text or
+            "rammasage" in row_text or
+            "retrait depot" in row_text or
+            "retrait dépôt" in row_text or
+            "retrait" in driver_lower or
+            ((driver_lower in ("autre", "auter", "autres") or "autre" in driver_lower or "auter" in driver_lower) and
+             ("client" in row_text or "ramassage" in row_text or not remarque_clean))
+        )
+
+        if is_ramassage_pickup:
             driver_name = "RETRAIT DÉPÔT"
 
         # CRITICAL: Strict Blacklist Check
