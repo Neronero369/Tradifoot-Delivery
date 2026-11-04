@@ -2541,13 +2541,41 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     /**
+     * GPS Stamping: Silently captures the device's GPS position with a strict 4-second
+     * timeout. Never blocks the delivery flow — returns null on any failure (denied,
+     * unavailable, timeout). Called fire-and-forget alongside photo compression so
+     * drivers experience zero additional latency.
+     * @returns {Promise<{latitude: number, longitude: number}|null>}
+     */
+    function captureGPSCoords() {
+      return new Promise((resolve) => {
+        if (!navigator || !navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+        const timer = setTimeout(() => resolve(null), 4000);
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            clearTimeout(timer);
+            resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+          },
+          () => {
+            clearTimeout(timer);
+            resolve(null);
+          },
+          { timeout: 3800, maximumAge: 60000, enableHighAccuracy: false }
+        );
+      });
+    }
+
+    /**
      * Requirement 2: Correct Update & Upsert Logic
      * - Enforces chauffeur authentication (Admins cannot trigger updates)
      * - Optimistically updates local UI state
      * - Upserts delivery in Supabase table 'deliveries' with onConflict: 'delivery_id'
      * - Logs explicit errors to console and shows toast notification on error
      */
-    async function syncDeliveryStatusToSupabase(item, newStatus = "Livré", photoUrl = null, reserveData = null, recouvrementData = null) {
+    async function syncDeliveryStatusToSupabase(item, newStatus = "Livré", photoUrl = null, reserveData = null, recouvrementData = null, gpsCoords = null) {
       if (!item) return false;
 
       const currentUser = AppState.currentUser || getAuthSession();
@@ -2607,6 +2635,8 @@ const LOCAL_DELIVERY_DATA = [
         a_recouvrement: hasRecouvrement,
         photo_recouvrement_url: photoRecetteUrl,
         montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
+        latitude: gpsCoords ? gpsCoords.latitude : null,
+        longitude: gpsCoords ? gpsCoords.longitude : null,
         updated_at: new Date().toISOString()
       };
 
@@ -2661,6 +2691,8 @@ const LOCAL_DELIVERY_DATA = [
             a_recouvrement: hasRecouvrement,
             photo_recouvrement_url: photoRecetteUrl,
             montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
+            latitude: gpsCoords ? gpsCoords.latitude : null,
+            longitude: gpsCoords ? gpsCoords.longitude : null,
             updated_at: new Date().toISOString()
           };
           const res3 = await supabaseClient
@@ -3970,11 +4002,18 @@ const LOCAL_DELIVERY_DATA = [
         if (statusText) statusText.textContent = "Compression des photos...";
         if (compInfo) compInfo.textContent = "Optimisation JPEG via canvas (max 1280px)...";
 
-        // 1. Dual-Compression Engine (<canvas> 1280px, quality 0.7)
+        // 1. Dual-Compression Engine (<canvas> 1280px, quality 0.7) + silent GPS capture in parallel
+        //    GPS fires immediately alongside compression — no extra delay for the driver.
         const blBlobPromise = compressImage(selectedBlFile, 1280, 0.7);
         const recetteBlobPromise = selectedRecetteFile ? compressImage(selectedRecetteFile, 1280, 0.7) : Promise.resolve(null);
+        const gpsCoordsPromise = captureGPSCoords(); // silent, 4s timeout, never blocks
 
-        const [compressedBlBlob, compressedRecetteBlob] = await Promise.all([blBlobPromise, recetteBlobPromise]);
+        const [compressedBlBlob, compressedRecetteBlob, gpsCoords] = await Promise.all([blBlobPromise, recetteBlobPromise, gpsCoordsPromise]);
+        if (gpsCoords) {
+          console.log(`[GPS] Position capturée: ${gpsCoords.latitude.toFixed(5)}, ${gpsCoords.longitude.toFixed(5)}`);
+        } else {
+          console.log("[GPS] Position non disponible (désactivé, refusé ou timeout).");
+        }
 
         const timestamp = Date.now();
         const safeId = String(targetItem.delivery_id || targetItem.id).replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -4036,8 +4075,8 @@ const LOCAL_DELIVERY_DATA = [
           montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
         };
 
-        // 5. Finalize delivery and sync to Supabase
-        await finalizeDelivery(targetItem, blPhotoUrl, reserveData, recouvrementData);
+        // 5. Finalize delivery and sync to Supabase (with captured GPS stamp)
+        await finalizeDelivery(targetItem, blPhotoUrl, reserveData, recouvrementData, gpsCoords);
 
         // 6. Close Modal
         closePoDModal();
@@ -4071,11 +4110,13 @@ const LOCAL_DELIVERY_DATA = [
         montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
       };
 
+      // Silent GPS capture — fires after modal closes so driver is never blocked
       closePoDModal();
-      await finalizeDelivery(targetItem, null, reserveData, recouvrementData);
+      const gpsCoords = await captureGPSCoords();
+      await finalizeDelivery(targetItem, null, reserveData, recouvrementData, gpsCoords);
     }
 
-    async function finalizeDelivery(targetItem, photoUrl = null, reserveData = null, recouvrementData = null) {
+    async function finalizeDelivery(targetItem, photoUrl = null, reserveData = null, recouvrementData = null, gpsCoords = null) {
       const currentUser = AppState.currentUser || getAuthSession();
       const idStr = String(targetItem.delivery_id || targetItem.id).trim();
 
@@ -4160,8 +4201,8 @@ const LOCAL_DELIVERY_DATA = [
         showNotification(isRetrait ? `${notifStoreName} marquée comme Retirée.` : `${notifStoreName} marquée comme Livrée.`, "success");
       }
 
-      // Sync status change to Supabase with full row details, reserve fields, photo_url & recouvrement
-      await syncDeliveryStatusToSupabase(targetItem, "Livré", photoUrl, reserveData, recouvrementData);
+      // Sync status change to Supabase with full row details, reserve fields, photo_url & recouvrement & GPS
+      await syncDeliveryStatusToSupabase(targetItem, "Livré", photoUrl, reserveData, recouvrementData, gpsCoords);
     }
 
     function validateRetrait(deliveryId, event) {
@@ -4608,6 +4649,7 @@ const LOCAL_DELIVERY_DATA = [
       const isChauffeur = Boolean(currentUser && currentUser.role === "chauffeur");
       const isAdmin = Boolean(currentUser && currentUser.role === "admin");
       const isCompleted = isItemDelivered(item);
+      const isRetrait = isRetraitDepot(item);
       const isReserve = isCompleted && item.statut_reserve === "Avec Réserve";
       const storeName = item.magasin || item.destination || "Magasin";
       const rawDriver = String(item.chauffeur || item.driver || "").trim();
@@ -4652,6 +4694,21 @@ const LOCAL_DELIVERY_DATA = [
               <span>${storeName}</span>
             </div>
           </div>
+
+          <!-- GPS Stamp (Admin only — shown only on completed deliveries) -->
+          ${isAdmin && isCompleted ? `
+            <div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Position GPS</span>
+              ${(item.latitude != null && item.longitude != null) ? `
+                <a href="https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 text-blue-600 underline text-xs font-semibold hover:text-blue-800 transition-colors">
+                  📍 Position GPS enregistrée
+                </a>
+              ` : `
+                <span class="text-xs text-gray-400 flex items-center gap-1">📍 GPS non disponible</span>
+              `}
+            </div>
+          ` : ""}
 
           <!-- Driver & Vehicle -->
           <div class="grid grid-cols-2 gap-3 text-xs">
