@@ -542,6 +542,10 @@ def parse_delivery_file(fpath):
         tot_units += row_qty
 
         driver = str(r[col_driver]).strip().upper() if col_driver is not None and r[col_driver] else ''
+        rem = str(r[col_rem]).strip() if col_rem is not None and r[col_rem] else ''
+        d_low = driver.lower()
+        if (d_low in ('autre', 'auter', 'autres') or 'autre' in d_low or 'auter' in d_low) and ('ramassage' in rem.lower() or 'rammasage' in rem.lower()):
+            driver = 'RETRAIT DÉPÔT'
         if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
             continue
         vehicle = str(r[col_vehicle]).strip().upper() if col_vehicle is not None and r[col_vehicle] else ''

@@ -107,6 +107,7 @@ def parse_delivery_excel(file_path):
     col_globale = None
     col_chauffeur = None
     col_livraison = None
+    col_remarque = None
     raw_headers = []
 
     for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
@@ -126,6 +127,8 @@ def parse_delivery_excel(file_path):
                     col_chauffeur = c_idx
                 elif h in ("livraison", "date") or ("livraison" in h and col_livraison is None):
                     col_livraison = c_idx
+                elif ("remarque" in h or "note" in h or "observation" in h) and col_remarque is None:
+                    col_remarque = c_idx
             break
 
     if header_row_idx is None or col_boutique is None:
@@ -166,15 +169,29 @@ def parse_delivery_excel(file_path):
         raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
         driver_name = " ".join(raw_driver.split())
 
+        # Customer Pickup (Ramassage) Workflow:
+        # Inspect Chauffeur and REMARQUE columns.
+        # If Chauffeur (case-insensitive) equals "autre" (or "auter") AND REMARQUE contains "rammasage" or "ramassage" (case-insensitive):
+        # Override driver name: driver_name = 'RETRAIT DÉPÔT'
+        raw_remarque = str(row[col_remarque] or "").strip() if col_remarque is not None and col_remarque < len(row) and row[col_remarque] is not None else ""
+        remarque_clean = " ".join(raw_remarque.split()).lower()
+
+        driver_lower = driver_name.lower()
+        if (driver_lower in ("autre", "auter", "autres") or "autre" in driver_lower or "auter" in driver_lower) and ("ramassage" in remarque_clean or "rammasage" in remarque_clean):
+            driver_name = "RETRAIT DÉPÔT"
+
         # CRITICAL: Strict Blacklist Check
         # If driver matches 'bahlouli adel' (case-insensitive), completely skip appending this row
         driver_normalized = driver_name.lower().strip()
         if "bahlouli adel" in driver_normalized or "bahlouli" in driver_normalized or driver_name.upper() in BLACKLISTED_CHAUFFEURS:
             continue
 
-        chauffeur = driver_name.upper() if driver_name else ""
-        if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
-            chauffeur = ""
+        if driver_name == "RETRAIT DÉPÔT":
+            chauffeur = "RETRAIT DÉPÔT"
+        else:
+            chauffeur = driver_name.upper() if driver_name else ""
+            if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
+                chauffeur = ""
 
         # Column 4: Livraison -> date (Convert from DD/MM/YYYY to YYYY-MM-DD)
         raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
@@ -182,11 +199,11 @@ def parse_delivery_excel(file_path):
 
         # Occurrence tracker for 100% unique delivery_id without relying on Excel row numbers
         store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
-        driver_name = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
-        base_key = f"{normalized_date}_{store_name}_{driver_name}"
+        driver_key_part = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
+        base_key = f"{normalized_date}_{store_name}_{driver_key_part}"
         occurrence_tracker[base_key] = occurrence_tracker.get(base_key, 0) + 1
 
-        raw_delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_name}-{occurrence_tracker[base_key]}"
+        raw_delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_key_part}-{occurrence_tracker[base_key]}"
         # Clean spaces and special characters from the ID
         delivery_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
         delivery_key = delivery_id
