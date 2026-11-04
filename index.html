@@ -890,14 +890,18 @@ const LOCAL_DELIVERY_DATA = [];
         status: status,
         completed: isLivre,
         photo_url: d.photo_url || d.photoUrl || null,
-        a_recouvrement: Boolean(d.a_recouvrement || d.photo_recouvrement_url || Number(d.montant_recouvrement) > 0),
-        photo_recouvrement_url: d.photo_recouvrement_url || null,
+        recouvrement_url: d.recouvrement_url || d.photo_recouvrement_url || null,
+        photo_recouvrement_url: d.recouvrement_url || d.photo_recouvrement_url || null,
+        a_recouvrement: Boolean(d.a_recouvrement || d.recouvrement_url || d.photo_recouvrement_url || Number(d.montant_recouvrement) > 0),
         montant_recouvrement: d.montant_recouvrement !== undefined && d.montant_recouvrement !== null ? Number(d.montant_recouvrement) : 0,
         quantite_recue: qtyRecue,
         quantite_litige: qtyLitige,
         statut_reserve: statReserve,
         motif_reserve: d.motif_reserve || null,
-        remarque_chauffeur: d.remarque_chauffeur || null
+        remarque_chauffeur: d.remarque_chauffeur || null,
+        latitude: d.latitude !== undefined ? d.latitude : null,
+        longitude: d.longitude !== undefined ? d.longitude : null,
+        updated_at: d.updated_at || null
       };
     }
 
@@ -1431,14 +1435,17 @@ const LOCAL_DELIVERY_DATA = [];
               status: isLivre ? "Livré" : "Non Livré",
               completed: isLivre,
               photo_url: row.photo_url || null,
-              a_recouvrement: Boolean(row.a_recouvrement || row.photo_recouvrement_url || Number(row.montant_recouvrement) > 0),
-              photo_recouvrement_url: row.photo_recouvrement_url || null,
+              recouvrement_url: row.recouvrement_url || row.photo_recouvrement_url || null,
+              photo_recouvrement_url: row.recouvrement_url || row.photo_recouvrement_url || null,
+              a_recouvrement: Boolean(row.a_recouvrement || row.recouvrement_url || row.photo_recouvrement_url || Number(row.montant_recouvrement) > 0),
               montant_recouvrement: row.montant_recouvrement !== undefined && row.montant_recouvrement !== null ? Number(row.montant_recouvrement) : 0,
               quantite_recue: qRecue,
               quantite_litige: qLitige,
               statut_reserve: statReserve,
               motif_reserve: row.motif_reserve || null,
               remarque_chauffeur: row.remarque_chauffeur || null,
+              latitude: row.latitude !== undefined ? row.latitude : null,
+              longitude: row.longitude !== undefined ? row.longitude : null,
               updated_at: row.updated_at || null
             };
           });
@@ -1541,7 +1548,11 @@ const LOCAL_DELIVERY_DATA = [];
       const remarqueChauffeur = isReserve ? (reserveData ? (reserveData.remarque_chauffeur || "").trim() : (item.remarque_chauffeur || "").trim()) : null;
 
       // Extract Recouvrement attributes
-      const hasRecettePhoto = Boolean((recouvrementData && recouvrementData.photo_recouvrement_url) || item.photo_recouvrement_url);
+      const hasRecettePhoto = Boolean(
+        (recouvrementData && (recouvrementData.recouvrement_url || recouvrementData.photo_recouvrement_url)) ||
+        item.recouvrement_url ||
+        item.photo_recouvrement_url
+      );
       const montantVal = (recouvrementData && recouvrementData.montant_recouvrement !== undefined && recouvrementData.montant_recouvrement !== null)
         ? Number(recouvrementData.montant_recouvrement)
         : (Number(item.montant_recouvrement) || 0);
@@ -1551,7 +1562,10 @@ const LOCAL_DELIVERY_DATA = [];
         hasRecettePhoto ||
         montantVal > 0
       );
-      const photoRecetteUrl = (recouvrementData && recouvrementData.photo_recouvrement_url) || item.photo_recouvrement_url || null;
+      const photoRecetteUrl = (recouvrementData && (recouvrementData.recouvrement_url || recouvrementData.photo_recouvrement_url)) ||
+        item.recouvrement_url ||
+        item.photo_recouvrement_url ||
+        null;
 
       updateSupabaseSyncBadge("syncing", "Envoi en cours...");
 
@@ -1566,11 +1580,11 @@ const LOCAL_DELIVERY_DATA = [];
         motif_reserve: motifReserve,
         remarque_chauffeur: remarqueChauffeur,
         photo_url: targetPhotoUrl,
+        recouvrement_url: photoRecetteUrl || null,
         a_recouvrement: hasRecouvrement,
-        photo_recouvrement_url: photoRecetteUrl,
         montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
-        latitude: gpsCoords ? gpsCoords.latitude : null,
-        longitude: gpsCoords ? gpsCoords.longitude : null,
+        latitude: gpsCoords ? gpsCoords.latitude : (item.latitude !== undefined ? item.latitude : null),
+        longitude: gpsCoords ? gpsCoords.longitude : (item.longitude !== undefined ? item.longitude : null),
         updated_at: new Date().toISOString()
       };
 
@@ -1622,11 +1636,11 @@ const LOCAL_DELIVERY_DATA = [];
             motif_reserve: motifReserve,
             remarque_chauffeur: remarqueChauffeur,
             photo_url: targetPhotoUrl,
+            recouvrement_url: photoRecetteUrl || null,
             a_recouvrement: hasRecouvrement,
-            photo_recouvrement_url: photoRecetteUrl,
             montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0,
-            latitude: gpsCoords ? gpsCoords.latitude : null,
-            longitude: gpsCoords ? gpsCoords.longitude : null,
+            latitude: gpsCoords ? gpsCoords.latitude : (item.latitude !== undefined ? item.latitude : null),
+            longitude: gpsCoords ? gpsCoords.longitude : (item.longitude !== undefined ? item.longitude : null),
             updated_at: new Date().toISOString()
           };
           const res3 = await supabaseClient
@@ -2389,7 +2403,7 @@ const LOCAL_DELIVERY_DATA = [];
                     ` : ""}
                   </div>
                   <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
-                    ${Boolean(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || item.photo_recouvrement_url) ? `
+                    ${Boolean(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || item.recouvrement_url || item.photo_recouvrement_url) ? `
                       <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
                         💰 Recouvrement
                       </span>
@@ -2982,36 +2996,37 @@ const LOCAL_DELIVERY_DATA = [];
           .getPublicUrl(blPath);
         const blPhotoUrl = blUrlData ? blUrlData.publicUrl : null;
 
-        // 3. Upload Recette photo if present (Optional)
-        let recettePhotoUrl = null;
+        // 3. Upload Recouvrement photo if present (Optional)
+        let recouvrementPhotoUrl = null;
         if (compressedRecetteBlob) {
-          const recetteFileName = `${safeId}_RECETTE_${timestamp}.jpg`;
-          const recettePath = `proofs/${recetteFileName}`;
+          const recouvrementFileName = `${safeId}_${timestamp}_recouvrement.jpg`;
+          const recouvrementPath = `proofs/${recouvrementFileName}`;
           const { error: recUploadErr } = await supabaseClient
             .storage
             .from("delivery-proofs")
-            .upload(recettePath, compressedRecetteBlob, {
+            .upload(recouvrementPath, compressedRecetteBlob, {
               contentType: "image/jpeg",
               upsert: true
             });
 
           if (recUploadErr) {
-            console.error("[Storage] Erreur upload Recette:", recUploadErr);
+            console.error("[Storage] Erreur upload Recouvrement:", recUploadErr);
             throw recUploadErr;
           }
 
           const { data: recUrlData } = supabaseClient
             .storage
             .from("delivery-proofs")
-            .getPublicUrl(recettePath);
-          recettePhotoUrl = recUrlData ? recUrlData.publicUrl : null;
+            .getPublicUrl(recouvrementPath);
+          recouvrementPhotoUrl = recUrlData ? recUrlData.publicUrl : null;
         }
 
         // 4. Construct Recouvrement Data
-        const hasRecettePhoto = Boolean(recettePhotoUrl);
+        const hasRecouvrementPhoto = Boolean(recouvrementPhotoUrl);
         const recouvrementData = {
-          a_recouvrement: Boolean(hasRecettePhoto || montantVal > 0),
-          photo_recouvrement_url: recettePhotoUrl,
+          a_recouvrement: Boolean(hasRecouvrementPhoto || montantVal > 0),
+          recouvrement_url: recouvrementPhotoUrl,
+          photo_recouvrement_url: recouvrementPhotoUrl,
           montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
         };
 
@@ -3046,6 +3061,7 @@ const LOCAL_DELIVERY_DATA = [];
       const montantVal = montantInput ? Number(montantInput.value) || 0 : 0;
       const recouvrementData = {
         a_recouvrement: montantVal > 0,
+        recouvrement_url: null,
         photo_recouvrement_url: null,
         montant_recouvrement: montantVal > 0 ? Number(montantVal) : 0
       };
@@ -3069,15 +3085,15 @@ const LOCAL_DELIVERY_DATA = [];
       const statutReserve = isReserve ? "Avec Réserve" : "Conforme";
 
       // Extract Recouvrement attributes
-      const hasRecettePhoto = Boolean(recouvrementData && recouvrementData.photo_recouvrement_url);
+      const hasRecettePhoto = Boolean(recouvrementData && (recouvrementData.recouvrement_url || recouvrementData.photo_recouvrement_url));
       const montant = Number(recouvrementData && recouvrementData.montant_recouvrement) || 0;
       const hasRecouvrement = Boolean(
         (recouvrementData && (recouvrementData.a_recouvrement || hasRecettePhoto || montant > 0)) ||
         targetItem.a_recouvrement ||
-        Boolean(targetItem.photo_recouvrement_url) ||
+        Boolean(targetItem.recouvrement_url || targetItem.photo_recouvrement_url) ||
         Number(targetItem.montant_recouvrement) > 0
       );
-      const photoRecouvrementUrl = (recouvrementData && recouvrementData.photo_recouvrement_url) || targetItem.photo_recouvrement_url || null;
+      const photoRecouvrementUrl = (recouvrementData && (recouvrementData.recouvrement_url || recouvrementData.photo_recouvrement_url)) || targetItem.recouvrement_url || targetItem.photo_recouvrement_url || null;
       const montantRecouvrement = montant > 0 ? montant : (Number(targetItem.montant_recouvrement) || 0);
 
       // Optimistic UI state update: mark as Livré
@@ -3089,8 +3105,13 @@ const LOCAL_DELIVERY_DATA = [];
       targetItem.motif_reserve = motifReserve;
       targetItem.remarque_chauffeur = remarqueChauffeur;
       targetItem.a_recouvrement = hasRecouvrement;
+      targetItem.recouvrement_url = photoRecouvrementUrl;
       targetItem.photo_recouvrement_url = photoRecouvrementUrl;
       targetItem.montant_recouvrement = montantRecouvrement;
+      if (gpsCoords) {
+        targetItem.latitude = gpsCoords.latitude;
+        targetItem.longitude = gpsCoords.longitude;
+      }
       if (photoUrl) {
         targetItem.photo_url = photoUrl;
       }
@@ -3106,8 +3127,13 @@ const LOCAL_DELIVERY_DATA = [];
           itemInView.motif_reserve = motifReserve;
           itemInView.remarque_chauffeur = remarqueChauffeur;
           itemInView.a_recouvrement = hasRecouvrement;
+          itemInView.recouvrement_url = photoRecouvrementUrl;
           itemInView.photo_recouvrement_url = photoRecouvrementUrl;
           itemInView.montant_recouvrement = montantRecouvrement;
+          if (gpsCoords) {
+            itemInView.latitude = gpsCoords.latitude;
+            itemInView.longitude = gpsCoords.longitude;
+          }
           if (photoUrl) {
             itemInView.photo_url = photoUrl;
           }
@@ -3748,7 +3774,7 @@ const LOCAL_DELIVERY_DATA = [];
           `)}
 
           <!-- Recouvrement (Cash Collection) Section if applicable -->
-          ${(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || Boolean(item.photo_recouvrement_url)) ? `
+          ${(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || Boolean(item.recouvrement_url || item.photo_recouvrement_url)) ? `
             <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -3767,55 +3793,113 @@ const LOCAL_DELIVERY_DATA = [];
             </div>
           ` : ""}
 
-          <!-- Proof of Delivery Photos: BL & Recette side-by-side if both exist -->
-          ${(item.photo_url || item.photo_recouvrement_url) ? `
+          <!-- Proof of Delivery Photos: BL & Recouvrement -->
+          ${isCompleted ? `
             <div class="space-y-2">
               <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Preuves de livraison</span>
-              <div class="grid ${(item.photo_url && item.photo_recouvrement_url) ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"} gap-3">
-                ${item.photo_url ? `
-                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
-                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
-                      <span class="flex items-center gap-1.5 truncate">
-                        <i class="fa-solid fa-file-invoice text-blue-600"></i>
-                        <span>Bon de Livraison (BL)</span>
-                      </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Preuve de Livraison (BL) -->
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 flex flex-col justify-between">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5 truncate">
+                      <i class="fa-solid fa-file-invoice text-blue-600"></i>
+                      <span>Preuve de Livraison (BL)</span>
+                    </span>
+                    ${item.photo_url ? `
                       <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
                         Validé ✓
                       </span>
-                    </div>
-                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_url}', 'Bon de Livraison (BL)')">
+                    ` : `
+                      <span class="text-[10px] text-slate-500 font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                        Non fourni
+                      </span>
+                    `}
+                  </div>
+                  ${item.photo_url ? `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_url}', 'Preuve de Livraison (BL)')">
                       <img src="${item.photo_url}" alt="Bon de Livraison" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
                       <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
                         <i class="fa-solid fa-magnifying-glass-plus text-base"></i>
                         <span>Agrandir</span>
                       </div>
                     </div>
-                  </div>
-                ` : ""}
+                  ` : `
+                    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-4 flex flex-col items-center justify-center text-center text-slate-400 aspect-video">
+                      <i class="fa-solid fa-camera-slash text-2xl mb-1 text-slate-300"></i>
+                      <span class="text-xs font-medium">Aucune photo de BL</span>
+                    </div>
+                  `}
+                </div>
 
-                ${item.photo_recouvrement_url ? `
-                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
-                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
-                      <span class="flex items-center gap-1.5 truncate">
-                        <i class="fa-solid fa-money-bill-wave text-emerald-600"></i>
-                        <span>Photo de la Recette</span>
-                      </span>
+                <!-- Preuve de Recouvrement (Espèces) -->
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2 flex flex-col justify-between">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span class="flex items-center gap-1.5 truncate">
+                      <i class="fa-solid fa-money-bill-wave text-emerald-600"></i>
+                      <span>Preuve de Recouvrement (Espèces)</span>
+                    </span>
+                    ${(item.recouvrement_url || item.photo_recouvrement_url) ? `
                       <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
                         Encaissé ✓
                       </span>
-                    </div>
-                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_recouvrement_url}', 'Photo de la Recette')">
-                      <img src="${item.photo_recouvrement_url}" alt="Photo Recette" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
+                    ` : `
+                      <span class="text-[10px] text-slate-400 font-bold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                        Non fourni
+                      </span>
+                    `}
+                  </div>
+                  ${(item.recouvrement_url || item.photo_recouvrement_url) ? `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.recouvrement_url || item.photo_recouvrement_url}', 'Preuve de Recouvrement (Espèces)')">
+                      <img src="${item.recouvrement_url || item.photo_recouvrement_url}" alt="Preuve Recouvrement" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
                       <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
                         <i class="fa-solid fa-magnifying-glass-plus text-base"></i>
                         <span>Agrandir</span>
                       </div>
                     </div>
+                  ` : `
+                    <div class="rounded-xl border border-dashed border-slate-300 bg-white p-4 flex flex-col items-center justify-center text-center text-slate-400 aspect-video">
+                      <i class="fa-solid fa-receipt text-2xl mb-1 text-slate-300"></i>
+                      <span class="text-xs font-medium">Aucune photo de recouvrement</span>
+                    </div>
+                  `}
+                </div>
+              </div>
+            </div>
+          ` : (!isCompleted && (item.photo_url || item.recouvrement_url || item.photo_recouvrement_url) ? `
+            <div class="space-y-2">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Preuves enregistrées</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${item.photo_url ? `
+                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span class="flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-file-invoice text-blue-600"></i>
+                        <span>Preuve de Livraison (BL)</span>
+                      </span>
+                      <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Validé ✓</span>
+                    </div>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.photo_url}', 'Preuve de Livraison (BL)')">
+                      <img src="${item.photo_url}" alt="Bon de Livraison" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
+                    </div>
+                  </div>
+                ` : ""}
+                ${(item.recouvrement_url || item.photo_recouvrement_url) ? `
+                  <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span class="flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-money-bill-wave text-emerald-600"></i>
+                        <span>Preuve de Recouvrement (Espèces)</span>
+                      </span>
+                      <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">Encaissé ✓</span>
+                    </div>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center" onclick="openPhotoViewer('${item.recouvrement_url || item.photo_recouvrement_url}', 'Preuve de Recouvrement (Espèces)')">
+                      <img src="${item.recouvrement_url || item.photo_recouvrement_url}" alt="Preuve Recouvrement" class="w-full h-full object-cover object-center group-hover:scale-105 transition duration-300" loading="lazy">
+                    </div>
                   </div>
                 ` : ""}
               </div>
             </div>
-          ` : ""}
+          ` : "")}
 
           <!-- Actions -->
           <div class="pt-2 flex flex-col gap-2">
