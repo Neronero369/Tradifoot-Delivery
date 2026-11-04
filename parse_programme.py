@@ -100,10 +100,44 @@ def normalize_date_to_iso(val, fallback=""):
     return s[:10]
 
 
-def parse_delivery_excel(file_path):
+def fetch_existing_delivery_ids(supabase_url=None, api_key=None):
+    """
+    Fetches all existing delivery_id and delivery_key values from the Supabase
+    'deliveries' table and returns them as a Python set for fast lookup.
+    """
+    url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
+    key = api_key or DEFAULT_SUPABASE_API_KEY
+    endpoint = f"{url}?select=delivery_id,delivery_key"
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}"
+    }
+    existing_ids = set()
+    try:
+        req = urllib.request.Request(endpoint, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            for item in data:
+                did = str(item.get("delivery_id") or "").strip().upper()
+                dkey = str(item.get("delivery_key") or "").strip().upper()
+                if did:
+                    existing_ids.add(did)
+                if dkey:
+                    existing_ids.add(dkey)
+    except Exception as e:
+        print(f"[!] Warning: Could not fetch existing Supabase IDs ({e})")
+    return existing_ids
+
+
+def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
     """
     Parses a production Programme de Livraison Excel workbook dynamically by header name.
     Uses pandas to load the DataFrame, strip header whitespaces, and safely extract columns.
+
+    INSERT-ONLY SAFEGUARD:
+    If skip_existing is True (default), fetches existing Supabase IDs before row iteration
+    and skips any row whose generated delivery_id is already present, protecting live
+    driver data (status, photo_url, recouvrement_url, GPS).
 
     CRITICAL COLUMN MAPPING:
       - Boutique   -> maps to magasin (String, uppercase, trimmed)
@@ -112,6 +146,9 @@ def parse_delivery_excel(file_path):
       - Livraison  -> maps to date (Convert from DD/MM/YYYY to YYYY-MM-DD)
       - Materiel   -> maps to materiel (String, stripped, None if blank/empty/NaN)
     """
+    # 1. Fetch Existing State from Supabase for Insert-Only safe sync
+    if skip_existing and existing_ids is None:
+        existing_ids = fetch_existing_delivery_ids()
     # 1. Locate the delivery program sheet (or default to first sheet)
     xl = pd.ExcelFile(file_path)
     try:
@@ -182,6 +219,7 @@ def parse_delivery_excel(file_path):
         records = []
         errors = []
         occurrence_tracker = {}
+        skipped_existing_count = 0
 
         # 2. Iterate data rows
         for row_idx, row in df.iterrows():
@@ -322,6 +360,14 @@ def parse_delivery_excel(file_path):
             delivery_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
             delivery_key = delivery_id
 
+            # CRITICAL FIX 2: Filter Existing Records (INSERT-ONLY)
+            # If this delivery ID or key is already in the existing Supabase set,
+            # completely SKIP the row to prevent overwriting live driver progress/photos/GPS.
+            if skip_existing and existing_ids:
+                if delivery_id.upper() in existing_ids or delivery_key.upper() in existing_ids:
+                    skipped_existing_count += 1
+                    continue
+
             record = {
                 "id": delivery_id,
                 "delivery_id": delivery_id,
@@ -336,9 +382,13 @@ def parse_delivery_excel(file_path):
             }
             records.append(record)
 
+        if skipped_existing_count > 0:
+            print(f"[i] Safe Ingestion: Skipped {skipped_existing_count} existing record(s) in {os.path.basename(file_path)} to protect live Supabase state.")
+
         return {
             "success": len(errors) == 0,
             "total_records": len(records),
+            "skipped_existing": skipped_existing_count,
             "records": records,
             "errors": errors
         }
@@ -416,12 +466,12 @@ def upsert_manifest_records(incoming_records, existing_records):
 
 def fetch_supabase_records(supabase_url=None, api_key=None):
     """
-    Fetches all current deliveries from Supabase REST endpoint to protect existing
-    completed ('Livré') statuses and avoid duplicate processing.
+    Fetches all current deliveries from Supabase REST endpoint.
+    Retrieves full record state to support status checks and verification.
     """
     url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
     key = api_key or DEFAULT_SUPABASE_API_KEY
-    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by,materiel"
+    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by,materiel,photo_url,recouvrement_url,latitude,longitude,statut_reserve,quantite_recue,quantite_litige"
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}"
@@ -435,35 +485,47 @@ def fetch_supabase_records(supabase_url=None, api_key=None):
         return []
 
 
-def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new=False):
+def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new=True):
     """
-    Pushes delivery records to Supabase REST endpoint via POST upsert
-    with STRICT ROW-LEVEL INDEPENDENCE & STATUS PRESERVATION:
+    STRICTLY INSERT-ONLY SYNC:
+    Safely appends only brand-new delivery records to Supabase.
+    Existing records are NEVER overwritten, updated, or nullified, completely
+    preserving driver photos (BL & recouvrement), live statuses, and GPS stamps.
     """
-    url = supabase_url or DEFAULT_SUPABASE_REST_URL
+    url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
     key = api_key or DEFAULT_SUPABASE_API_KEY
 
+    # 1. Fetch Existing State: Get all existing delivery_id and delivery_key values in a Python set
+    existing_ids = fetch_existing_delivery_ids(url, key)
+
     if isinstance(records, str):
-        parsed = parse_delivery_excel(records)
+        parsed = parse_delivery_excel(records, skip_existing=True, existing_ids=existing_ids)
         records = parsed.get("records", [])
 
     if not records:
-        return {"status": "success", "count": 0, "data": []}
+        print("[i] Insert-Only Sync: No incoming records to evaluate.")
+        return {"status": "success", "count": 0, "message": "No incoming records to evaluate."}
 
-    # 1. Fetch live Supabase state for status preservation strictly by unique ID
-    existing_records = fetch_supabase_records(url, key)
-    existing_by_id = {}
-
-    for row in existing_records:
-        did = str(row.get("delivery_id") or row.get("id") or "").strip().upper()
-        if did:
-            existing_by_id[did] = row
-
-    payload = []
-    preserved_livre = 0
-
-    # 2. Append EVERY valid parsed row directly to the final payload list
+    # 2. Filter Existing Records: Discard any record whose ID or key already exists in Supabase
+    unpushed_records = []
     for r in records:
+        rec_id = str(r.get("delivery_id") or r.get("id") or "").strip().upper()
+        dkey = str(r.get("delivery_key") or "").strip().upper()
+        if (rec_id and rec_id in existing_ids) or (dkey and dkey in existing_ids):
+            continue
+        unpushed_records.append(r)
+
+    if not unpushed_records:
+        print(f"[i] Insert-Only Sync: All {len(records)} record(s) already exist in Supabase. 0 rows inserted, 0 overwritten.")
+        return {
+            "status": "success",
+            "count": 0,
+            "message": "All records already exist in Supabase. Live statuses, photos, and GPS timestamps preserved."
+        }
+
+    # 3. Build uniform schema payload strictly for brand-new deliveries
+    payload = []
+    for r in unpushed_records:
         rec_id = str(r.get("delivery_id") or r.get("id") or "").strip()
         if not rec_id:
             continue
@@ -478,27 +540,10 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower() or driver.upper() in BLACKLISTED_CHAUFFEURS:
             continue
         matricule = str(r.get("matricule") or "").strip()
-        raw_status = str(r.get("status") or "Non Livré").strip()
         dkey = str(r.get("delivery_key") or "").strip() or rec_id
-
-        # Match existing row strictly by exact delivery_id
-        existing_row = existing_by_id.get(rec_id.upper())
-
-        if existing_row:
-            s_stat = str(existing_row.get("status") or "")
-            is_already_livre = bool("livr" in s_stat.lower() and "non" not in s_stat.lower())
-            if is_already_livre:
-                preserved_livre += 1
-                final_status = "Livré"
-            else:
-                final_status = raw_status
-        else:
-            final_status = raw_status
 
         mat_val = str(r.get("materiel") or r.get("Materiel") or r.get("Materiel ") or "").strip()
         materiel_val = mat_val if mat_val and mat_val.lower() != "nan" and mat_val.lower() not in ("none", "null", "-", "/") else None
-        if not materiel_val and existing_row and existing_row.get("materiel"):
-            materiel_val = existing_row["materiel"]
 
         mapped = {
             "delivery_id": rec_id,
@@ -508,41 +553,34 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             "matricule": matricule or (materiel_val or ""),
             "materiel": materiel_val,
             "quantite": qty,
-            "status": final_status,
+            "status": "Non Livré",
             "delivery_key": dkey,
-            "delivered_by": existing_row.get("delivered_by") if existing_row else None,
-            "quantite_recue": existing_row.get("quantite_recue") if existing_row else None,
-            "quantite_litige": existing_row.get("quantite_litige") if existing_row else None,
-            "statut_reserve": existing_row.get("statut_reserve") if existing_row else None,
-            "photo_url": existing_row.get("photo_url") if existing_row else None,
-            "recouvrement_url": existing_row.get("recouvrement_url") if existing_row else None,
-            "latitude": existing_row.get("latitude") if existing_row else None,
-            "longitude": existing_row.get("longitude") if existing_row else None,
+            "delivered_by": None,
+            "quantite_recue": None,
+            "quantite_litige": None,
+            "statut_reserve": None,
+            "photo_url": None,
+            "recouvrement_url": None,
+            "latitude": None,
+            "longitude": None
         }
-
         payload.append(mapped)
 
-    if preserved_livre > 0:
-        print(f"[i] Status Preservation: {preserved_livre} delivery status(es) preserved as 'Livré'.")
-
     if not payload:
-        return {"status": "success", "count": 0, "message": "No records to push"}
+        return {"status": "success", "count": 0, "message": "No new records to insert."}
 
+    # 4. Never Overwrite: POST with resolution=ignore-duplicates
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates"
+        "Prefer": "resolution=ignore-duplicates"
     }
 
-    if "on_conflict=" not in url:
-        sep = "&" if "?" in url else "?"
-        endpoint_url = f"{url}{sep}on_conflict=delivery_key"
-    else:
-        endpoint_url = url
-
+    endpoint_url = f"{url}?on_conflict=delivery_key"
     BATCH_SIZE = 100
     total_pushed = 0
+
     try:
         for i in range(0, len(payload), BATCH_SIZE):
             batch = payload[i:i + BATCH_SIZE]
@@ -560,7 +598,7 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
                     raise he
             total_pushed += len(batch)
 
-        print(f"[+] Successfully pushed {total_pushed} record(s) to Supabase.")
+        print(f"[+] Insert-Only Sync: Successfully inserted {total_pushed} brand-new record(s) to Supabase (0 overwritten).")
         return {"status": "success", "count": total_pushed}
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="ignore")
