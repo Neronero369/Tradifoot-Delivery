@@ -920,6 +920,7 @@ const LOCAL_DELIVERY_DATA = [];
       { username: "BOUKHALFA ADEL", pin: "6165", role: "chauffeur", chauffeurName: "BOUKHALFA ADEL" },
       { username: "BALLA YOUCEF", pin: "5763", role: "chauffeur", chauffeurName: "BALLA YOUCEF" },
       { username: "RETRAIT DÉPÔT", pin: "0000", role: "chauffeur", chauffeurName: "RETRAIT DÉPÔT" },
+      { username: "ADV", pin: "3168", role: "chauffeur", chauffeurName: "RETRAIT DÉPÔT" },
       { username: "BENAMAR NACIM", pin: "3021", role: "admin", chauffeurName: "All" },
       { username: "MEKHLOUFI MOHAMMED", pin: "1234", role: "admin", chauffeurName: "All" },
       { username: "BRAHIM MECHAI", pin: "0411", role: "admin", chauffeurName: "All" }
@@ -1809,7 +1810,7 @@ const LOCAL_DELIVERY_DATA = [];
 
       revealDashboard();
       initAuthenticatedApp();
-      showNotification(`Bienvenue, ${found.username} (${found.role.toUpperCase()})`, "success");
+      showNotification(`Bienvenue, ${found.username} (${found.username === 'ADV' ? 'ADV / RETRAIT DÉPÔT' : found.role.toUpperCase()})`, "success");
     }
 
     /**
@@ -1884,13 +1885,18 @@ const LOCAL_DELIVERY_DATA = [];
       const t = normalizeDriver(targetChauffeur);
       if (r === t) return true;
 
+      // Robust matching for Retrait Dépôt / Ramassage / ADV
+      const isRRetrait = r.includes("RETRAIT") || r.includes("RAMASSAGE") || r.includes("RAMMASAGE");
+      const isTRetrait = t.includes("RETRAIT") || t.includes("RAMASSAGE") || t.includes("RAMMASAGE") || t === "ADV";
+      if (isRRetrait && isTRetrait) return true;
+
       if (r.includes('+') || r.includes('/') || r.includes('&') || r.includes(' ET ')) {
         const parts = r.split(/[\+\/\&]| ET /i).map(s => normalizeDriver(s));
         if (parts.some(p => p === t || isChauffeurMatch(p, t))) return true;
       }
 
-      const cleanR = r.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
-      const cleanT = t.replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+      const cleanR = r.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
+      const cleanT = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").replace(/DD/g, "D");
       return cleanR === cleanT || cleanR.includes(cleanT) || cleanT.includes(cleanR);
     }
 
@@ -1944,10 +1950,21 @@ const LOCAL_DELIVERY_DATA = [];
         }
       } else if (currentUser.role === 'chauffeur') {
         const assignedName = (currentUser.chauffeurName || currentUser.username || "").trim();
+        const isRetraitUser = assignedName.toUpperCase().includes("RETRAIT") || (currentUser.username && currentUser.username.toUpperCase() === "ADV");
         displayData = allData.filter(delivery => {
+          if (isRetraitUser && isRetraitDepot(delivery)) {
+            return true;
+          }
           const rowDriver = String(delivery.chauffeur || delivery.driver || delivery.Chauffeur || "").trim();
           // CRITICAL: Unassigned drops (empty, null, or placeholder) must NEVER match any chauffeur
           if (!rowDriver || rowDriver === "" || /non assign[ée]|non sp[ée]cifi[ée]|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rowDriver)) {
+            return false;
+          }
+          if (isRetraitUser) {
+            return isChauffeurMatch(rowDriver, "RETRAIT DÉPÔT");
+          }
+          // Non-retrait chauffeurs must NEVER see customer pickups
+          if (isRetraitDepot(delivery) || rowDriver.toUpperCase().includes("RETRAIT")) {
             return false;
           }
           return isChauffeurMatch(rowDriver, assignedName);
@@ -2164,7 +2181,8 @@ const LOCAL_DELIVERY_DATA = [];
         DOM.progressPercent.textContent = `${percent}%`;
       }
       if (DOM.progressText) {
-        DOM.progressText.textContent = `${completedCount} / ${totalCount} livraisons`;
+        const isRetraitUser = AppState.currentUser && (AppState.currentUser.chauffeurName === 'RETRAIT DÉPÔT' || (AppState.currentUser.username && AppState.currentUser.username.toUpperCase() === 'ADV'));
+        DOM.progressText.textContent = `${completedCount} / ${totalCount} ${isRetraitUser ? 'retraits' : 'livraisons'}`;
       }
 
       if (DOM.progressRingIcon) {
@@ -4083,18 +4101,21 @@ const LOCAL_DELIVERY_DATA = [];
       initLocalDeliveryStates();
 
       const isAdmin = AppState.currentUser.role === 'admin';
+      const isRetraitUser = AppState.currentUser.chauffeurName === 'RETRAIT DÉPÔT' || (AppState.currentUser.username && AppState.currentUser.username.toUpperCase() === 'ADV');
 
       if (DOM.userRoleBadge) {
-        DOM.userRoleBadge.textContent = isAdmin ? "ADMIN CONSOLE" : "CHAUFFEUR";
+        DOM.userRoleBadge.textContent = isAdmin ? "ADMIN CONSOLE" : (isRetraitUser ? "ADV / RETRAIT DÉPÔT" : "CHAUFFEUR");
         DOM.userRoleBadge.className = isAdmin
           ? "px-3 py-0.5 text-xs font-semibold rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/30 hidden sm:inline-block"
-          : "px-3 py-0.5 text-xs font-semibold rounded-full bg-[#1B417E]/90 text-[#8ec2f2] border border-[#3076BB]/40 hidden sm:inline-block";
+          : (isRetraitUser
+            ? "px-3 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 border border-blue-200 hidden sm:inline-block"
+            : "px-3 py-0.5 text-xs font-semibold rounded-full bg-[#1B417E]/90 text-[#8ec2f2] border border-[#3076BB]/40 hidden sm:inline-block");
         DOM.userRoleBadge.classList.remove("hidden");
       }
       if (DOM.userRoleSubtitle) {
         DOM.userRoleSubtitle.textContent = isAdmin
           ? "Portail d'Administration Logistique • Vue Globale"
-          : `Espace Chauffeur • ${AppState.currentUser.chauffeurName}`;
+          : (isRetraitUser ? "Espace ADV • Retrait Dépôt Client" : `Espace Chauffeur • ${AppState.currentUser.chauffeurName}`);
       }
 
       if (DOM.adminToolbar) {
