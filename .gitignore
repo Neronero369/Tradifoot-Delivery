@@ -1,15 +1,28 @@
-# Data & raw files
-data/
-all_delivery_programs/
-delivery_september/
-*.xlsx
-*.XLSX
-!template_programme_de_livraison.xlsx
-*.xls
-*.pdf
-*.docx
-*.log
-*.ps1
+# Python Cache & Logs
 __pycache__/
-node_modules/
+*.py[cod]
+*$py.class
+*.log
+
+# Environment & Credentials
+.env
+
+# Data & Excel Ingestion Cache
+data/programs/*.xlsx
+data/programs/*.XLSX
+data/programs/*.xls
+data/delivery_db.json
+data/logs/
+
+# Backups & Artifacts
+*.bak
+*.tmp
+*.zip
+*.ps1
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
 .vscode/
+.idea/
+node_modules/

@@ -5,9 +5,9 @@ Tradifoot Logistics - Program Ingestion Parser, Validator & Upsert Engine
 Production Excel Delivery Schedule Parser & Supabase Synchronization.
 Dynamically locates headers (Boutique, Globale, Chauffeur, Livraison)
 and maps records directly to the Supabase database schema.
+Optimized for minimal RAM usage (openpyxl read-only streaming) and combined API batching.
 """
 
-import sys
 import os
 import re
 import json
@@ -16,8 +16,34 @@ import urllib.error
 from datetime import datetime, date
 import openpyxl
 
-DEFAULT_SUPABASE_REST_URL = "https://gmdgnzokgqyivlfeosdy.supabase.co/rest/v1/deliveries"
-DEFAULT_SUPABASE_API_KEY = "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur"
+
+def _load_env():
+    """Lightweight zero-dependency .env loader."""
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+
+_load_env()
+
+DEFAULT_SUPABASE_REST_URL = os.environ.get(
+    "SUPABASE_REST_URL",
+    "https://gmdgnzokgqyivlfeosdy.supabase.co/rest/v1/deliveries"
+)
+DEFAULT_SUPABASE_API_KEY = os.environ.get(
+    "SUPABASE_ANON_KEY",
+    os.environ.get("SUPABASE_KEY", "sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur")
+)
 
 AUTHORIZED_CHAUFFEURS = {
     "SAADI BILLEL",
@@ -56,7 +82,7 @@ def normalize_date_to_iso(val, fallback=""):
     if not s:
         return fallback or datetime.today().strftime("%Y-%m-%d")
 
-    # Priority 1: DD/MM/YYYY and variations
+    # Priority 1: Standard date formats
     for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%Y-%m-%d", "%Y/%m/%d"):
         try:
             return datetime.strptime(s[:10], fmt).strftime("%Y-%m-%d")
@@ -75,173 +101,163 @@ def normalize_date_to_iso(val, fallback=""):
 def parse_delivery_excel(file_path):
     """
     Parses a production Programme de Livraison Excel workbook dynamically by header name.
+    Uses openpyxl read_only=True mode for minimum RAM usage.
 
     CRITICAL COLUMN MAPPING:
       - Boutique   -> maps to magasin (String, uppercase, trimmed)
       - Globale    -> maps to quantite (Integer, default 0, skip row if 0/empty)
       - Chauffeur  -> maps to chauffeur (String, uppercase, strictly "" if blank or missing)
       - Livraison  -> maps to date (Convert from DD/MM/YYYY to YYYY-MM-DD)
-
-    Completely ignores all operational columns (Wilaya, Region, ACCESSOIRES,
-    CHAUSSETTES, SAC A DOS, FOOTWEAR, Sachet, P, OM, Retour, Chargement,
-    Materiel, REMARQUE).
-
-    Uses an occurrence tracker to guarantee EVERY row receives a 100% unique delivery_id
-    without depending on changing Excel row numbers:
-      base_key = f"{normalized_date}_{store_name}_{driver_name}"
-      occurrence_tracker[base_key] += 1
-      delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_name}-{occurrence_tracker[base_key]}"
     """
-    wb = openpyxl.load_workbook(file_path, data_only=True)
+    wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+    try:
+        # Locate the delivery program sheet (or default to first sheet)
+        prog_sheet_name = None
+        for s_name in wb.sheetnames:
+            if re.search(r'prog|poro|livr', s_name, re.I):
+                prog_sheet_name = s_name
+                break
+        if not prog_sheet_name:
+            prog_sheet_name = wb.sheetnames[0]
 
-    # Locate the delivery program sheet (or default to active sheet)
-    ws = wb.active
-    for s_name in wb.sheetnames:
-        if re.search(r'prog|poro|livr', s_name, re.I):
-            ws = wb[s_name]
-            break
+        ws = wb[prog_sheet_name]
 
-    # 1. Dynamic Header Resolution (search rows 1 to 7)
-    header_row_idx = None
-    col_boutique = None
-    col_globale = None
-    col_chauffeur = None
-    col_livraison = None
-    col_remarque = None
-    raw_headers = []
+        # 1. Dynamic Header Resolution (search rows 1 to 7)
+        header_row_idx = None
+        col_boutique = None
+        col_globale = None
+        col_chauffeur = None
+        col_livraison = None
+        col_remarque = None
+        raw_headers = []
 
-    for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
-        clean_row = [str(c or "").strip().lower() for c in row]
-        has_boutique = any(h in ("boutique", "magasin") or "boutique" in h or "magasin" in h for h in clean_row)
-        has_globale = any(h in ("globale", "global", "quantite", "quantité", "qte") or "globale" in h or "quantite" in h for h in clean_row)
-        
-        if has_boutique and (has_globale or any("livraison" in h or "chauffeur" in h for h in clean_row)):
-            header_row_idx = r_idx
-            raw_headers = [str(c or "").strip() for c in row]
-            for c_idx, h in enumerate(clean_row):
-                if h in ("boutique", "magasin") or ("boutique" in h and col_boutique is None) or ("magasin" in h and col_boutique is None):
-                    col_boutique = c_idx
-                elif h in ("globale", "global", "quantite", "quantité", "qte") or ("globale" in h and col_globale is None):
-                    col_globale = c_idx
-                elif h in ("chauffeur", "driver") or ("chauffeur" in h and col_chauffeur is None):
-                    col_chauffeur = c_idx
-                elif h in ("livraison", "date") or ("livraison" in h and col_livraison is None):
-                    col_livraison = c_idx
-                elif ("remarque" in h or "note" in h or "observation" in h) and col_remarque is None:
-                    col_remarque = c_idx
-            break
+        for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
+            clean_row = [str(c or "").strip().lower() for c in row]
+            has_boutique = any(h in ("boutique", "magasin") or "boutique" in h or "magasin" in h for h in clean_row)
+            has_globale = any(h in ("globale", "global", "quantite", "quantité", "qte") or "globale" in h or "quantite" in h for h in clean_row)
 
-    if header_row_idx is None or col_boutique is None:
-        wb.close()
-        raise ValueError(
-            f"Could not locate required 'Boutique' column in {file_path}. Headers detected: {raw_headers}"
-        )
+            if has_boutique and (has_globale or any("livraison" in h or "chauffeur" in h for h in clean_row)):
+                header_row_idx = r_idx
+                raw_headers = [str(c or "").strip() for c in row]
+                for c_idx, h in enumerate(clean_row):
+                    if h in ("boutique", "magasin") or ("boutique" in h and col_boutique is None) or ("magasin" in h and col_boutique is None):
+                        col_boutique = c_idx
+                    elif h in ("globale", "global", "quantite", "quantité", "qte") or ("globale" in h and col_globale is None):
+                        col_globale = c_idx
+                    elif h in ("chauffeur", "driver") or ("chauffeur" in h and col_chauffeur is None):
+                        col_chauffeur = c_idx
+                    elif h in ("livraison", "date") or ("livraison" in h and col_livraison is None):
+                        col_livraison = c_idx
+                    elif ("remarque" in h or "note" in h or "observation" in h) and col_remarque is None:
+                        col_remarque = c_idx
+                break
 
-    records = []
-    errors = []
-    occurrence_tracker = {}
-    record_idx = 1
+        if header_row_idx is None or col_boutique is None:
+            raise ValueError(
+                f"Could not locate required 'Boutique' column in {file_path}. Headers detected: {raw_headers}"
+            )
 
-    # 2. Iterate data rows starting immediately below the detected header row
-    for row_idx, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), start=header_row_idx + 1):
-        if not any(row):
-            continue
+        records = []
+        errors = []
+        occurrence_tracker = {}
+        record_idx = 1
 
-        # Column 1: Boutique -> magasin (String, uppercase, trimmed)
-        raw_store = str(row[col_boutique] or "").strip() if col_boutique < len(row) and row[col_boutique] is not None else ""
-        magasin = " ".join(raw_store.upper().split())
+        # 2. Iterate data rows starting immediately below the detected header row
+        for row_idx, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), start=header_row_idx + 1):
+            if not any(row):
+                continue
 
-        # Column 2: Globale -> quantite (Integer, default 0 if blank)
-        raw_qty = row[col_globale] if col_globale is not None and col_globale < len(row) else 0
-        try:
-            if raw_qty is not None and str(raw_qty).strip() != "":
-                qty = int(float(str(raw_qty).replace(",", ".")))
-            else:
+            # Column 1: Boutique -> magasin (String, uppercase, trimmed)
+            raw_store = str(row[col_boutique] or "").strip() if col_boutique < len(row) and row[col_boutique] is not None else ""
+            magasin = " ".join(raw_store.upper().split())
+
+            # Column 2: Globale -> quantite (Integer, default 0 if blank)
+            raw_qty = row[col_globale] if col_globale is not None and col_globale < len(row) else 0
+            try:
+                if raw_qty is not None and str(raw_qty).strip() != "":
+                    qty = int(float(str(raw_qty).replace(",", ".")))
+                else:
+                    qty = 0
+            except (ValueError, TypeError):
                 qty = 0
-        except (ValueError, TypeError):
-            qty = 0
 
-        # Skip rule: If a row has an empty Boutique or if Globale is 0/empty, skip entirely
-        if not magasin or magasin.startswith("TOTAL") or magasin == "NONE" or qty <= 0:
-            continue
+            # Skip rule: If empty Boutique or Globale is 0/empty, skip entirely
+            if not magasin or magasin.startswith("TOTAL") or magasin == "NONE" or qty <= 0:
+                continue
 
-        # Column 3: Chauffeur -> chauffeur (String, uppercase, strictly "" if blank/missing)
-        raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
-        driver_name = " ".join(raw_driver.split())
+            # Column 3: Chauffeur -> chauffeur
+            raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
+            driver_name = " ".join(raw_driver.split())
 
-        # Customer Pickup (Ramassage) Workflow:
-        # Inspect Chauffeur and REMARQUE columns, as well as entire row.
-        # Make sure EVERY "Ramassage par le client" is set to "RETRAIT DÉPÔT"
-        raw_remarque = str(row[col_remarque] or "").strip() if col_remarque is not None and col_remarque < len(row) and row[col_remarque] is not None else ""
-        remarque_clean = " ".join(raw_remarque.split()).lower()
-        driver_lower = driver_name.lower()
-        row_text = " ".join([str(c or "").strip().lower() for c in row if c is not None])
+            # Customer Pickup (Ramassage) Workflow:
+            raw_remarque = str(row[col_remarque] or "").strip() if col_remarque is not None and col_remarque < len(row) and row[col_remarque] is not None else ""
+            remarque_clean = " ".join(raw_remarque.split()).lower()
+            driver_lower = driver_name.lower()
+            row_text = " ".join([str(c or "").strip().lower() for c in row if c is not None])
 
-        is_ramassage_pickup = (
-            "ramassage" in remarque_clean or
-            "rammasage" in remarque_clean or
-            "ramassage" in row_text or
-            "rammasage" in row_text or
-            "retrait depot" in row_text or
-            "retrait dépôt" in row_text or
-            "retrait" in driver_lower or
-            ((driver_lower in ("autre", "auter", "autres") or "autre" in driver_lower or "auter" in driver_lower) and
-             ("client" in row_text or "ramassage" in row_text or not remarque_clean))
-        )
+            is_ramassage_pickup = (
+                "ramassage" in remarque_clean or
+                "rammasage" in remarque_clean or
+                "ramassage" in row_text or
+                "rammasage" in row_text or
+                "retrait depot" in row_text or
+                "retrait dépôt" in row_text or
+                "retrait" in driver_lower or
+                ((driver_lower in ("autre", "auter", "autres") or "autre" in driver_lower or "auter" in driver_lower) and
+                 ("client" in row_text or "ramassage" in row_text or not remarque_clean))
+            )
 
-        if is_ramassage_pickup:
-            driver_name = "RETRAIT DÉPÔT"
+            if is_ramassage_pickup:
+                driver_name = "RETRAIT DÉPÔT"
 
-        # CRITICAL: Strict Blacklist Check
-        # If driver matches 'bahlouli adel' (case-insensitive), completely skip appending this row
-        driver_normalized = driver_name.lower().strip()
-        if "bahlouli adel" in driver_normalized or "bahlouli" in driver_normalized or driver_name.upper() in BLACKLISTED_CHAUFFEURS:
-            continue
+            # Strict Blacklist Check: Skip "bahlouli adel"
+            driver_normalized = driver_name.lower().strip()
+            if "bahlouli adel" in driver_normalized or "bahlouli" in driver_normalized or driver_name.upper() in BLACKLISTED_CHAUFFEURS:
+                continue
 
-        if driver_name == "RETRAIT DÉPÔT":
-            chauffeur = "RETRAIT DÉPÔT"
-        else:
-            chauffeur = driver_name.upper() if driver_name else ""
-            if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
-                chauffeur = ""
+            if driver_name == "RETRAIT DÉPÔT":
+                chauffeur = "RETRAIT DÉPÔT"
+            else:
+                chauffeur = driver_name.upper() if driver_name else ""
+                if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
+                    chauffeur = ""
 
-        # Column 4: Livraison -> date (Convert from DD/MM/YYYY to YYYY-MM-DD)
-        raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
-        normalized_date = normalize_date_to_iso(raw_date)
+            # Column 4: Livraison -> date (DD/MM/YYYY to YYYY-MM-DD)
+            raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
+            normalized_date = normalize_date_to_iso(raw_date)
 
-        # Occurrence tracker for 100% unique delivery_id without relying on Excel row numbers
-        store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
-        driver_key_part = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
-        base_key = f"{normalized_date}_{store_name}_{driver_key_part}"
-        occurrence_tracker[base_key] = occurrence_tracker.get(base_key, 0) + 1
+            # Occurrence tracker for deterministic unique delivery_id
+            store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
+            driver_key_part = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
+            base_key = f"{normalized_date}_{store_name}_{driver_key_part}"
+            occurrence_tracker[base_key] = occurrence_tracker.get(base_key, 0) + 1
 
-        raw_delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_key_part}-{occurrence_tracker[base_key]}"
-        # Clean spaces and special characters from the ID
-        delivery_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
-        delivery_key = delivery_id
+            raw_delivery_id = f"LIV-{normalized_date}-{store_name}-{driver_key_part}-{occurrence_tracker[base_key]}"
+            delivery_id = re.sub(r'[^A-Za-z0-9\-]', '', raw_delivery_id)
+            delivery_key = delivery_id
 
-        # Matched schema payload for Supabase
-        record = {
-            "id": delivery_id,
-            "delivery_id": delivery_id,
-            "date": normalized_date,
-            "magasin": magasin,
-            "chauffeur": chauffeur,
-            "matricule": "",
-            "quantite": qty,
-            "status": "Non Livré",
-            "delivery_key": delivery_key
+            record = {
+                "id": delivery_id,
+                "delivery_id": delivery_id,
+                "date": normalized_date,
+                "magasin": magasin,
+                "chauffeur": chauffeur,
+                "matricule": "",
+                "quantite": qty,
+                "status": "Non Livré",
+                "delivery_key": delivery_key
+            }
+            records.append(record)
+            record_idx += 1
+
+        return {
+            "success": len(errors) == 0,
+            "total_records": len(records),
+            "records": records,
+            "errors": errors
         }
-        records.append(record)
-        record_idx += 1
-
-    wb.close()
-    return {
-        "success": len(errors) == 0,
-        "total_records": len(records),
-        "records": records,
-        "errors": errors
-    }
+    finally:
+        wb.close()
 
 
 def upsert_manifest_records(incoming_records, existing_records):
@@ -333,11 +349,6 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
     """
     Pushes delivery records to Supabase REST endpoint via POST upsert
     with STRICT ROW-LEVEL INDEPENDENCE & STATUS PRESERVATION:
-
-    1. Queries existing records in Supabase before pushing.
-    2. Any existing delivery that is already 'Livré' is NEVER overwritten with 'Non Livré'.
-    3. Every single valid row parsed from Excel is appended directly to the final payload list.
-    4. Guarantees 1:1 row independence without dictionary-based grouping or merging.
     """
     url = supabase_url or DEFAULT_SUPABASE_REST_URL
     key = api_key or DEFAULT_SUPABASE_API_KEY
@@ -347,7 +358,6 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         records = parsed.get("records", [])
 
     if not records:
-        print("[!] No records provided to push to Supabase.")
         return {"status": "success", "count": 0, "data": []}
 
     # 1. Fetch live Supabase state for status preservation strictly by unique ID
@@ -418,14 +428,12 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             if existing_row.get("photo_url"):
                 mapped["photo_url"] = existing_row["photo_url"]
 
-        # Every single valid row parsed from Excel MUST be appended directly to the final payload list
         payload.append(mapped)
 
     if preserved_livre > 0:
         print(f"[i] Status Preservation: {preserved_livre} delivery status(es) preserved as 'Livré'.")
 
     if not payload:
-        print("[i] No records to push.")
         return {"status": "success", "count": 0, "message": "No records to push"}
 
     headers = {
@@ -435,7 +443,6 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         "Prefer": "resolution=merge-duplicates"
     }
 
-    # Ensure on_conflict target matches the table unique constraint (delivery_key)
     if "on_conflict=" not in url:
         sep = "&" if "?" in url else "?"
         endpoint_url = f"{url}{sep}on_conflict=delivery_key"
@@ -453,7 +460,6 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
                 with urllib.request.urlopen(req, timeout=45) as resp:
                     pass
             except urllib.error.HTTPError as he:
-                # Fallback to direct url if endpoint rejects on_conflict parameter
                 if he.code == 400 and endpoint_url != url:
                     fallback_req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
                     with urllib.request.urlopen(fallback_req, timeout=45) as resp:
@@ -462,7 +468,7 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
                     raise he
             total_pushed += len(batch)
 
-        print(f"[+] Successfully pushed {total_pushed} new record(s) to Supabase.")
+        print(f"[+] Successfully pushed {total_pushed} record(s) to Supabase.")
         return {"status": "success", "count": total_pushed}
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="ignore")
@@ -477,15 +483,12 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
 
 
 if __name__ == "__main__":
-    test_files = [
-        "data/programs/20261102_2129_Programme 03-11-26.xlsx",
-        "data/programs/20261102_1354_PROGRAMME 01-11-2026.xlsx"
-    ]
+    import sys
+    test_files = sys.argv[1:] if len(sys.argv) > 1 else []
     for tf in test_files:
         if os.path.exists(tf):
             print(f"\n--- Testing parse_delivery_excel on: {tf} ---")
             res = parse_delivery_excel(tf)
-            print(f"Success: {res['success']}")
-            print(f"Total Rows: {res['total_records']}")
+            print(f"Success: {res['success']}, Total Rows: {res['total_records']}")
             for r in res['records'][:5]:
                 print(f"  [{r['delivery_id']}] {r['magasin']} | {r['chauffeur']} | {r['quantite']} p")

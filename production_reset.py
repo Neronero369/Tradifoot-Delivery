@@ -7,7 +7,6 @@ to prepare the local system for clean production ingestion.
 """
 
 import os
-import sys
 from pathlib import Path
 
 
