@@ -15,6 +15,8 @@ import urllib.request
 import urllib.error
 from datetime import datetime, date
 import openpyxl
+import pandas as pd
+import numpy as np
 
 
 def _load_env():
@@ -101,81 +103,113 @@ def normalize_date_to_iso(val, fallback=""):
 def parse_delivery_excel(file_path):
     """
     Parses a production Programme de Livraison Excel workbook dynamically by header name.
-    Uses openpyxl read_only=True mode for minimum RAM usage.
+    Uses pandas to load the DataFrame, strip header whitespaces, and safely extract columns.
 
     CRITICAL COLUMN MAPPING:
       - Boutique   -> maps to magasin (String, uppercase, trimmed)
       - Globale    -> maps to quantite (Integer, default 0, skip row if 0/empty)
       - Chauffeur  -> maps to chauffeur (String, uppercase, strictly "" if blank or missing)
       - Livraison  -> maps to date (Convert from DD/MM/YYYY to YYYY-MM-DD)
+      - Materiel   -> maps to materiel (String, stripped, None if blank/empty/NaN)
     """
-    wb = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+    # 1. Locate the delivery program sheet (or default to first sheet)
+    xl = pd.ExcelFile(file_path)
     try:
-        # Locate the delivery program sheet (or default to first sheet)
         prog_sheet_name = None
-        for s_name in wb.sheetnames:
-            if re.search(r'prog|poro|livr', s_name, re.I):
+        for s_name in xl.sheet_names:
+            if re.search(r'prog|poro|livr', str(s_name), re.I):
                 prog_sheet_name = s_name
                 break
         if not prog_sheet_name:
-            prog_sheet_name = wb.sheetnames[0]
+            prog_sheet_name = xl.sheet_names[0]
 
-        ws = wb[prog_sheet_name]
+        # 2. Dynamic Header Resolution (search rows 0 to 8)
+        preview_df = pd.read_excel(xl, sheet_name=prog_sheet_name, nrows=8, header=None)
+        header_row_idx = 0
+        raw_headers = []
 
-        # 1. Dynamic Header Resolution (search rows 1 to 7)
-        header_row_idx = None
+        for r_idx, row_vals in preview_df.iterrows():
+            clean_row = [str(c or "").strip().lower() for c in row_vals if pd.notna(c)]
+            has_boutique = any(h in ("boutique", "magasin") or "boutique" in h or "magasin" in h for h in clean_row)
+            has_globale = any(h in ("globale", "global", "quantite", "quantité", "qte") or "globale" in h or "quantite" in h for h in clean_row)
+
+            if has_boutique and (has_globale or any("livraison" in h or "chauffeur" in h for h in clean_row)):
+                header_row_idx = r_idx
+                raw_headers = [str(c or "").strip() for c in row_vals if pd.notna(c)]
+                break
+
+        # Load dataframe starting at detected header row
+        df = pd.read_excel(xl, sheet_name=prog_sheet_name, header=header_row_idx)
+
+        # 1. Clean the Excel Headers (Pandas)
+        df.columns = df.columns.astype(str).str.strip()
+
+        # Identify primary columns safely from stripped column names
         col_boutique = None
         col_globale = None
         col_chauffeur = None
         col_livraison = None
         col_remarque = None
         col_materiel = None
-        raw_headers = []
 
-        for r_idx, row in enumerate(ws.iter_rows(max_row=7, values_only=True), start=1):
-            clean_row = [str(c or "").strip().lower() for c in row]
-            has_boutique = any(h in ("boutique", "magasin") or "boutique" in h or "magasin" in h for h in clean_row)
-            has_globale = any(h in ("globale", "global", "quantite", "quantité", "qte") or "globale" in h or "quantite" in h for h in clean_row)
+        for col in df.columns:
+            c_clean = str(col).strip()
+            c_lower = c_clean.lower()
+            if ("boutique" in c_lower or "magasin" in c_lower) and col_boutique is None:
+                col_boutique = col
+            elif ("globale" in c_lower or "global" in c_lower or "quantite" in c_lower or "quantité" in c_lower or "qte" in c_lower) and col_globale is None:
+                col_globale = col
+            elif ("chauffeur" in c_lower or "driver" in c_lower) and col_chauffeur is None:
+                col_chauffeur = col
+            elif ("livraison" in c_lower or "date" in c_lower) and col_livraison is None:
+                col_livraison = col
+            elif ("remarque" in c_lower or "note" in c_lower or "observation" in c_lower) and col_remarque is None:
+                col_remarque = col
+            elif ("materiel" in c_lower or "matériel" in c_lower or "vehicule" in c_lower or "véhicule" in c_lower or "camion" in c_lower or "engin" in c_lower) and col_materiel is None:
+                col_materiel = col
 
-            if has_boutique and (has_globale or any("livraison" in h or "chauffeur" in h for h in clean_row)):
-                header_row_idx = r_idx
-                raw_headers = [str(c or "").strip() for c in row]
-                for c_idx, h in enumerate(clean_row):
-                    if h in ("boutique", "magasin") or ("boutique" in h and col_boutique is None) or ("magasin" in h and col_boutique is None):
-                        col_boutique = c_idx
-                    elif h in ("globale", "global", "quantite", "quantité", "qte") or ("globale" in h and col_globale is None):
-                        col_globale = c_idx
-                    elif h in ("chauffeur", "driver") or ("chauffeur" in h and col_chauffeur is None):
-                        col_chauffeur = c_idx
-                    elif h in ("livraison", "date") or ("livraison" in h and col_livraison is None):
-                        col_livraison = c_idx
-                    elif ("remarque" in h or "note" in h or "observation" in h) and col_remarque is None:
-                        col_remarque = c_idx
-                    elif ("materiel" in h or "matériel" in h or "vehicule" in h or "véhicule" in h or "camion" in h or "engin" in h) and col_materiel is None:
-                        col_materiel = c_idx
-                break
+        if col_boutique is None:
+            for cand in ['Boutique', 'Magasin', 'BOUTIQUE', 'MAGASIN', 'Destinataire']:
+                if cand in df.columns:
+                    col_boutique = cand
+                    break
 
-        if header_row_idx is None or col_boutique is None:
+        if col_boutique is None:
             raise ValueError(
-                f"Could not locate required 'Boutique' column in {file_path}. Headers detected: {raw_headers}"
+                f"Could not locate required 'Boutique' column in {file_path}. Headers detected: {list(df.columns)}"
             )
 
         records = []
         errors = []
         occurrence_tracker = {}
-        record_idx = 1
 
-        # 2. Iterate data rows starting immediately below the detected header row
-        for row_idx, row in enumerate(ws.iter_rows(min_row=header_row_idx + 1, values_only=True), start=header_row_idx + 1):
-            if not any(row):
-                continue
-
+        # 2. Iterate data rows
+        for row_idx, row in df.iterrows():
             # Column 1: Boutique -> magasin (String, uppercase, trimmed)
-            raw_store = str(row[col_boutique] or "").strip() if col_boutique < len(row) and row[col_boutique] is not None else ""
+            raw_store = ""
+            if col_boutique is not None and col_boutique in df.columns:
+                val_store = row.get(col_boutique)
+                if val_store is not None and pd.notna(val_store):
+                    raw_store = str(val_store).strip()
+            if not raw_store:
+                for k in ['Boutique', 'Magasin', 'BOUTIQUE', 'MAGASIN', 'Destinataire']:
+                    if k in df.columns and pd.notna(row.get(k)):
+                        raw_store = str(row.get(k)).strip()
+                        break
+
             magasin = " ".join(raw_store.upper().split())
 
             # Column 2: Globale -> quantite (Integer, default 0 if blank)
-            raw_qty = row[col_globale] if col_globale is not None and col_globale < len(row) else 0
+            raw_qty = 0
+            if col_globale is not None and col_globale in df.columns:
+                val_qty = row.get(col_globale)
+                if val_qty is not None and pd.notna(val_qty):
+                    raw_qty = val_qty
+            if not raw_qty:
+                for k in ['Globale', 'Global', 'Quantité', 'Quantite', 'QTE', 'Qte', 'Total']:
+                    if k in df.columns and pd.notna(row.get(k)):
+                        raw_qty = row.get(k)
+                        break
             try:
                 if raw_qty is not None and str(raw_qty).strip() != "":
                     qty = int(float(str(raw_qty).replace(",", ".")))
@@ -189,14 +223,34 @@ def parse_delivery_excel(file_path):
                 continue
 
             # Column 3: Chauffeur -> chauffeur
-            raw_driver = str(row[col_chauffeur] or "").strip() if col_chauffeur is not None and col_chauffeur < len(row) and row[col_chauffeur] is not None else ""
+            raw_driver = ""
+            if col_chauffeur is not None and col_chauffeur in df.columns:
+                val_ch = row.get(col_chauffeur)
+                if val_ch is not None and pd.notna(val_ch):
+                    raw_driver = str(val_ch).strip()
+            if not raw_driver:
+                for k in ['Chauffeur', 'Driver', 'CHAUFFEUR', 'DRIVER']:
+                    if k in df.columns and pd.notna(row.get(k)):
+                        raw_driver = str(row.get(k)).strip()
+                        break
             driver_name = " ".join(raw_driver.split())
 
             # Customer Pickup (Ramassage) Workflow:
-            raw_remarque = str(row[col_remarque] or "").strip() if col_remarque is not None and col_remarque < len(row) and row[col_remarque] is not None else ""
+            raw_remarque = ""
+            if col_remarque is not None and col_remarque in df.columns:
+                val_rem = row.get(col_remarque)
+                if val_rem is not None and pd.notna(val_rem):
+                    raw_remarque = str(val_rem).strip()
+            if not raw_remarque:
+                for k in ['Remarque', 'Remarques', 'Observation', 'Observations', 'Note', 'Notes', 'REMARQUE']:
+                    if k in df.columns and pd.notna(row.get(k)):
+                        raw_remarque = str(row.get(k)).strip()
+                        break
+
             remarque_clean = " ".join(raw_remarque.split()).lower()
             driver_lower = driver_name.lower()
-            row_text = " ".join([str(c or "").strip().lower() for c in row if c is not None])
+            row_vals_list = [str(v).strip().lower() for v in row.values if pd.notna(v)]
+            row_text = " ".join(row_vals_list)
 
             is_ramassage_pickup = (
                 "ramassage" in remarque_clean or
@@ -226,15 +280,43 @@ def parse_delivery_excel(file_path):
                     chauffeur = ""
 
             # Column 4: Livraison -> date (DD/MM/YYYY to YYYY-MM-DD)
-            raw_date = row[col_livraison] if col_livraison is not None and col_livraison < len(row) else None
+            raw_date = None
+            if col_livraison is not None and col_livraison in df.columns:
+                val_date = row.get(col_livraison)
+                if val_date is not None and pd.notna(val_date):
+                    raw_date = val_date
+            if raw_date is None:
+                for k in ['Livraison', 'Date', 'LIVRAISON', 'DATE', 'Date Livraison']:
+                    if k in df.columns and pd.notna(row.get(k)):
+                        raw_date = row.get(k)
+                        break
             normalized_date = normalize_date_to_iso(raw_date)
 
-            # Column 5: Materiel -> materiel (Clean string, default to None if empty or NaN)
-            raw_materiel = str(row[col_materiel] or "").strip() if col_materiel is not None and col_materiel < len(row) and row[col_materiel] is not None else ""
-            materiel_cleaned = " ".join(raw_materiel.split())
-            if materiel_cleaned.lower() in ("nan", "none", "null", "-", "/"):
-                materiel_cleaned = ""
-            materiel = materiel_cleaned if materiel_cleaned else None
+            # Column 5: Materiel -> robust extraction & null handling
+            # Safe .get() checking variations just in case (e.g., row.get('Materiel'))
+            raw_materiel = row.get('Materiel')
+            if raw_materiel is None or (isinstance(raw_materiel, float) and np.isnan(raw_materiel)) or str(raw_materiel).strip().lower() in ("nan", "none", "null", ""):
+                for key_cand in ['Matériel', 'MATERIEL', 'MATÉRIEL', 'materiel', 'matériel', 'Vehicule', 'Véhicule', 'VEHICULE', 'Camion', 'CAMION', 'Engin', 'ENGIN']:
+                    if key_cand in df.columns:
+                        val_m = row.get(key_cand)
+                        if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)) and str(val_m).strip().lower() not in ("nan", "none", "null", ""):
+                            raw_materiel = val_m
+                            break
+
+            if (raw_materiel is None or (isinstance(raw_materiel, float) and np.isnan(raw_materiel))) and col_materiel is not None and col_materiel in df.columns:
+                val_m = row.get(col_materiel)
+                if val_m is not None and not (isinstance(val_m, float) and np.isnan(val_m)):
+                    raw_materiel = val_m
+
+            # Clean extracted value: strip whitespace, convert empty/NaN/None/"nan" to None
+            materiel = None
+            if raw_materiel is not None and pd.notna(raw_materiel):
+                if isinstance(raw_materiel, str):
+                    cleaned_mat = raw_materiel.strip()
+                else:
+                    cleaned_mat = str(raw_materiel).strip()
+                if cleaned_mat and cleaned_mat.lower() not in ("nan", "none", "null", "-", "/"):
+                    materiel = cleaned_mat
 
             # Occurrence tracker for deterministic unique delivery_id
             store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
@@ -259,7 +341,6 @@ def parse_delivery_excel(file_path):
                 "delivery_key": delivery_key
             }
             records.append(record)
-            record_idx += 1
 
         return {
             "success": len(errors) == 0,
@@ -268,7 +349,7 @@ def parse_delivery_excel(file_path):
             "errors": errors
         }
     finally:
-        wb.close()
+        xl.close()
 
 
 def upsert_manifest_records(incoming_records, existing_records):
@@ -421,14 +502,16 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             final_status = raw_status
 
         raw_mat = r.get("materiel")
+        materiel_val = None
         if raw_mat is not None:
-            mat_clean = str(raw_mat).strip()
-            if not mat_clean or mat_clean.lower() in ("nan", "none", "null", "-", "/"):
+            if isinstance(raw_mat, float) and np.isnan(raw_mat):
                 materiel_val = None
             else:
-                materiel_val = mat_clean
-        else:
-            materiel_val = None
+                mat_clean = str(raw_mat).strip()
+                if not mat_clean or mat_clean.lower() in ("nan", "none", "null", "-", "/"):
+                    materiel_val = None
+                else:
+                    materiel_val = mat_clean
 
         mapped = {
             "delivery_id": rec_id,
