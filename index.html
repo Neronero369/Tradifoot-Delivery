@@ -6041,8 +6041,7 @@ const LOCAL_DELIVERY_DATA = [
         status: "Disponible",
         current_mileage: 12000,
         fuel_level: "50%",
-        current_driver: null,
-        last_oil_change_km: 0
+        current_driver: null
       },
       {
         id: "ec09bed4-816a-4327-af1d-4e7362a1cdc7",
@@ -6051,8 +6050,7 @@ const LOCAL_DELIVERY_DATA = [
         status: "Disponible",
         current_mileage: 0,
         fuel_level: "100%",
-        current_driver: null,
-        last_oil_change_km: 0
+        current_driver: null
       },
       {
         id: "2c43c7e9-5c2a-4ef1-b393-17fb50bf3dc4",
@@ -6061,8 +6059,7 @@ const LOCAL_DELIVERY_DATA = [
         status: "Disponible",
         current_mileage: 0,
         fuel_level: "100%",
-        current_driver: null,
-        last_oil_change_km: 0
+        current_driver: null
       },
       {
         id: "c660bb2b-6bbd-4123-ba73-c679bb418716",
@@ -6071,8 +6068,7 @@ const LOCAL_DELIVERY_DATA = [
         status: "Maintenance",
         current_mileage: 0,
         fuel_level: "100%",
-        current_driver: null,
-        last_oil_change_km: 0
+        current_driver: null
       }
     ];
 
@@ -6284,32 +6280,7 @@ const LOCAL_DELIVERY_DATA = [
         else if (fuelStr === '50%') fuelPct = 50;
         else if (fuelStr === '25%') fuelPct = 25;
 
-        // Predictive Maintenance Engine: Vidange 10 000 km
-        const currentKm = Number(v.current_mileage || 0);
-        const lastOilKm = Number(v.last_oil_change_km || 0);
-        const drivenSinceOil = Math.max(0, currentKm - lastOilKm);
-        const remainingKm = 10000 - drivenSinceOil;
 
-        let oilBarColor = 'bg-emerald-500';
-        let oilStatusClass = 'text-emerald-700 font-semibold';
-        let oilStatusText = `Reste ${remainingKm.toLocaleString('fr-FR')} km`;
-        let oilContainerBg = 'bg-slate-50 border-slate-100';
-        let oilBarPct = Math.min(100, Math.round((drivenSinceOil / 10000) * 100));
-        if (oilBarPct === 0 && drivenSinceOil === 0) oilBarPct = 2;
-
-        if (remainingKm <= 0) {
-          const overdueKm = Math.abs(remainingKm);
-          oilBarColor = 'bg-red-500 animate-pulse shadow-xs shadow-red-500/50';
-          oilStatusClass = 'text-red-600 font-extrabold animate-pulse';
-          oilStatusText = `🚨 Vidange DÉPASSÉE de ${overdueKm.toLocaleString('fr-FR')} km !`;
-          oilContainerBg = 'bg-red-50/80 border-red-200';
-          oilBarPct = 100;
-        } else if (remainingKm <= 500) {
-          oilBarColor = 'bg-amber-500 shadow-xs shadow-amber-500/30';
-          oilStatusClass = 'text-amber-700 font-bold';
-          oilStatusText = `⚠️ Vidange requise dans ${remainingKm.toLocaleString('fr-FR')} km`;
-          oilContainerBg = 'bg-amber-50/70 border-amber-200';
-        }
 
         // 3. Session-Aware Driver Action Rendering
         // Requirement 1:
@@ -6389,7 +6360,7 @@ const LOCAL_DELIVERY_DATA = [
                   <i class="fa-solid fa-gauge-high text-blue-500"></i> Kilométrage
                 </span>
                 <div class="text-sm sm:text-base font-extrabold text-slate-900 font-mono mt-1">
-                  ${currentKm.toLocaleString('fr-FR')} <span class="text-xs text-slate-500 font-normal">km</span>
+                  ${Number(v.current_mileage || 0).toLocaleString('fr-FR')} <span class="text-xs text-slate-500 font-normal">km</span>
                 </div>
               </div>
 
@@ -6405,35 +6376,6 @@ const LOCAL_DELIVERY_DATA = [
                   <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                     <div class="${isMaintenance ? 'bg-red-400' : 'bg-amber-500'} h-full rounded-full" style="width: ${fuelPct}%"></div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Maintenance (Vidange) Section -->
-            <div class="p-3.5 rounded-2xl ${oilContainerBg} border flex flex-col justify-between space-y-2.5 transition-colors duration-300">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-slate-500 text-[10px] sm:text-[11px] uppercase font-bold tracking-wider flex items-center gap-1.5">
-                  <i class="fa-solid fa-oil-can text-amber-500"></i> MAINTENANCE (Vidange)
-                </span>
-                ${canManageMaintenance ? `
-                  <button onclick="logVehicleOilChange('${v.id}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-[10px] transition shadow-xs active:scale-95 shrink-0" title="Enregistrer une nouvelle vidange">
-                    <i class="fa-solid fa-wrench text-[9px] text-amber-400"></i>
-                    <span>Enregistrer Vidange</span>
-                  </button>
-                ` : ''}
-              </div>
-
-              <div>
-                <div class="flex items-center justify-between text-xs mb-1.5 gap-2">
-                  <span class="${oilStatusClass} text-xs truncate">
-                    ${oilStatusText}
-                  </span>
-                  <span class="text-[10px] font-mono text-slate-500 font-semibold shrink-0">
-                    ${drivenSinceOil.toLocaleString('fr-FR')} / 10 000 km
-                  </span>
-                </div>
-                <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
-                  <div class="${oilBarColor} h-full rounded-full transition-all duration-500" style="width: ${oilBarPct}%"></div>
                 </div>
               </div>
             </div>
@@ -6969,57 +6911,6 @@ const LOCAL_DELIVERY_DATA = [
       );
     }
 
-    async function logVehicleOilChange(vehicleId) {
-      const currentUser = AppState.currentUser || getAuthSession() || {};
-      const isAdmin = currentUser.role === 'admin';
-      const isRetraitUser = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
-      if (!isAdmin && !isRetraitUser) {
-        showNotification("Action réservée aux administrateurs et ADV.", "warning");
-        return;
-      }
-
-      const v = (AppState.vehicles || []).find(item => String(item.id) === String(vehicleId));
-      if (!v) return;
-
-      const currentMileage = Number(v.current_mileage || 0);
-      const confirmed = window.confirm(
-        `Confirmer l'enregistrement de la vidange pour le véhicule ${v.brand || ''} (${v.plate_number || 'N/A'}) ?\n\nLe compteur de vidange sera réinitialisé au kilométrage actuel (${currentMileage.toLocaleString('fr-FR')} km).`
-      );
-      if (!confirmed) return;
-
-      // Synchronously update in-memory object
-      v.last_oil_change_km = currentMileage;
-
-      // Immediate local storage persistence
-      localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
-
-      // Immediately re-render the DOM without requiring a page reload
-      renderFleetDashboard();
-
-      // Update remote Supabase vehicles table
-      if (supabaseClient) {
-        try {
-          const { error: upErr } = await supabaseClient
-            .from('vehicles')
-            .update({ last_oil_change_km: currentMileage })
-            .eq('id', v.id);
-
-          if (upErr) {
-            console.warn('[Admin] Vidange update Supabase warning:', upErr);
-            showNotification(`Vidange enregistrée localement pour ${v.brand} (erreur synchro distante)`, "warning");
-          } else {
-            console.log(`[Admin] Vidange Supabase mise à jour avec succès : ${v.brand} -> ${currentMileage} km`);
-            showNotification(`Vidange enregistrée avec succès pour ${v.brand} (${currentMileage.toLocaleString('fr-FR')} km)`, "success");
-          }
-        } catch (e) {
-          console.warn('[Admin] Vidange update exception:', e);
-          showNotification(`Vidange enregistrée localement pour ${v.brand}`, "success");
-        }
-      } else {
-        showNotification(`Vidange enregistrée pour ${v.brand} (${currentMileage.toLocaleString('fr-FR')} km)`, "success");
-      }
-    }
-
         window.switchMainView = switchMainView;
     window.loadFleetData = loadFleetData;
     window.openHandoverModal = openHandoverModal;
@@ -7031,7 +6922,6 @@ const LOCAL_DELIVERY_DATA = [
     window.openVehicleHistoryModal = openVehicleHistoryModal;
     window.closeVehicleHistoryModal = closeVehicleHistoryModal;
     window.adminToggleVehicleStatus = adminToggleVehicleStatus;
-    window.logVehicleOilChange = logVehicleOilChange;
 
 
     async function initAuthenticatedApp() {
