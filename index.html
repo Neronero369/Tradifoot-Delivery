@@ -6386,10 +6386,10 @@ const LOCAL_DELIVERY_DATA = [
                 } flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
                   <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
                 </div>
-                <div>
+                <div class="shrink-0 min-w-0">
                   <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${vehicleDetails.brand}</h3>
                   <div class="mt-1.5">
-                    <span class="inline-block bg-yellow-400 text-black border border-black rounded px-2 py-0.5 font-bold tracking-widest text-xs font-mono shadow-xs">
+                    <span class="inline-block bg-yellow-400 text-black border border-black rounded px-2 py-0.5 font-bold tracking-widest text-xs font-mono shadow-xs whitespace-nowrap">
                       ${vehicleDetails.plate}
                     </span>
                   </div>
@@ -6398,8 +6398,8 @@ const LOCAL_DELIVERY_DATA = [
 
               <!-- Truck Image -->
               ${vehicleImg ? `
-                <div class="flex items-center justify-center shrink-0 px-1">
-                  <img src="${vehicleImg}" alt="${vehicleDetails.brand}" class="h-16 sm:h-24 w-auto max-w-[120px] sm:max-w-[160px] object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="if(!this.src.endsWith('.jpg')){this.src=this.src.replace('.png','.jpg');}else{this.style.display='none';}" loading="lazy" />
+                <div class="bg-transparent border-0 shadow-none flex items-center justify-center shrink-0 px-1">
+                  <img src="${vehicleImg}" alt="${vehicleDetails.brand}" class="h-20 md:h-24 w-auto object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="this.style.display='none';" loading="lazy" />
                 </div>
               ` : ''}
 
