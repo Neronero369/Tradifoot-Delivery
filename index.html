@@ -6384,6 +6384,15 @@ const LOCAL_DELIVERY_DATA = [
         }
       }
 
+      // Active Driver Check (Strict Single-Vehicle Lock)
+      // Condition: Does the user currently exist as the current_driver on any vehicle where status === 'En Tournée'?
+      const hasActiveVehicle = Boolean(
+        isChauffeur && currentChauffeur && vehicles.some(veh => {
+          const s = getNormalizedStatus(veh);
+          return s === 'en_tournee' && isSameDriver(veh.current_driver, currentChauffeur);
+        })
+      );
+
       grid.innerHTML = vehicles.map((v, vIndex) => {
         const normStatus = getNormalizedStatus(v);
         const vehicleDetails = resolveVehicleDetails(v, vIndex);
@@ -6449,12 +6458,21 @@ const LOCAL_DELIVERY_DATA = [
             `;
           } else if (isDisponible) {
             // STATE A (Available)
-            chauffeurActionHtml = `
-              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
-                <i class="fa-solid fa-key"></i>
-                <span>Prendre ce véhicule</span>
-              </button>
-            `;
+            if (hasActiveVehicle && !isMyTruck) {
+              chauffeurActionHtml = `
+                <button disabled="true" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl opacity-50 cursor-not-allowed bg-gray-400 text-white border-none text-xs font-bold transition min-h-[40px]" title="Vous avez déjà un véhicule en cours d'utilisation">
+                  <i class="fa-solid fa-lock"></i>
+                  <span>Bloqué (Vous avez déjà un véhicule)</span>
+                </button>
+              `;
+            } else {
+              chauffeurActionHtml = `
+                <button onclick="openHandoverModal('${v.id}', 'Prise')" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
+                  <i class="fa-solid fa-key"></i>
+                  <span>Prendre ce véhicule</span>
+                </button>
+              `;
+            }
           } else if (isEnTournee && isMyTruck) {
             // STATE B (My Truck)
             chauffeurActionHtml = `
@@ -6607,6 +6625,19 @@ const LOCAL_DELIVERY_DATA = [
       if (actionType === 'Prise' && (vStatus === 'en tournée' || vStatus === 'en tournee' || vStatus === 'tournée' || vStatus === 'tournee')) {
         showNotification(`Ce véhicule est déjà en tournée avec ${vehicle.current_driver || 'un autre chauffeur'}.`, "warning");
         return;
+      }
+
+      // Guard 3b: Single-vehicle checkout lock (One truck per driver)
+      if (actionType === 'Prise') {
+        const alreadyActiveTruck = AppState.vehicles.find(veh => {
+          const s = String((veh && veh.status) || '').trim().toLowerCase();
+          const isOnRoute = (s === 'en tournée' || s === 'en tournee' || s === 'tournée' || s === 'tournee');
+          return isOnRoute && isSameDriver(veh.current_driver, currentChauffeur);
+        });
+        if (alreadyActiveTruck) {
+          showNotification("🚫 Vous avez déjà un véhicule en cours d'utilisation. Veuillez le restituer avant d'en prendre un nouveau.", "error");
+          return;
+        }
       }
 
       // Guard 4: Retour block if not my truck
