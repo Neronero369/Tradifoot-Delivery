@@ -6339,7 +6339,7 @@ const LOCAL_DELIVERY_DATA = [
         if (isChauffeur) {
           if (isMaintenance) {
             chauffeurActionHtml = `
-              <div class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 min-h-[40px]">
+              <div class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 min-h-[40px]">
                 <span class="text-red-500 font-bold text-xs flex items-center gap-1.5">
                   🚫 Véhicule Indisponible
                 </span>
@@ -6348,7 +6348,7 @@ const LOCAL_DELIVERY_DATA = [
           } else if (isDisponible) {
             // STATE A (Available)
             chauffeurActionHtml = `
-              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
+              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
                 <i class="fa-solid fa-key"></i>
                 <span>Prendre ce véhicule</span>
               </button>
@@ -6356,7 +6356,7 @@ const LOCAL_DELIVERY_DATA = [
           } else if (isEnTournee && isMyTruck) {
             // STATE B (My Truck)
             chauffeurActionHtml = `
-              <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-600/25 active:scale-95 min-h-[40px]">
+              <button onclick="openHandoverModal('${v.id}', 'Retour')" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-600/25 active:scale-95 min-h-[40px]">
                 <i class="fa-solid fa-arrow-right-arrow-left"></i>
                 <span>Restituer le véhicule</span>
               </button>
@@ -6364,7 +6364,7 @@ const LOCAL_DELIVERY_DATA = [
           } else if (isEnTournee && !isMyTruck) {
             // STATE C (Someone Else's Truck)
             chauffeurActionHtml = `
-              <span class="bg-gray-200 text-gray-700 font-bold px-3 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 flex-1 min-h-[40px]">
+              <span class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold px-3 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 flex-1 min-h-[40px]">
                 🔒 En utilisation par ${v.current_driver || 'un autre chauffeur'}
               </span>
             `;
@@ -6375,41 +6375,48 @@ const LOCAL_DELIVERY_DATA = [
           <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-5">
             
             <!-- Card Header: Brand, Plate, Truck Image, Status -->
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center space-x-3 sm:space-x-3.5 min-w-0">
-                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${
-                  isMaintenance 
-                    ? 'bg-red-50 text-red-700 border border-red-200' 
-                    : (isEnTournee 
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
-                } flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
-                  <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
-                </div>
-                <div class="shrink-0 min-w-0">
-                  <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${vehicleDetails.brand}</h3>
-                  <div class="mt-1.5">
-                    <span class="inline-block bg-yellow-400 text-black border border-black rounded px-2 py-0.5 font-bold tracking-widest text-xs font-mono shadow-xs whitespace-nowrap">
-                      ${vehicleDetails.plate}
-                    </span>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+              <div class="flex items-center justify-between w-full sm:w-auto gap-3 min-w-0">
+                <div class="flex items-center space-x-3 sm:space-x-3.5 min-w-0">
+                  <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${
+                    isMaintenance 
+                      ? 'bg-red-50 text-red-700 border border-red-200' 
+                      : (isEnTournee 
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                  } flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
+                    <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
                   </div>
+                  <div class="shrink-0 min-w-0">
+                    <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${vehicleDetails.brand}</h3>
+                    <div class="mt-1.5">
+                      <span class="inline-block bg-yellow-400 text-black border border-black rounded px-2 py-0.5 font-bold tracking-widest text-xs font-mono shadow-xs whitespace-nowrap">
+                        ${vehicleDetails.plate}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Status badge on mobile -->
+                <div class="sm:hidden shrink-0">
+                  ${statusBadgeHtml}
                 </div>
               </div>
 
               <!-- Truck Image -->
               ${vehicleImg ? `
-                <div class="bg-transparent border-0 shadow-none flex items-center justify-center shrink-0 px-1">
+                <div class="bg-transparent border-0 shadow-none flex items-center justify-center self-center sm:self-auto shrink-0 px-1">
                   <img src="${vehicleImg}" alt="${vehicleDetails.brand}" class="h-20 md:h-24 w-auto object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="this.style.display='none';" loading="lazy" />
                 </div>
               ` : ''}
 
-              <div class="shrink-0 self-start sm:self-center">
+              <!-- Status badge on desktop -->
+              <div class="hidden sm:block shrink-0 self-start sm:self-center">
                 ${statusBadgeHtml}
               </div>
             </div>
 
             <!-- Metrics Grid: Mileage, Fuel -->
-            <div class="grid grid-cols-2 gap-3.5 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <!-- Mileage -->
               <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
                 <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
@@ -6437,8 +6444,8 @@ const LOCAL_DELIVERY_DATA = [
             </div>
 
             <!-- Action Buttons Footer -->
-            <div class="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
-              <button onclick="openVehicleHistoryModal('${v.id}')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs active:scale-95 min-h-[40px]">
+            <div class="pt-2 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-3 w-full">
+              <button onclick="openVehicleHistoryModal('${v.id}')" class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs active:scale-95 min-h-[40px]">
                 <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
                 <span>Voir Historique</span>
               </button>
@@ -6447,18 +6454,18 @@ const LOCAL_DELIVERY_DATA = [
 
               ${canManageMaintenance ? (
                 isMaintenance ? `
-                  <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition min-h-[40px]" title="Remettre le camion en service">
+                  <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition min-h-[40px]" title="Remettre le camion en service">
                     <i class="fa-solid fa-check text-xs"></i>
                     <span>Remettre Disponible</span>
                   </button>
                 ` : (
                   isDisponible ? `
-                    <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition min-h-[40px]" title="Mettre le véhicule en maintenance">
+                    <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition min-h-[40px]" title="Mettre le véhicule en maintenance">
                       <i class="fa-solid fa-wrench text-xs"></i>
                       <span>Mettre en Maintenance</span>
                     </button>
                   ` : `
-                    <button disabled class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed text-xs font-bold min-h-[40px]" title="Impossible de mettre en maintenance pendant une tournée en cours">
+                    <button disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed text-xs font-bold min-h-[40px]" title="Impossible de mettre en maintenance pendant une tournée en cours">
                       <i class="fa-solid fa-lock text-xs"></i>
                       <span>Bloqué (En Tournée)</span>
                     </button>
