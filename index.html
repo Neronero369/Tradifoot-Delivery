@@ -6037,7 +6037,7 @@ const LOCAL_DELIVERY_DATA = [
       {
         id: "ab165d0e-5145-42c6-b516-67f3827491b7",
         brand: "MERCEDES",
-        plate_number: "MERCEDES-01",
+        plate_number: "003598 322 16",
         status: "Disponible",
         current_mileage: 12000,
         fuel_level: "50%",
@@ -6046,7 +6046,7 @@ const LOCAL_DELIVERY_DATA = [
       {
         id: "ec09bed4-816a-4327-af1d-4e7362a1cdc7",
         brand: "MERCEDES",
-        plate_number: "MERCEDES-02",
+        plate_number: "003599 322 16",
         status: "Disponible",
         current_mileage: 0,
         fuel_level: "100%",
@@ -6055,7 +6055,7 @@ const LOCAL_DELIVERY_DATA = [
       {
         id: "2c43c7e9-5c2a-4ef1-b393-17fb50bf3dc4",
         brand: "HYUNDAI",
-        plate_number: "HYUNDAI-01",
+        plate_number: "002059 317 16",
         status: "Disponible",
         current_mileage: 0,
         fuel_level: "100%",
@@ -6064,7 +6064,7 @@ const LOCAL_DELIVERY_DATA = [
       {
         id: "c660bb2b-6bbd-4123-ba73-c679bb418716",
         brand: "NISSAN",
-        plate_number: "NISSAN-01",
+        plate_number: "013869 317 16",
         status: "Maintenance",
         current_mileage: 0,
         fuel_level: "100%",
@@ -6198,14 +6198,48 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
+    // Explicit Vehicle Identification Mapping (Brand, Official Matricule, Image)
+    function resolveVehicleDetails(v, index = 0) {
+      if (!v) return { brand: 'Véhicule', plate: '000000 000 00', image: null };
+      const b = String(v.brand || '').trim().toUpperCase();
+      const p = String(v.plate_number || '').trim().toUpperCase();
+      const id = String(v.id || '').trim().toLowerCase();
+
+      let brandDisplay = v.brand || 'Véhicule';
+      let plateDisplay = '000000 000 00';
+      let imgPath = null;
+
+      if (b.includes('NISSAN') || p.includes('NISSAN') || p.includes('013869')) {
+        brandDisplay = 'NISSAN';
+        plateDisplay = '013869 317 16';
+        imgPath = 'assets/nissan.png';
+      } else if (b.includes('HYUNDAI') || p.includes('HYUNDAI') || p.includes('002059')) {
+        brandDisplay = 'HYUNDAI';
+        plateDisplay = '002059 317 16';
+        imgPath = 'assets/hyundai.png';
+      } else if (b.includes('MERCEDES') || p.includes('MERCEDES') || p.includes('3598') || p.includes('3599')) {
+        brandDisplay = 'MERCEDES';
+        imgPath = 'assets/mercedes.png';
+        if (p.includes('02') || p.includes('3599') || id === 'ec09bed4-816a-4327-af1d-4e7362a1cdc7' || index === 1) {
+          plateDisplay = '003599 322 16';
+        } else {
+          plateDisplay = '003598 322 16';
+        }
+      } else {
+        brandDisplay = v.brand || 'Véhicule';
+        plateDisplay = v.plate_number || 'MATRICULE';
+      }
+
+      return {
+        brand: brandDisplay,
+        plate: plateDisplay,
+        image: imgPath
+      };
+    }
+
     // Brand to vehicle image mapping helper
     function getVehicleImagePath(brand) {
-      if (!brand) return null;
-      const b = String(brand).trim().toUpperCase();
-      if (b.includes('MERCEDES')) return 'assets/mercedes.png';
-      if (b.includes('HYUNDAI')) return 'assets/hyundai.png';
-      if (b.includes('NISSAN')) return 'assets/nissan.png';
-      return null;
+      return resolveVehicleDetails({ brand }).image;
     }
 
     function renderFleetDashboard() {
@@ -6248,9 +6282,10 @@ const LOCAL_DELIVERY_DATA = [
       const isAdmin = currentUser.role === 'admin';
       const canManageMaintenance = isAdmin || isRetraitUser;
 
-      grid.innerHTML = vehicles.map(v => {
+      grid.innerHTML = vehicles.map((v, vIndex) => {
         const normStatus = getNormalizedStatus(v);
-        const vehicleImg = getVehicleImagePath(v.brand);
+        const vehicleDetails = resolveVehicleDetails(v, vIndex);
+        const vehicleImg = vehicleDetails.image;
         const isMaintenance = normStatus === 'maintenance';
         const isEnTournee = normStatus === 'en_tournee';
         const isDisponible = normStatus === 'disponible';
@@ -6341,7 +6376,7 @@ const LOCAL_DELIVERY_DATA = [
             
             <!-- Card Header: Brand, Plate, Truck Image, Status -->
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center space-x-3 sm:space-x-4 min-w-0">
+              <div class="flex items-center space-x-3 sm:space-x-3.5 min-w-0">
                 <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${
                   isMaintenance 
                     ? 'bg-red-50 text-red-700 border border-red-200' 
@@ -6352,20 +6387,23 @@ const LOCAL_DELIVERY_DATA = [
                   <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
                 </div>
                 <div>
-                  <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${v.brand || 'Véhicule'}</h3>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold border border-slate-200 tracking-wider">
-                      ${v.plate_number || 'MATRICULE'}
+                  <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${vehicleDetails.brand}</h3>
+                  <div class="mt-1.5">
+                    <span class="inline-block bg-yellow-400 text-black border border-black rounded px-2 py-0.5 font-bold tracking-widest text-xs font-mono shadow-xs">
+                      ${vehicleDetails.plate}
                     </span>
                   </div>
                 </div>
-                ${vehicleImg ? `
-                  <div class="pl-2 sm:pl-3 flex items-center justify-center shrink-0">
-                    <img src="${vehicleImg}" alt="${v.brand || 'Véhicule'}" class="h-16 sm:h-24 w-auto max-w-[110px] sm:max-w-[150px] object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="if(!this.src.endsWith('.jpg')){this.src=this.src.replace('.png','.jpg');}else{this.style.display='none';}" loading="lazy" />
-                  </div>
-                ` : ''}
               </div>
-              <div class="shrink-0">
+
+              <!-- Truck Image -->
+              ${vehicleImg ? `
+                <div class="flex items-center justify-center shrink-0 px-1">
+                  <img src="${vehicleImg}" alt="${vehicleDetails.brand}" class="h-16 sm:h-24 w-auto max-w-[120px] sm:max-w-[160px] object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="if(!this.src.endsWith('.jpg')){this.src=this.src.replace('.png','.jpg');}else{this.style.display='none';}" loading="lazy" />
+                </div>
+              ` : ''}
+
+              <div class="shrink-0 self-start sm:self-center">
                 ${statusBadgeHtml}
               </div>
             </div>
@@ -6488,8 +6526,9 @@ const LOCAL_DELIVERY_DATA = [
 
       if (title) title.textContent = actionType === 'Prise' ? "Passation de Véhicule - Prise en charge" : "Restitution de Véhicule - Fin de tournée";
       if (subtitle) subtitle.textContent = actionType === 'Prise' ? "Enregistrement du départ en tournée et inspection" : "Enregistrement du retour au dépôt, kilométrage final et contrôle";
-      if (truckBrand) truckBrand.textContent = vehicle.brand || 'Camion';
-      if (truckPlate) truckPlate.textContent = vehicle.plate_number || 'Sans matricule';
+      const vDetails = resolveVehicleDetails(vehicle);
+      if (truckBrand) truckBrand.textContent = vDetails.brand;
+      if (truckPlate) truckPlate.textContent = vDetails.plate;
       if (driverName) driverName.textContent = currentChauffeur;
       if (mileageInput) {
         mileageInput.value = vehicle.current_mileage || '';
@@ -6770,8 +6809,9 @@ const LOCAL_DELIVERY_DATA = [
       const body = document.getElementById('vehicle-history-body');
       const countEl = document.getElementById('vehicle-history-count');
 
-      if (title) title.textContent = `Historique : ${vehicle.brand}`;
-      if (subtitle) subtitle.textContent = `Matricule : ${vehicle.plate_number || 'Non spécifié'}`;
+      const vDetails = resolveVehicleDetails(vehicle);
+      if (title) title.textContent = `Historique : ${vDetails.brand}`;
+      if (subtitle) subtitle.textContent = `Matricule : ${vDetails.plate}`;
 
       const history = (AppState.vehicleHandovers || []).filter(h => String(h.vehicle_id) === String(vehicleId) || String(h.vehicle_id) === String(vehicle.plate_number));
 
@@ -6941,6 +6981,7 @@ const LOCAL_DELIVERY_DATA = [
     window.closeVehicleHistoryModal = closeVehicleHistoryModal;
     window.adminToggleVehicleStatus = adminToggleVehicleStatus;
     window.getVehicleImagePath = getVehicleImagePath;
+    window.resolveVehicleDetails = resolveVehicleDetails;
 
 
     async function initAuthenticatedApp() {
