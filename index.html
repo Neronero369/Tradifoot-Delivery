@@ -250,6 +250,18 @@
           </span>
         </div>
 
+        <!-- Navigation Tabs: Livraisons vs Parc Auto -->
+        <div class="flex items-center p-1 bg-[#142e54] rounded-xl border border-[#1B417E]/60 shadow-inner">
+          <button id="nav-btn-deliveries" onclick="switchMainView('manifest')" class="flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 bg-[#3076BB] text-white shadow-sm min-h-[38px]">
+            <i class="fa-solid fa-boxes-packing text-xs"></i>
+            <span>📦 Livraisons</span>
+          </button>
+          <button id="nav-btn-fleet" onclick="switchMainView('fleet')" class="flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white hover:bg-white/10 min-h-[38px]">
+            <i class="fa-solid fa-truck-moving text-xs"></i>
+            <span>🚙 Parc Auto</span>
+          </button>
+        </div>
+
         <!-- Live Supabase Connection Status Badge (Hidden) -->
         <div id="supabase-badge" onclick="handleManualSync()" title="Cliquer pour actualiser depuis Supabase" class="hidden" style="display: none !important;">
           <span class="relative flex h-2 w-2">
@@ -280,7 +292,7 @@
     </header>
 
     <!-- RESPONSIVE WORKSPACE -->
-    <main id="workspace-main" class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all duration-300">
+    <main id="manifest-view" class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all duration-300">
 
       <!-- LEFT PANEL: THE INTERACTIVE CALENDAR -->
       <section id="calendar-section" class="lg:col-span-5 xl:col-span-5 flex flex-col glass-panel rounded-2xl md:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-fluent transition-all duration-300">
@@ -455,6 +467,60 @@
       </section>
 
     </main>
+
+    <!-- ======================================================== -->
+    <!-- FLEET MANAGEMENT (PARC AUTO) WORKSPACE CONTAINER -->
+    <!-- ======================================================== -->
+    <section id="fleet-view" class="hidden flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 space-y-6 transition-all duration-300">
+      
+      <!-- Fleet Header & Control Bar -->
+      <div class="glass-panel rounded-2xl md:rounded-3xl p-4 sm:p-6 shadow-fluent flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-200/80 bg-white/80">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-[#1B417E] text-white flex items-center justify-center text-lg shadow-sm">
+              <i class="fa-solid fa-truck-ramp-box"></i>
+            </div>
+            <div>
+              <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">🚙 Parc Auto & Flotte Logistique</h2>
+              <p class="text-xs text-slate-500 font-medium">Gestion du matériel roulant, passation des chauffeurs & état des véhicules</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fleet KPI summary badges -->
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+          <div class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center gap-2">
+            <span class="text-slate-500 font-semibold uppercase text-[10px]">Total</span>
+            <span id="fleet-kpi-total" class="font-extrabold text-slate-900 text-sm">4</span>
+            <span class="text-slate-600 font-medium">véhicules</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="font-bold text-xs"><span id="fleet-kpi-available">0</span> Dispo</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+            <span class="font-bold text-xs"><span id="fleet-kpi-on-route">0</span> En Tournée</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            <span class="font-bold text-xs"><span id="fleet-kpi-maintenance">0</span> Maintenance</span>
+          </div>
+
+          <!-- Refresh Button -->
+          <button onclick="loadFleetData(true)" class="px-3 py-1.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] text-white font-semibold transition active:scale-95 flex items-center gap-1.5 text-xs shadow-sm min-h-[36px]" title="Actualiser la flotte">
+            <i class="fa-solid fa-arrows-rotate text-xs"></i>
+            <span>Actualiser</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- CSS GRID: 4 TRUCKS (grid-cols-1 md:grid-cols-2) -->
+      <div id="fleet-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <!-- Rendered dynamically by renderFleetDashboard() -->
+      </div>
+
+    </section>
 
   </div>
 
@@ -753,6 +819,255 @@
           Fermer
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: DRIVER VEHICLE HANDOVER (PRISE DE VÉHICULE & INSPECTION) -->
+  <!-- ======================================================== -->
+  <div id="handover-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+            <i class="fa-solid fa-key text-base"></i>
+          </div>
+          <div>
+            <h4 id="handover-modal-title" class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Passation de Véhicule - Prise en charge</h4>
+            <p id="handover-modal-subtitle" class="text-xs text-slate-500 font-medium">Enregistrement du départ en tournée et inspection</p>
+          </div>
+        </div>
+        <button onclick="closeHandoverModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+        
+        <!-- Vehicle & Driver Recap Banner -->
+        <div class="p-3.5 rounded-2xl bg-[#EBF3FA] border border-[#3076BB]/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#1B417E] text-white flex items-center justify-center text-lg shadow-xs">
+              <i class="fa-solid fa-truck"></i>
+            </div>
+            <div>
+              <span id="handover-truck-brand" class="font-extrabold text-slate-900 text-sm block">MERCEDES</span>
+              <span id="handover-truck-plate" class="font-mono text-slate-600 bg-white/70 px-2 py-0.5 rounded border border-slate-200 font-bold">00123-116-16</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Conducteur</span>
+            <span id="handover-driver-name" class="font-bold text-[#1B417E] text-sm">SAADI BILLEL</span>
+          </div>
+        </div>
+
+        <!-- Inputs Grid: Mileage & Fuel Level -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          <!-- 1. Current Mileage (Number Input) -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge text-blue-600"></i>
+              <span>Kilométrage Actuel (Compteur Odomètre) *</span>
+            </label>
+            <div class="relative">
+              <input id="handover-mileage-input" type="number" step="1" min="0" placeholder="Ex: 142550" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#3076BB] focus:border-[#3076BB] text-sm font-bold font-mono text-slate-800">
+              <span class="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400">km</span>
+            </div>
+            <p id="handover-mileage-hint" class="text-[11px] text-slate-400 font-medium">Dernier relevé : 142 500 km</p>
+          </div>
+
+          <!-- 2. Fuel Level (Dropdown: 25%, 50%, 75%, 100%) -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-gas-pump text-amber-500"></i>
+              <span>Niveau de Carburant (Jauge) *</span>
+            </label>
+            <select id="handover-fuel-select" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#3076BB] focus:border-[#3076BB] text-sm font-bold text-slate-800 bg-white">
+              <option value="100%">100% - Plein Complet (Réservoir Plein)</option>
+              <option value="75%">75% - Trois Quarts (3/4)</option>
+              <option value="50%">50% - Moitié Réservoir (1/2)</option>
+              <option value="25%">25% - Quart / Réserve (1/4)</option>
+            </select>
+            <p class="text-[11px] text-slate-400 font-medium">Vérifiez la jauge au tableau de bord</p>
+          </div>
+
+        </div>
+
+        <!-- 3. Optional Remarque (Damage/Observations) -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+            <span>Remarques, Anomalies ou Dégradations Constatées (Optionnel)</span>
+          </label>
+          <textarea id="handover-remarque-input" rows="2" placeholder="Signalez toute rayure, anomalie mécanique, choc carrosserie, voyant ou outil manquant..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#3076BB] focus:border-[#3076BB] text-xs text-slate-800"></textarea>
+        </div>
+
+        <!-- 4. 5 Pictures of Vehicle State -->
+        <div class="space-y-2.5 pt-2 border-t border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-camera text-[#3076BB]"></i>
+              <span>État du Véhicule - 5 Photos d'Inspection</span>
+            </label>
+            <span class="text-[11px] text-slate-400 font-semibold" id="handover-photos-count">0 / 5 photos</span>
+          </div>
+          <p class="text-[11px] text-slate-500">Capturez l'état du camion sous les 5 angles pour valider la passation :</p>
+
+          <!-- 5 Photo Slots Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+            <!-- Slot 1: Avant -->
+            <div id="photo-slot-container-0" class="relative group border-2 border-dashed border-slate-300 rounded-2xl p-2 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer min-h-[120px]" onclick="triggerPhotoSlot(0)">
+              <input type="file" id="handover-file-0" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSlotChange(0, this)">
+              <div id="photo-slot-empty-0" class="flex flex-col items-center space-y-1">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700">1. Avant</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Face / Calandre</span>
+              </div>
+              <div id="photo-slot-preview-0" class="hidden absolute inset-0 rounded-2xl overflow-hidden bg-slate-900">
+                <img id="photo-slot-img-0" src="" class="w-full h-full object-cover">
+                <button type="button" onclick="event.stopPropagation(); removePhotoSlot(0);" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow hover:bg-rose-700">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 py-0.5 text-center text-[9px] text-white font-bold">1. Avant ✓</div>
+              </div>
+            </div>
+
+            <!-- Slot 2: Arrière -->
+            <div id="photo-slot-container-1" class="relative group border-2 border-dashed border-slate-300 rounded-2xl p-2 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer min-h-[120px]" onclick="triggerPhotoSlot(1)">
+              <input type="file" id="handover-file-1" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSlotChange(1, this)">
+              <div id="photo-slot-empty-1" class="flex flex-col items-center space-y-1">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700">2. Arrière</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Feux / Hayon</span>
+              </div>
+              <div id="photo-slot-preview-1" class="hidden absolute inset-0 rounded-2xl overflow-hidden bg-slate-900">
+                <img id="photo-slot-img-1" src="" class="w-full h-full object-cover">
+                <button type="button" onclick="event.stopPropagation(); removePhotoSlot(1);" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow hover:bg-rose-700">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 py-0.5 text-center text-[9px] text-white font-bold">2. Arrière ✓</div>
+              </div>
+            </div>
+
+            <!-- Slot 3: Côté Gauche -->
+            <div id="photo-slot-container-2" class="relative group border-2 border-dashed border-slate-300 rounded-2xl p-2 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer min-h-[120px]" onclick="triggerPhotoSlot(2)">
+              <input type="file" id="handover-file-2" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSlotChange(2, this)">
+              <div id="photo-slot-empty-2" class="flex flex-col items-center space-y-1">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700">3. Côté G</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Conducteur / Pneu</span>
+              </div>
+              <div id="photo-slot-preview-2" class="hidden absolute inset-0 rounded-2xl overflow-hidden bg-slate-900">
+                <img id="photo-slot-img-2" src="" class="w-full h-full object-cover">
+                <button type="button" onclick="event.stopPropagation(); removePhotoSlot(2);" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow hover:bg-rose-700">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 py-0.5 text-center text-[9px] text-white font-bold">3. Côté G ✓</div>
+              </div>
+            </div>
+
+            <!-- Slot 4: Côté Droit -->
+            <div id="photo-slot-container-3" class="relative group border-2 border-dashed border-slate-300 rounded-2xl p-2 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer min-h-[120px]" onclick="triggerPhotoSlot(3)">
+              <input type="file" id="handover-file-3" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSlotChange(3, this)">
+              <div id="photo-slot-empty-3" class="flex flex-col items-center space-y-1">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700">4. Côté D</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Passager / Réservoir</span>
+              </div>
+              <div id="photo-slot-preview-3" class="hidden absolute inset-0 rounded-2xl overflow-hidden bg-slate-900">
+                <img id="photo-slot-img-3" src="" class="w-full h-full object-cover">
+                <button type="button" onclick="event.stopPropagation(); removePhotoSlot(3);" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow hover:bg-rose-700">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 py-0.5 text-center text-[9px] text-white font-bold">4. Côté D ✓</div>
+              </div>
+            </div>
+
+            <!-- Slot 5: Tableau de Bord / Compteur -->
+            <div id="photo-slot-container-4" class="relative group border-2 border-dashed border-slate-300 rounded-2xl p-2 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition cursor-pointer min-h-[120px]" onclick="triggerPhotoSlot(4)">
+              <input type="file" id="handover-file-4" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSlotChange(4, this)">
+              <div id="photo-slot-empty-4" class="flex flex-col items-center space-y-1">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700">5. Compteur</span>
+                <span class="text-[9px] text-slate-400 leading-tight">Tableau / Voyants</span>
+              </div>
+              <div id="photo-slot-preview-4" class="hidden absolute inset-0 rounded-2xl overflow-hidden bg-slate-900">
+                <img id="photo-slot-img-4" src="" class="w-full h-full object-cover">
+                <button type="button" onclick="event.stopPropagation(); removePhotoSlot(4);" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] shadow hover:bg-rose-700">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="absolute bottom-0 inset-x-0 bg-slate-900/70 py-0.5 text-center text-[9px] text-white font-bold">5. Compteur ✓</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-end gap-3 shrink-0">
+        <button onclick="closeHandoverModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition">
+          Annuler
+        </button>
+        <button id="btn-submit-handover" onclick="submitHandover()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center gap-2 shadow-md shadow-emerald-600/30 active:scale-95">
+          <i class="fa-solid fa-check"></i>
+          <span id="btn-submit-handover-text">Confirmer la Prise de Véhicule</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: VEHICLE HANDOVER HISTORY (HISTORIQUE DES PASSATIONS) -->
+  <!-- ======================================================== -->
+  <div id="vehicle-history-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-2xl bg-[#EBF3FA] text-[#3076BB] border border-[#3076BB]/30 shrink-0">
+            <i class="fa-solid fa-clock-rotate-left text-base"></i>
+          </div>
+          <div>
+            <h4 id="vehicle-history-title" class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Historique du Véhicule</h4>
+            <p id="vehicle-history-subtitle" class="text-xs text-slate-500 font-medium">Relevé chronologique des passations et inspections</p>
+          </div>
+        </div>
+        <button onclick="closeVehicleHistoryModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- History List Body (Scrollable) -->
+      <div id="vehicle-history-body" class="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-between shrink-0">
+        <span id="vehicle-history-count" class="text-xs text-slate-500 font-medium">0 passation(s)</span>
+        <button onclick="closeVehicleHistoryModal()" class="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition active:scale-95">
+          Fermer
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -2515,6 +2830,12 @@ const LOCAL_DELIVERY_DATA = [
       selectedDateStr: getLiveTodayDateStr(),
       currentViewDate: getLiveFirstOfMonth(),
       activeManifestFilter: 'PENDING', // default left tab "Non Livré"
+      activeView: 'manifest',
+      vehicles: [],
+      vehicleHandovers: [],
+      currentHandoverVehicle: null,
+      currentHandoverAction: 'Prise',
+      handoverPhotos: [null, null, null, null, null],
       totalCount: 0,
       completedCount: 0,
       adminFilterDriver: 'ALL',
@@ -2572,7 +2893,14 @@ const LOCAL_DELIVERY_DATA = [
         supabaseBadge:        document.getElementById('supabase-badge'),
         supabaseStatusText:   document.getElementById('supabase-status-text'),
         btnSyncRefresh:       document.getElementById('btn-sync-refresh'),
-        syncRefreshIcon:      document.getElementById('sync-refresh-icon')
+        syncRefreshIcon:      document.getElementById('sync-refresh-icon'),
+        manifestView:         document.getElementById('manifest-view'),
+        fleetView:            document.getElementById('fleet-view'),
+        navBtnDeliveries:     document.getElementById('nav-btn-deliveries'),
+        navBtnFleet:          document.getElementById('nav-btn-fleet'),
+        fleetCardsGrid:       document.getElementById('fleet-cards-grid'),
+        handoverModal:        document.getElementById('handover-modal'),
+        vehicleHistoryModal:  document.getElementById('vehicle-history-modal')
       };
     }
 
@@ -3410,6 +3738,7 @@ const LOCAL_DELIVERY_DATA = [
       AppState.selectedDateStr = getLiveTodayDateStr();
       AppState.currentViewDate = getLiveFirstOfMonth();
       AppState.activeManifestFilter = 'PENDING';
+      switchMainView('manifest');
       AppState.adminFilterDriver = 'ALL';
       AppState.adminFilterBoutique = 'ALL';
       AppState.adminFilterSearch = '';
@@ -5695,9 +6024,720 @@ const LOCAL_DELIVERY_DATA = [
       });
     });
 
+    
+    // ========================================================
+    // FLEET MANAGEMENT (PARC AUTO) LOGIC ENGINE
+    // ========================================================
+    const DEFAULT_FLEET_VEHICLES = [
+      {
+        id: "veh-merc-01",
+        brand: "MERCEDES Actros",
+        plate_number: "00123-116-16",
+        status: "Disponible",
+        current_mileage: 142500,
+        fuel_level: "75%"
+      },
+      {
+        id: "veh-merc-02",
+        brand: "MERCEDES Atego",
+        plate_number: "00124-116-16",
+        status: "Disponible",
+        current_mileage: 118400,
+        fuel_level: "50%"
+      },
+      {
+        id: "veh-niss-01",
+        brand: "NISSAN Cabstar",
+        plate_number: "00456-116-16",
+        status: "Disponible",
+        current_mileage: 89300,
+        fuel_level: "50%"
+      },
+      {
+        id: "veh-port-01",
+        brand: "CAMION PORTEUR Master",
+        plate_number: "00789-116-16",
+        status: "Disponible",
+        current_mileage: 215400,
+        fuel_level: "100%"
+      }
+    ];
+
+    function escapeHtmlSafe(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function switchMainView(view) {
+      AppState.activeView = view;
+      const manifestView = document.getElementById('manifest-view');
+      const fleetView = document.getElementById('fleet-view');
+      const btnDeliveries = document.getElementById('nav-btn-deliveries');
+      const btnFleet = document.getElementById('nav-btn-fleet');
+
+      if (view === 'fleet') {
+        if (manifestView) manifestView.classList.add('hidden');
+        if (fleetView) fleetView.classList.remove('hidden');
+
+        if (btnFleet) {
+          btnFleet.className = "flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 bg-[#3076BB] text-white shadow-sm min-h-[38px]";
+        }
+        if (btnDeliveries) {
+          btnDeliveries.className = "flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white hover:bg-white/10 min-h-[38px]";
+        }
+        loadFleetData();
+      } else {
+        if (fleetView) fleetView.classList.add('hidden');
+        if (manifestView) manifestView.classList.remove('hidden');
+
+        if (btnDeliveries) {
+          btnDeliveries.className = "flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 bg-[#3076BB] text-white shadow-sm min-h-[38px]";
+        }
+        if (btnFleet) {
+          btnFleet.className = "flex items-center space-x-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white hover:bg-white/10 min-h-[38px]";
+        }
+      }
+    }
+
+    async function loadFleetData(forceRemote = false) {
+      try {
+        const storedVehicles = localStorage.getItem('tradifoot_vehicles');
+        if (storedVehicles) {
+          try {
+            const parsed = JSON.parse(storedVehicles);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              AppState.vehicles = parsed;
+            }
+          } catch (e) {}
+        }
+        if (!AppState.vehicles || AppState.vehicles.length === 0) {
+          AppState.vehicles = JSON.parse(JSON.stringify(DEFAULT_FLEET_VEHICLES));
+        }
+
+        const storedHandovers = localStorage.getItem('tradifoot_vehicle_handovers');
+        if (storedHandovers) {
+          try {
+            const parsedH = JSON.parse(storedHandovers);
+            if (Array.isArray(parsedH)) {
+              AppState.vehicleHandovers = parsedH;
+            }
+          } catch (e) {}
+        }
+
+        // Render with available data
+        renderFleetDashboard();
+
+        // Remote Supabase Fetch
+        if (supabaseClient) {
+          const { data: vData, error: vErr } = await supabaseClient.from('vehicles').select('*');
+          if (!vErr && Array.isArray(vData) && vData.length > 0) {
+            AppState.vehicles = vData;
+            localStorage.setItem('tradifoot_vehicles', JSON.stringify(vData));
+          }
+
+          const { data: hData, error: hErr } = await supabaseClient.from('vehicle_handovers').select('*').order('created_at', { ascending: false });
+          if (!hErr && Array.isArray(hData) && hData.length > 0) {
+            // Merge remote handovers with local
+            const idMap = new Map();
+            (AppState.vehicleHandovers || []).forEach(h => idMap.set(String(h.id), h));
+            hData.forEach(h => {
+              const existing = idMap.get(String(h.id));
+              if (existing) {
+                idMap.set(String(h.id), { ...existing, ...h });
+              } else {
+                idMap.set(String(h.id), h);
+              }
+            });
+            AppState.vehicleHandovers = Array.from(idMap.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            localStorage.setItem('tradifoot_vehicle_handovers', JSON.stringify(AppState.vehicleHandovers));
+          }
+
+          renderFleetDashboard();
+        }
+
+        if (forceRemote) {
+          showNotification("Flotte actualisée avec succès", "success");
+        }
+      } catch (err) {
+        console.warn('[Fleet] Erreur chargement parc auto:', err);
+      }
+    }
+
+    function renderFleetDashboard() {
+      const grid = document.getElementById('fleet-cards-grid');
+      if (!grid) return;
+
+      const vehicles = AppState.vehicles && AppState.vehicles.length > 0 ? AppState.vehicles : DEFAULT_FLEET_VEHICLES;
+      AppState.vehicles = vehicles;
+
+      const total = vehicles.length;
+      const available = vehicles.filter(v => v.status === 'Disponible').length;
+      const onRoute = vehicles.filter(v => v.status === 'En Tournée').length;
+      const maintenance = vehicles.filter(v => v.status === 'Maintenance').length;
+
+      const kpiTotal = document.getElementById('fleet-kpi-total');
+      const kpiAvail = document.getElementById('fleet-kpi-available');
+      const kpiRoute = document.getElementById('fleet-kpi-on-route');
+      const kpiMaint = document.getElementById('fleet-kpi-maintenance');
+
+      if (kpiTotal) kpiTotal.textContent = total;
+      if (kpiAvail) kpiAvail.textContent = available;
+      if (kpiRoute) kpiRoute.textContent = onRoute;
+      if (kpiMaint) kpiMaint.textContent = maintenance;
+
+      const currentUser = AppState.currentUser || {};
+      const isChauffeur = currentUser.role === 'chauffeur';
+      const isAdmin = currentUser.role === 'admin';
+      const chauffeurName = (currentUser.chauffeurName || currentUser.username || '').trim().toUpperCase();
+
+      grid.innerHTML = vehicles.map(v => {
+        const isDisponible = v.status === 'Disponible';
+        const isEnTournee = v.status === 'En Tournée';
+        const isMaintenance = v.status === 'Maintenance';
+
+        let statusBadgeHtml = '';
+        if (isDisponible) {
+          statusBadgeHtml = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Disponible
+            </span>
+          `;
+        } else if (isEnTournee) {
+          statusBadgeHtml = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 shadow-xs">
+              <i class="fa-solid fa-truck-fast text-[11px]"></i>
+              En Tournée
+            </span>
+          `;
+        } else {
+          statusBadgeHtml = `
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs">
+              <i class="fa-solid fa-wrench text-[11px]"></i>
+              Maintenance
+            </span>
+          `;
+        }
+
+        const lastDriver = v.last_driver || '';
+        const isAssignedToCurrent = isEnTournee && lastDriver && chauffeurName && lastDriver.toUpperCase().includes(chauffeurName);
+
+        let fuelPct = 100;
+        if (v.fuel_level === '75%') fuelPct = 75;
+        else if (v.fuel_level === '50%') fuelPct = 50;
+        else if (v.fuel_level === '25%') fuelPct = 25;
+
+        return `
+          <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
+            
+            <!-- Card Header: Brand, Plate, Status -->
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center space-x-3.5">
+                <div class="w-12 h-12 rounded-2xl ${isDisponible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : (isEnTournee ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-rose-50 text-rose-700 border border-rose-200')} flex items-center justify-center text-xl shadow-xs shrink-0">
+                  <i class="fa-solid fa-truck-moving"></i>
+                </div>
+                <div>
+                  <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${v.brand || 'Véhicule'}</h3>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold border border-slate-200 tracking-wider">
+                      ${v.plate_number || 'MATRICULE'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                ${statusBadgeHtml}
+              </div>
+            </div>
+
+            <!-- Metrics Grid: Mileage, Fuel, Driver -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <!-- Mileage -->
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-gauge-high text-blue-500"></i> Kilométrage
+                </span>
+                <div class="text-sm sm:text-base font-extrabold text-slate-900 font-mono mt-1">
+                  ${Number(v.current_mileage || 0).toLocaleString('fr-FR')} <span class="text-xs text-slate-500 font-normal">km</span>
+                </div>
+              </div>
+
+              <!-- Fuel -->
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                  <i class="fa-solid fa-gas-pump text-amber-500"></i> Carburant
+                </span>
+                <div class="mt-1">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800 mb-1">
+                    <span>${v.fuel_level || '100%'}</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-amber-500 h-full rounded-full" style="width: ${fuelPct}%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Driver Assignment banner -->
+            <div class="text-xs p-2.5 rounded-xl ${isEnTournee ? 'bg-blue-50/70 border border-blue-200/70 text-blue-900' : 'bg-slate-50 border border-slate-100 text-slate-600'} flex items-center justify-between">
+              <span class="font-medium flex items-center gap-1.5">
+                <i class="fa-solid ${isEnTournee ? 'fa-user-clock text-blue-600' : 'fa-circle-check text-emerald-500'}"></i>
+                ${isEnTournee 
+                  ? `En mission avec : <strong class="font-bold">${v.last_driver || 'Chauffeur assigné'}</strong>` 
+                  : `Statut : <strong class="text-emerald-700 font-bold">Prêt pour affectation</strong>`}
+              </span>
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div class="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+              <button onclick="openVehicleHistoryModal('${v.id}')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs active:scale-95 min-h-[40px]">
+                <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
+                <span>Voir Historique</span>
+              </button>
+
+              ${(isChauffeur || isAdmin) && isDisponible ? `
+                <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
+                  <i class="fa-solid fa-key"></i>
+                  <span>Prendre ce véhicule</span>
+                </button>
+              ` : ''}
+
+              ${(isEnTournee && (isAssignedToCurrent || isAdmin)) ? `
+                <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] text-white text-xs font-bold transition shadow-md shadow-[#3076BB]/25 active:scale-95 min-h-[40px]">
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                  <span>Restituer le véhicule</span>
+                </button>
+              ` : ''}
+
+              ${isAdmin ? `
+                <button onclick="adminToggleVehicleStatus('${v.id}')" title="Modifier le statut (Admin)" class="p-2.5 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-600 transition min-h-[40px]">
+                  <i class="fa-solid fa-sliders text-xs"></i>
+                </button>
+              ` : ''}
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openHandoverModal(vehicleId, actionType = 'Prise') {
+      const vehicle = AppState.vehicles.find(v => v.id === vehicleId);
+      if (!vehicle) return;
+
+      AppState.currentHandoverVehicle = vehicle;
+      AppState.currentHandoverAction = actionType;
+      AppState.handoverPhotos = [null, null, null, null, null];
+
+      const modal = document.getElementById('handover-modal');
+      const title = document.getElementById('handover-modal-title');
+      const subtitle = document.getElementById('handover-modal-subtitle');
+      const truckBrand = document.getElementById('handover-truck-brand');
+      const truckPlate = document.getElementById('handover-truck-plate');
+      const driverName = document.getElementById('handover-driver-name');
+      const mileageInput = document.getElementById('handover-mileage-input');
+      const mileageHint = document.getElementById('handover-mileage-hint');
+      const fuelSelect = document.getElementById('handover-fuel-select');
+      const remarqueInput = document.getElementById('handover-remarque-input');
+      const submitText = document.getElementById('btn-submit-handover-text');
+
+      const currentUser = AppState.currentUser || {};
+      const currentDriver = currentUser.chauffeurName || currentUser.username || 'Chauffeur';
+
+      if (title) title.textContent = actionType === 'Prise' ? "Passation de Véhicule - Prise en charge" : "Restitution de Véhicule - Fin de tournée";
+      if (subtitle) subtitle.textContent = actionType === 'Prise' ? "Enregistrement du départ en tournée et inspection" : "Enregistrement du retour au dépôt et contrôle";
+      if (truckBrand) truckBrand.textContent = vehicle.brand || 'Camion';
+      if (truckPlate) truckPlate.textContent = vehicle.plate_number || 'Sans matricule';
+      if (driverName) driverName.textContent = currentDriver;
+      if (mileageInput) {
+        mileageInput.value = vehicle.current_mileage || '';
+        mileageInput.min = vehicle.current_mileage || 0;
+      }
+      if (mileageHint) {
+        mileageHint.textContent = `Dernier relevé : ${Number(vehicle.current_mileage || 0).toLocaleString('fr-FR')} km`;
+      }
+      if (fuelSelect) fuelSelect.value = vehicle.fuel_level || '100%';
+      if (remarqueInput) remarqueInput.value = '';
+      if (submitText) submitText.textContent = actionType === 'Prise' ? "Confirmer la Prise de Véhicule" : "Confirmer la Restitution";
+
+      // Reset all 5 photo slots
+      for (let i = 0; i < 5; i++) {
+        removePhotoSlot(i);
+      }
+
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeHandoverModal() {
+      const modal = document.getElementById('handover-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function triggerPhotoSlot(slotIndex) {
+      const fileInput = document.getElementById(`handover-file-${slotIndex}`);
+      if (fileInput) fileInput.click();
+    }
+
+    function handlePhotoSlotChange(slotIndex, input) {
+      if (!input || !input.files || input.files.length === 0) return;
+      const file = input.files[0];
+      AppState.handoverPhotos[slotIndex] = file;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const previewContainer = document.getElementById(`photo-slot-preview-${slotIndex}`);
+        const emptyContainer = document.getElementById(`photo-slot-empty-${slotIndex}`);
+        const imgEl = document.getElementById(`photo-slot-img-${slotIndex}`);
+
+        if (imgEl) imgEl.src = e.target.result;
+        if (emptyContainer) emptyContainer.classList.add('hidden');
+        if (previewContainer) previewContainer.classList.remove('hidden');
+
+        updatePhotoCountBadge();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removePhotoSlot(slotIndex) {
+      AppState.handoverPhotos[slotIndex] = null;
+      const input = document.getElementById(`handover-file-${slotIndex}`);
+      if (input) input.value = '';
+
+      const previewContainer = document.getElementById(`photo-slot-preview-${slotIndex}`);
+      const emptyContainer = document.getElementById(`photo-slot-empty-${slotIndex}`);
+      const imgEl = document.getElementById(`photo-slot-img-${slotIndex}`);
+
+      if (imgEl) imgEl.src = '';
+      if (previewContainer) previewContainer.classList.add('hidden');
+      if (emptyContainer) emptyContainer.classList.remove('hidden');
+
+      updatePhotoCountBadge();
+    }
+
+    function updatePhotoCountBadge() {
+      const count = (AppState.handoverPhotos || []).filter(Boolean).length;
+      const badge = document.getElementById('handover-photos-count');
+      if (badge) {
+        badge.textContent = `${count} / 5 photos`;
+        badge.className = count === 5
+          ? 'text-[11px] text-emerald-600 font-bold'
+          : (count > 0 ? 'text-[11px] text-[#3076BB] font-bold' : 'text-[11px] text-slate-400 font-semibold');
+      }
+    }
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function submitHandover() {
+      const vehicle = AppState.currentHandoverVehicle;
+      if (!vehicle) return;
+
+      const mileageInput = document.getElementById('handover-mileage-input');
+      const fuelSelect = document.getElementById('handover-fuel-select');
+      const remarqueInput = document.getElementById('handover-remarque-input');
+      const submitBtn = document.getElementById('btn-submit-handover');
+      const submitText = document.getElementById('btn-submit-handover-text');
+
+      const mileageVal = parseInt(mileageInput ? mileageInput.value : 0, 10);
+      if (isNaN(mileageVal) || mileageVal <= 0) {
+        showNotification("Veuillez saisir un kilométrage valide.", "warning");
+        if (mileageInput) mileageInput.focus();
+        return;
+      }
+
+      const fuelVal = fuelSelect ? fuelSelect.value : "100%";
+      const remarqueVal = remarqueInput ? remarqueInput.value.trim() : "";
+      const actionType = AppState.currentHandoverAction || "Prise";
+      const driverName = (AppState.currentUser && (AppState.currentUser.chauffeurName || AppState.currentUser.username)) || "Chauffeur";
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitText) submitText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traitement...';
+
+      try {
+        // 1. Process 5 photos
+        const photoUrls = [];
+        for (let i = 0; i < 5; i++) {
+          const file = AppState.handoverPhotos[i];
+          if (file) {
+            try {
+              const compressedBlob = await compressImage(file, 1280, 0.7);
+              const safeBrand = (vehicle.brand || 'truck').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+              const fileName = `handovers/${safeBrand}/${Date.now()}_slot${i + 1}.jpg`;
+
+              let uploaded = false;
+              if (supabaseClient) {
+                try {
+                  const { error: upErr } = await supabaseClient.storage
+                    .from('delivery-proofs')
+                    .upload(fileName, compressedBlob, { contentType: 'image/jpeg', upsert: true });
+
+                  if (!upErr) {
+                    const { data: pubData } = supabaseClient.storage
+                      .from('delivery-proofs')
+                      .getPublicUrl(fileName);
+                    if (pubData && pubData.publicUrl) {
+                      photoUrls.push(pubData.publicUrl);
+                      uploaded = true;
+                    }
+                  }
+                } catch (sErr) {
+                  console.warn('[Handover] Storage upload exception:', sErr);
+                }
+              }
+
+              if (!uploaded) {
+                const dataUrl = await blobToDataUrl(compressedBlob);
+                photoUrls.push(dataUrl);
+              }
+            } catch (pErr) {
+              console.warn(`[Handover] Erreur traitement photo slot ${i}:`, pErr);
+            }
+          }
+        }
+
+        // 2. Build Handover Record
+        const handoverRecord = {
+          id: 'ho_' + Date.now(),
+          created_at: new Date().toISOString(),
+          vehicle_id: vehicle.id,
+          driver_name: driverName,
+          action_type: actionType,
+          mileage: mileageVal,
+          fuel_level: fuelVal,
+          remarque: remarqueVal,
+          photo_urls: photoUrls
+        };
+
+        // 3. Supabase Insert with Fallback for custom columns
+        if (supabaseClient) {
+          try {
+            let { error: insErr } = await supabaseClient.from('vehicle_handovers').insert(handoverRecord);
+            if (insErr) {
+              console.warn('[Handover] Retrying base columns insert:', insErr.message);
+              await supabaseClient.from('vehicle_handovers').insert({
+                vehicle_id: vehicle.id,
+                driver_name: driverName,
+                action_type: actionType,
+                mileage: mileageVal,
+                fuel_level: fuelVal
+              });
+            }
+          } catch (e) {
+            console.warn('[Handover] Supabase insert warning:', e);
+          }
+        }
+
+        // 4. Update Vehicle State in Supabase
+        const newStatus = actionType === 'Prise' ? 'En Tournée' : 'Disponible';
+        if (supabaseClient) {
+          try {
+            await supabaseClient.from('vehicles').update({
+              status: newStatus,
+              current_mileage: mileageVal,
+              fuel_level: fuelVal
+            }).eq('id', vehicle.id);
+          } catch (e) {
+            console.warn('[Handover] Supabase vehicle update warning:', e);
+          }
+        }
+
+        // 5. Update Local State & Persist
+        const updatedVehicles = AppState.vehicles.map(v => {
+          if (v.id === vehicle.id) {
+            return {
+              ...v,
+              status: newStatus,
+              current_mileage: mileageVal,
+              fuel_level: fuelVal,
+              last_driver: actionType === 'Prise' ? driverName : ''
+            };
+          }
+          return v;
+        });
+        AppState.vehicles = updatedVehicles;
+        localStorage.setItem('tradifoot_vehicles', JSON.stringify(updatedVehicles));
+
+        AppState.vehicleHandovers.unshift(handoverRecord);
+        localStorage.setItem('tradifoot_vehicle_handovers', JSON.stringify(AppState.vehicleHandovers));
+
+        closeHandoverModal();
+        renderFleetDashboard();
+
+        const successMsg = actionType === 'Prise'
+          ? `Prise du véhicule ${vehicle.brand} confirmée ! Bonne tournée.`
+          : `Restitution du véhicule ${vehicle.brand} enregistrée avec succès.`;
+        showNotification(successMsg, "success");
+
+      } catch (error) {
+        console.error('[Handover] Erreur globale:', error);
+        showNotification("Erreur lors de la passation: " + error.message, "error");
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.textContent = actionType === 'Prise' ? "Confirmer la Prise de Véhicule" : "Confirmer la Restitution";
+      }
+    }
+
+    function openVehicleHistoryModal(vehicleId) {
+      const vehicle = AppState.vehicles.find(v => v.id === vehicleId) || { brand: 'Véhicule', plate_number: '' };
+      AppState.selectedVehicleForHistory = vehicle;
+
+      const modal = document.getElementById('vehicle-history-modal');
+      const title = document.getElementById('vehicle-history-title');
+      const subtitle = document.getElementById('vehicle-history-subtitle');
+      const body = document.getElementById('vehicle-history-body');
+      const countEl = document.getElementById('vehicle-history-count');
+
+      if (title) title.textContent = `Historique : ${vehicle.brand}`;
+      if (subtitle) subtitle.textContent = `Matricule : ${vehicle.plate_number || 'Non spécifié'}`;
+
+      const history = (AppState.vehicleHandovers || []).filter(h => h.vehicle_id === vehicleId || h.vehicle_id === vehicle.plate_number);
+
+      if (countEl) countEl.textContent = `${history.length} passation(s) enregistrée(s)`;
+
+      if (!body) return;
+
+      if (history.length === 0) {
+        body.innerHTML = `
+          <div class="py-12 flex flex-col items-center justify-center text-center space-y-3">
+            <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-2xl">
+              <i class="fa-solid fa-clipboard-list"></i>
+            </div>
+            <div>
+              <h5 class="text-sm font-bold text-slate-800">Aucun historique disponible</h5>
+              <p class="text-xs text-slate-500 mt-1 max-w-sm">Aucune passation de véhicule n'a encore été enregistrée pour ce camion.</p>
+            </div>
+          </div>
+        `;
+      } else {
+        const photoLabels = ['Avant', 'Arrière', 'Côté Gauche', 'Côté Droit', 'Compteur'];
+        body.innerHTML = history.map(item => {
+          const isPrise = item.action_type === 'Prise';
+          const dateStr = item.created_at ? new Date(item.created_at).toLocaleString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : 'Date inconnue';
+
+          const photos = Array.isArray(item.photo_urls) ? item.photo_urls : [];
+
+          return `
+            <div class="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-xs space-y-3">
+              <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                    isPrise ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
+                  }">
+                    <i class="fa-solid ${isPrise ? 'fa-key' : 'fa-arrow-right-arrow-left'} text-[10px]"></i>
+                    ${isPrise ? 'Prise en charge' : 'Restitution'}
+                  </span>
+                  <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <i class="fa-solid fa-user-tie text-slate-400"></i> ${item.driver_name || 'Chauffeur'}
+                  </span>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-500 font-mono">
+                  <i class="fa-regular fa-clock text-slate-400"></i> ${dateStr}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <div>
+                  <span class="text-slate-400 text-[10px] uppercase font-bold block">Kilométrage relevé</span>
+                  <span class="font-extrabold text-slate-800 font-mono text-sm">${Number(item.mileage || 0).toLocaleString('fr-FR')} km</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 text-[10px] uppercase font-bold block">Niveau carburant</span>
+                  <span class="font-bold text-amber-600">${item.fuel_level || '100%'}</span>
+                </div>
+              </div>
+
+              ${item.remarque ? `
+                <div class="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                  <div class="font-bold flex items-center gap-1 text-[11px] text-amber-800">
+                    <i class="fa-solid fa-comment-dots"></i> Remarque / Anomalie :
+                  </div>
+                  <p class="text-[11px] leading-relaxed">${escapeHtmlSafe(item.remarque)}</p>
+                </div>
+              ` : ''}
+
+              ${photos.length > 0 ? `
+                <div class="space-y-1.5 pt-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                    <i class="fa-solid fa-images text-blue-500"></i> Photos d'inspection (${photos.length})
+                  </span>
+                  <div class="grid grid-cols-5 gap-1.5">
+                    ${photos.map((url, pIdx) => `
+                      <div class="group relative aspect-square rounded-lg overflow-hidden bg-slate-900 border border-slate-200 cursor-pointer shadow-xs hover:opacity-90 transition" onclick="openPhotoViewer('${url}', 'Inspection ${photoLabels[pIdx] || 'Photo ' + (pIdx + 1)}')">
+                        <img src="${url}" class="w-full h-full object-cover">
+                        <div class="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white text-center py-0.5 font-bold truncate">
+                          ${photoLabels[pIdx] || pIdx + 1}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeVehicleHistoryModal() {
+      const modal = document.getElementById('vehicle-history-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function adminToggleVehicleStatus(vehicleId) {
+      const v = AppState.vehicles.find(item => item.id === vehicleId);
+      if (!v) return;
+
+      const nextStatus = v.status === 'Disponible' ? 'Maintenance' : 'Disponible';
+      v.status = nextStatus;
+
+      if (supabaseClient) {
+        try {
+          await supabaseClient.from('vehicles').update({ status: nextStatus }).eq('id', vehicleId);
+        } catch (e) {
+          console.warn('[Admin] Statut update warning:', e);
+        }
+      }
+
+      localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
+      renderFleetDashboard();
+      showNotification(`Statut du camion ${v.brand} passé à : ${nextStatus}`, "info");
+    }
+
+    // Export to window for inline onclick handlers
+    window.switchMainView = switchMainView;
+    window.loadFleetData = loadFleetData;
+    window.openHandoverModal = openHandoverModal;
+    window.closeHandoverModal = closeHandoverModal;
+    window.triggerPhotoSlot = triggerPhotoSlot;
+    window.handlePhotoSlotChange = handlePhotoSlotChange;
+    window.removePhotoSlot = removePhotoSlot;
+    window.submitHandover = submitHandover;
+    window.openVehicleHistoryModal = openVehicleHistoryModal;
+    window.closeVehicleHistoryModal = closeVehicleHistoryModal;
+    window.adminToggleVehicleStatus = adminToggleVehicleStatus;
+
+
     async function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
       initLocalDeliveryStates();
+      loadFleetData(false);
 
       const isAdmin = AppState.currentUser.role === 'admin';
       const isRetraitUser = AppState.currentUser.chauffeurName === 'RETRAIT DÉPÔT' || (AppState.currentUser.username && AppState.currentUser.username.toUpperCase() === 'ADV');
