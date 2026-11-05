@@ -6030,35 +6030,35 @@ const LOCAL_DELIVERY_DATA = [
     // ========================================================
     const DEFAULT_FLEET_VEHICLES = [
       {
-        id: "veh-merc-01",
-        brand: "MERCEDES Actros",
-        plate_number: "00123-116-16",
+        id: "ab165d0e-5145-42c6-b516-67f3827491b7",
+        brand: "MERCEDES",
+        plate_number: "MERCEDES-01",
         status: "Disponible",
-        current_mileage: 142500,
-        fuel_level: "75%"
-      },
-      {
-        id: "veh-merc-02",
-        brand: "MERCEDES Atego",
-        plate_number: "00124-116-16",
-        status: "Disponible",
-        current_mileage: 118400,
+        current_mileage: 12000,
         fuel_level: "50%"
       },
       {
-        id: "veh-niss-01",
-        brand: "NISSAN Cabstar",
-        plate_number: "00456-116-16",
+        id: "ec09bed4-816a-4327-af1d-4e7362a1cdc7",
+        brand: "MERCEDES",
+        plate_number: "MERCEDES-02",
         status: "Disponible",
-        current_mileage: 89300,
-        fuel_level: "50%"
+        current_mileage: 0,
+        fuel_level: "100%"
       },
       {
-        id: "veh-port-01",
-        brand: "CAMION PORTEUR Master",
-        plate_number: "00789-116-16",
+        id: "2c43c7e9-5c2a-4ef1-b393-17fb50bf3dc4",
+        brand: "HYUNDAI",
+        plate_number: "HYUNDAI-01",
         status: "Disponible",
-        current_mileage: 215400,
+        current_mileage: 0,
+        fuel_level: "100%"
+      },
+      {
+        id: "c660bb2b-6bbd-4123-ba73-c679bb418716",
+        brand: "NISSAN",
+        plate_number: "NISSAN-01",
+        status: "Maintenance",
+        current_mileage: 0,
         fuel_level: "100%"
       }
     ];
@@ -6175,10 +6175,18 @@ const LOCAL_DELIVERY_DATA = [
       const vehicles = AppState.vehicles && AppState.vehicles.length > 0 ? AppState.vehicles : DEFAULT_FLEET_VEHICLES;
       AppState.vehicles = vehicles;
 
+      // Robust case-insensitive status helper
+      function getNormalizedStatus(v) {
+        const raw = String((v && v.status) || '').trim().toLowerCase();
+        if (raw === 'maintenance' || raw === 'en maintenance' || raw === 'panne') return 'maintenance';
+        if (raw === 'en tournée' || raw === 'en tournee' || raw === 'tournée' || raw === 'tournee') return 'en_tournee';
+        return 'disponible';
+      }
+
       const total = vehicles.length;
-      const available = vehicles.filter(v => v.status === 'Disponible').length;
-      const onRoute = vehicles.filter(v => v.status === 'En Tournée').length;
-      const maintenance = vehicles.filter(v => v.status === 'Maintenance').length;
+      const available = vehicles.filter(v => getNormalizedStatus(v) === 'disponible').length;
+      const onRoute = vehicles.filter(v => getNormalizedStatus(v) === 'en_tournee').length;
+      const maintenance = vehicles.filter(v => getNormalizedStatus(v) === 'maintenance').length;
 
       const kpiTotal = document.getElementById('fleet-kpi-total');
       const kpiAvail = document.getElementById('fleet-kpi-available');
@@ -6191,24 +6199,24 @@ const LOCAL_DELIVERY_DATA = [
       if (kpiMaint) kpiMaint.textContent = maintenance;
 
       const currentUser = AppState.currentUser || {};
-      const isChauffeur = currentUser.role === 'chauffeur';
+      const isRetraitUser = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
+      const isChauffeur = (currentUser.role === 'chauffeur') && !isRetraitUser;
       const isAdmin = currentUser.role === 'admin';
       const chauffeurName = (currentUser.chauffeurName || currentUser.username || '').trim().toUpperCase();
 
       grid.innerHTML = vehicles.map(v => {
-        const isDisponible = v.status === 'Disponible';
-        const isEnTournee = v.status === 'En Tournée';
-        const isMaintenance = v.status === 'Maintenance';
+        const normStatus = getNormalizedStatus(v);
+        const isMaintenance = normStatus === 'maintenance';
+        const isEnTournee = normStatus === 'en_tournee';
+        const isDisponible = normStatus === 'disponible';
 
+        // 1. Status Badge (Strict Requirement: red badge for Maintenance)
         let statusBadgeHtml = '';
-        if (isDisponible) {
+        if (isMaintenance) {
           statusBadgeHtml = `
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
-              <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              Disponible
+            <span class="bg-red-100 text-red-800 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-red-300 shadow-xs">
+              <i class="fa-solid fa-triangle-exclamation text-[11px] text-red-600"></i>
+              En Maintenance
             </span>
           `;
         } else if (isEnTournee) {
@@ -6220,9 +6228,12 @@ const LOCAL_DELIVERY_DATA = [
           `;
         } else {
           statusBadgeHtml = `
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs">
-              <i class="fa-solid fa-wrench text-[11px]"></i>
-              Maintenance
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Disponible
             </span>
           `;
         }
@@ -6231,9 +6242,70 @@ const LOCAL_DELIVERY_DATA = [
         const isAssignedToCurrent = isEnTournee && lastDriver && chauffeurName && lastDriver.toUpperCase().includes(chauffeurName);
 
         let fuelPct = 100;
-        if (v.fuel_level === '75%') fuelPct = 75;
-        else if (v.fuel_level === '50%') fuelPct = 50;
-        else if (v.fuel_level === '25%') fuelPct = 25;
+        const fuelStr = String(v.fuel_level || '100%').trim();
+        if (fuelStr === '75%') fuelPct = 75;
+        else if (fuelStr === '50%') fuelPct = 50;
+        else if (fuelStr === '25%') fuelPct = 25;
+
+        // 2. Banner Html (FIX: Do NOT display "Prêt pour affectation" if Maintenance!)
+        let bannerHtml = '';
+        if (isMaintenance) {
+          bannerHtml = `
+            <div class="text-xs p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-900 flex items-center justify-between">
+              <span class="font-medium flex items-center gap-1.5">
+                <i class="fa-solid fa-wrench text-red-600"></i>
+                Statut : <strong class="text-red-700 font-bold">En Maintenance (Indisponible)</strong>
+              </span>
+            </div>
+          `;
+        } else if (isEnTournee) {
+          bannerHtml = `
+            <div class="text-xs p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/70 text-blue-900 flex items-center justify-between">
+              <span class="font-medium flex items-center gap-1.5">
+                <i class="fa-solid fa-user-clock text-blue-600"></i>
+                En mission avec : <strong class="font-bold">${v.last_driver || 'Chauffeur assigné'}</strong>
+              </span>
+            </div>
+          `;
+        } else {
+          bannerHtml = `
+            <div class="text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-between">
+              <span class="font-medium flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-check text-emerald-500"></i>
+                Statut : <strong class="text-emerald-700 font-bold">Prêt pour affectation</strong>
+              </span>
+            </div>
+          `;
+        }
+
+        // 3. Driver Action Button / Indicator (Strict Requirement: ONLY render "Prendre ce véhicule" if Disponible, replace with "🚫 Véhicule Indisponible" otherwise)
+        let chauffeurActionHtml = '';
+        if (isChauffeur) {
+          if (isDisponible) {
+            chauffeurActionHtml = `
+              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
+                <i class="fa-solid fa-key"></i>
+                <span>Prendre ce véhicule</span>
+              </button>
+            `;
+          } else if (isEnTournee && isAssignedToCurrent) {
+            chauffeurActionHtml = `
+              <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] text-white text-xs font-bold transition shadow-md shadow-[#3076BB]/25 active:scale-95 min-h-[40px]">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                <span>Restituer le véhicule</span>
+              </button>
+            `;
+          } else {
+            // Hard block: Maintenance or En Tournée par un autre chauffeur
+            chauffeurActionHtml = `
+              <div class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 min-h-[40px]">
+                <span class="text-red-500 font-bold text-xs flex items-center gap-1.5">
+                  🚫 Véhicule Indisponible
+                </span>
+              </div>
+            `;
+          }
+        }
 
         return `
           <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
@@ -6241,8 +6313,14 @@ const LOCAL_DELIVERY_DATA = [
             <!-- Card Header: Brand, Plate, Status -->
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center space-x-3.5">
-                <div class="w-12 h-12 rounded-2xl ${isDisponible ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : (isEnTournee ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-rose-50 text-rose-700 border border-rose-200')} flex items-center justify-center text-xl shadow-xs shrink-0">
-                  <i class="fa-solid fa-truck-moving"></i>
+                <div class="w-12 h-12 rounded-2xl ${
+                  isMaintenance 
+                    ? 'bg-red-50 text-red-700 border border-red-200' 
+                    : (isEnTournee 
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                } flex items-center justify-center text-xl shadow-xs shrink-0">
+                  <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
                 </div>
                 <div>
                   <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">${v.brand || 'Véhicule'}</h3>
@@ -6258,7 +6336,7 @@ const LOCAL_DELIVERY_DATA = [
               </div>
             </div>
 
-            <!-- Metrics Grid: Mileage, Fuel, Driver -->
+            <!-- Metrics Grid: Mileage, Fuel -->
             <div class="grid grid-cols-2 gap-3 pt-1">
               <!-- Mileage -->
               <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
@@ -6280,21 +6358,14 @@ const LOCAL_DELIVERY_DATA = [
                     <span>${v.fuel_level || '100%'}</span>
                   </div>
                   <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-amber-500 h-full rounded-full" style="width: ${fuelPct}%"></div>
+                    <div class="${isMaintenance ? 'bg-red-400' : 'bg-amber-500'} h-full rounded-full" style="width: ${fuelPct}%"></div>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Driver Assignment banner -->
-            <div class="text-xs p-2.5 rounded-xl ${isEnTournee ? 'bg-blue-50/70 border border-blue-200/70 text-blue-900' : 'bg-slate-50 border border-slate-100 text-slate-600'} flex items-center justify-between">
-              <span class="font-medium flex items-center gap-1.5">
-                <i class="fa-solid ${isEnTournee ? 'fa-user-clock text-blue-600' : 'fa-circle-check text-emerald-500'}"></i>
-                ${isEnTournee 
-                  ? `En mission avec : <strong class="font-bold">${v.last_driver || 'Chauffeur assigné'}</strong>` 
-                  : `Statut : <strong class="text-emerald-700 font-bold">Prêt pour affectation</strong>`}
-              </span>
-            </div>
+            ${bannerHtml}
 
             <!-- Action Buttons Footer -->
             <div class="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
@@ -6303,23 +6374,16 @@ const LOCAL_DELIVERY_DATA = [
                 <span>Voir Historique</span>
               </button>
 
-              ${(isChauffeur || isAdmin) && isDisponible ? `
-                <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
-                  <i class="fa-solid fa-key"></i>
-                  <span>Prendre ce véhicule</span>
-                </button>
-              ` : ''}
-
-              ${(isEnTournee && (isAssignedToCurrent || isAdmin)) ? `
-                <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] text-white text-xs font-bold transition shadow-md shadow-[#3076BB]/25 active:scale-95 min-h-[40px]">
-                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                  <span>Restituer le véhicule</span>
-                </button>
-              ` : ''}
+              ${chauffeurActionHtml}
 
               ${isAdmin ? `
-                <button onclick="adminToggleVehicleStatus('${v.id}')" title="Modifier le statut (Admin)" class="p-2.5 rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-600 transition min-h-[40px]">
-                  <i class="fa-solid fa-sliders text-xs"></i>
+                <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border ${
+                  isMaintenance 
+                    ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800' 
+                    : 'border-red-300 bg-red-50 hover:bg-red-100 text-red-800'
+                } text-xs font-bold transition min-h-[40px]" title="Changer l'état du camion (Admin)">
+                  <i class="fa-solid ${isMaintenance ? 'fa-check' : 'fa-wrench'} text-xs"></i>
+                  <span>${isMaintenance ? 'Remettre Disponible' : 'Mettre en Maintenance'}</span>
                 </button>
               ` : ''}
             </div>
@@ -6330,8 +6394,19 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function openHandoverModal(vehicleId, actionType = 'Prise') {
-      const vehicle = AppState.vehicles.find(v => v.id === vehicleId);
+      const vehicle = AppState.vehicles.find(v => String(v.id) === String(vehicleId));
       if (!vehicle) return;
+
+      const vStatus = String(vehicle.status || '').trim().toLowerCase();
+      if (actionType === 'Prise' && (vStatus === 'maintenance' || vStatus === 'en maintenance' || vStatus === 'panne')) {
+        showNotification("🚫 Ce véhicule est actuellement en maintenance et ne peut pas être pris en charge.", "error");
+        return;
+      }
+
+      if (actionType === 'Prise' && (vStatus === 'en tournée' || vStatus === 'en tournee' || vStatus === 'tournée' || vStatus === 'tournee')) {
+        showNotification("Ce véhicule est déjà en tournée.", "warning");
+        return;
+      }
 
       AppState.currentHandoverVehicle = vehicle;
       AppState.currentHandoverAction = actionType;
@@ -6556,7 +6631,7 @@ const LOCAL_DELIVERY_DATA = [
 
         // 5. Update Local State & Persist
         const updatedVehicles = AppState.vehicles.map(v => {
-          if (v.id === vehicle.id) {
+          if (String(v.id) === String(vehicle.id)) {
             return {
               ...v,
               status: newStatus,
@@ -6591,7 +6666,7 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     function openVehicleHistoryModal(vehicleId) {
-      const vehicle = AppState.vehicles.find(v => v.id === vehicleId) || { brand: 'Véhicule', plate_number: '' };
+      const vehicle = AppState.vehicles.find(v => String(v.id) === String(vehicleId)) || { brand: 'Véhicule', plate_number: '' };
       AppState.selectedVehicleForHistory = vehicle;
 
       const modal = document.getElementById('vehicle-history-modal');
@@ -6603,7 +6678,7 @@ const LOCAL_DELIVERY_DATA = [
       if (title) title.textContent = `Historique : ${vehicle.brand}`;
       if (subtitle) subtitle.textContent = `Matricule : ${vehicle.plate_number || 'Non spécifié'}`;
 
-      const history = (AppState.vehicleHandovers || []).filter(h => h.vehicle_id === vehicleId || h.vehicle_id === vehicle.plate_number);
+      const history = (AppState.vehicleHandovers || []).filter(h => String(h.vehicle_id) === String(vehicleId) || String(h.vehicle_id) === String(vehicle.plate_number));
 
       if (countEl) countEl.textContent = `${history.length} passation(s) enregistrée(s)`;
 
@@ -6700,28 +6775,57 @@ const LOCAL_DELIVERY_DATA = [
       if (modal) modal.classList.add('hidden');
     }
 
-    async function adminToggleVehicleStatus(vehicleId) {
-      const v = AppState.vehicles.find(item => item.id === vehicleId);
+    async function adminToggleVehicleStatus(vehicleId, targetStatus = null) {
+      const v = AppState.vehicles.find(item => String(item.id) === String(vehicleId));
       if (!v) return;
 
-      const nextStatus = v.status === 'Disponible' ? 'Maintenance' : 'Disponible';
+      const currentNorm = String(v.status || '').trim().toLowerCase();
+      let nextStatus = 'Maintenance';
+      if (targetStatus) {
+        nextStatus = targetStatus;
+      } else {
+        nextStatus = (currentNorm === 'maintenance' || currentNorm === 'en maintenance' || currentNorm === 'panne') 
+          ? 'Disponible' 
+          : 'Maintenance';
+      }
+
+      // 1. Synchronously update in-memory object
       v.status = nextStatus;
 
+      // 2. Immediate local storage persistence
+      localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
+
+      // 3. Immediately re-render the DOM without requiring a page reload
+      renderFleetDashboard();
+
+      // 4. Update remote Supabase vehicles table
       if (supabaseClient) {
         try {
-          await supabaseClient.from('vehicles').update({ status: nextStatus }).eq('id', vehicleId);
+          const { error: upErr } = await supabaseClient
+            .from('vehicles')
+            .update({ status: nextStatus })
+            .eq('id', v.id);
+
+          if (upErr) {
+            console.warn('[Admin] Statut update Supabase warning:', upErr);
+          } else {
+            console.log(`[Admin] Statut Supabase mis à jour avec succès : ${v.brand} -> ${nextStatus}`);
+          }
         } catch (e) {
-          console.warn('[Admin] Statut update warning:', e);
+          console.warn('[Admin] Statut update exception:', e);
         }
       }
 
-      localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
-      renderFleetDashboard();
-      showNotification(`Statut du camion ${v.brand} passé à : ${nextStatus}`, "info");
+      const isNowMaint = nextStatus.toLowerCase() === 'maintenance';
+      showNotification(
+        isNowMaint 
+          ? `Camion ${v.brand} placé en Maintenance (indisponible pour les chauffeurs)` 
+          : `Camion ${v.brand} remis en service (Disponible)`,
+        isNowMaint ? "warning" : "success"
+      );
     }
 
-    // Export to window for inline onclick handlers
-    window.switchMainView = switchMainView;
+        window.switchMainView = switchMainView;
     window.loadFleetData = loadFleetData;
     window.openHandoverModal = openHandoverModal;
     window.closeHandoverModal = closeHandoverModal;
