@@ -6279,47 +6279,7 @@ const LOCAL_DELIVERY_DATA = [
         else if (fuelStr === '50%') fuelPct = 50;
         else if (fuelStr === '25%') fuelPct = 25;
 
-        // 2. Banner HTML
-        let bannerHtml = '';
-        if (isMaintenance) {
-          bannerHtml = `
-            <div class="text-xs p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-900 flex items-center justify-between">
-              <span class="font-medium flex items-center gap-1.5">
-                <i class="fa-solid fa-wrench text-red-600"></i>
-                Statut : <strong class="text-red-700 font-bold">En Maintenance (Indisponible)</strong>
-              </span>
-            </div>
-          `;
-        } else if (isEnTournee) {
-          if (isMyTruck) {
-            bannerHtml = `
-              <div class="text-xs p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 flex items-center justify-between">
-                <span class="font-medium flex items-center gap-1.5">
-                  <i class="fa-solid fa-truck-fast text-blue-600"></i>
-                  En mission avec vous : <strong class="font-bold text-blue-700">${v.current_driver || currentChauffeur}</strong>
-                </span>
-              </div>
-            `;
-          } else {
-            bannerHtml = `
-              <div class="text-xs p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-between">
-                <span class="font-medium flex items-center gap-1.5">
-                  <i class="fa-solid fa-lock text-slate-500"></i>
-                  En mission avec : <strong class="font-bold text-slate-800">${v.current_driver || 'Autre chauffeur'}</strong>
-                </span>
-              </div>
-            `;
-          }
-        } else {
-          bannerHtml = `
-            <div class="text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-between">
-              <span class="font-medium flex items-center gap-1.5">
-                <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                Statut : <strong class="text-emerald-700 font-bold">Prêt pour affectation</strong>
-              </span>
-            </div>
-          `;
-        }
+
 
         // 3. Session-Aware Driver Action Rendering
         // Requirement 1:
@@ -6363,7 +6323,7 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         return `
-          <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
+          <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-5">
             
             <!-- Card Header: Brand, Plate, Status -->
             <div class="flex items-start justify-between gap-3">
@@ -6392,9 +6352,9 @@ const LOCAL_DELIVERY_DATA = [
             </div>
 
             <!-- Metrics Grid: Mileage, Fuel -->
-            <div class="grid grid-cols-2 gap-3 pt-1">
+            <div class="grid grid-cols-2 gap-3.5 pt-1">
               <!-- Mileage -->
-              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
                 <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
                   <i class="fa-solid fa-gauge-high text-blue-500"></i> Kilométrage
                 </span>
@@ -6418,9 +6378,6 @@ const LOCAL_DELIVERY_DATA = [
                 </div>
               </div>
             </div>
-
-            <!-- Driver Assignment banner -->
-            ${bannerHtml}
 
             <!-- Action Buttons Footer -->
             <div class="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
