@@ -512,6 +512,12 @@
             <i class="fa-solid fa-arrows-rotate text-xs"></i>
             <span>Actualiser</span>
           </button>
+
+          <!-- Performances Chauffeurs Button (Admin / ADV Only) -->
+          <button id="btn-fleet-leaderboard" onclick="openDriverPerformanceModal()" class="hidden px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition active:scale-95 flex items-center gap-1.5 text-xs shadow-sm min-h-[36px]" title="Consulter le classement et les performances kilométriques des chauffeurs">
+            <i class="fa-solid fa-chart-line text-xs"></i>
+            <span>📊 Performances Chauffeurs</span>
+          </button>
         </div>
       </div>
 
@@ -1064,6 +1070,92 @@
       <div class="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-between shrink-0">
         <span id="vehicle-history-count" class="text-xs text-slate-500 font-medium">0 passation(s)</span>
         <button onclick="closeVehicleHistoryModal()" class="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition active:scale-95">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- DRIVER PERFORMANCE LEADERBOARD MODAL (ADMIN ONLY) -->
+  <!-- ======================================================== -->
+  <div id="driver-performance-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl sm:max-w-3xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+            <i class="fa-solid fa-trophy text-base"></i>
+          </div>
+          <div>
+            <h4 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Classement & Performances Chauffeurs</span>
+              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Zéro GPS</span>
+            </h4>
+            <p class="text-xs text-slate-500 font-medium">Calculé strictement sur le delta odométrique (Restitution - Prise)</p>
+          </div>
+        </div>
+        <button onclick="closeDriverPerformanceModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95" title="Fermer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Quick KPI Aggregates -->
+      <div class="grid grid-cols-3 gap-2.5 sm:gap-3 p-4 sm:px-6 bg-slate-50/50 border-b border-slate-100 shrink-0 text-center">
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Missions Clôturées</span>
+          <span id="perf-kpi-missions" class="text-base sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">0</span>
+        </div>
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total km Roulés</span>
+          <span id="perf-kpi-totalkm" class="text-base sm:text-xl font-extrabold text-indigo-700 font-mono mt-0.5 block">0 <span class="text-xs font-normal text-slate-500">km</span></span>
+        </div>
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Moyenne / Mission</span>
+          <span id="perf-kpi-avgkm" class="text-base sm:text-xl font-extrabold text-emerald-700 font-mono mt-0.5 block">0 <span class="text-xs font-normal text-slate-500">km</span></span>
+        </div>
+      </div>
+
+      <!-- Leaderboard Body (Scrollable Table) -->
+      <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
+          <table class="w-full text-left border-collapse min-w-[500px]">
+            <thead>
+              <tr class="bg-slate-100/80 text-slate-600 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 select-none">
+                <th class="py-3 px-3 sm:px-4 text-center w-14">Rang</th>
+                <th class="py-3 px-3 sm:px-4 cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('driverName')">
+                  Chauffeur <i id="sort-icon-driverName" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                </th>
+                <th class="py-3 px-3 sm:px-4 text-center cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('missionsCount')">
+                  Missions <i id="sort-icon-missionsCount" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                </th>
+                <th class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('totalKm')">
+                  Total km <i id="sort-icon-totalKm" class="fa-solid fa-sort-down text-[10px] ml-1 text-indigo-600"></i>
+                </th>
+                <th class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('avgKm')">
+                  Moyenne km/Mission <i id="sort-icon-avgKm" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="driver-performance-tbody" class="divide-y divide-slate-100 text-xs sm:text-sm">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Explanatory note at the bottom -->
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-500 flex items-start gap-2">
+          <i class="fa-solid fa-circle-info text-indigo-500 mt-0.5 shrink-0"></i>
+          <span>La distance de chaque mission est calculée via <code class="font-mono font-bold text-slate-700">Distance = Restitution - Prise</code> sans aucun appel API GPS, 100% basée sur les relevés kilométriques certifiés des passations.</span>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 sm:px-6 py-4 border-t border-slate-200/80 bg-slate-50/70 flex items-center justify-between shrink-0">
+        <span id="driver-performance-count" class="text-xs text-slate-500 font-medium">4 chauffeurs suivis</span>
+        <button onclick="closeDriverPerformanceModal()" class="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition active:scale-95">
           Fermer
         </button>
       </div>
@@ -6282,6 +6374,16 @@ const LOCAL_DELIVERY_DATA = [
       const isAdmin = currentUser.role === 'admin';
       const canManageMaintenance = isAdmin || isRetraitUser;
 
+      // RBAC: Show/Hide Driver Performance Leaderboard Button for Admin / ADV only
+      const btnLeaderboard = document.getElementById('btn-fleet-leaderboard');
+      if (btnLeaderboard) {
+        if (canManageMaintenance) {
+          btnLeaderboard.classList.remove('hidden');
+        } else {
+          btnLeaderboard.classList.add('hidden');
+        }
+      }
+
       grid.innerHTML = vehicles.map((v, vIndex) => {
         const normStatus = getNormalizedStatus(v);
         const vehicleDetails = resolveVehicleDetails(v, vIndex);
@@ -6917,6 +7019,255 @@ const LOCAL_DELIVERY_DATA = [
       if (modal) modal.classList.add('hidden');
     }
 
+    // ========================================================
+    // DRIVER PERFORMANCE LEADERBOARD ENGINE (NO GPS API)
+    // ========================================================
+    let currentLeaderboardSortKey = 'totalKm';
+    let currentLeaderboardSortAsc = false;
+    let cachedLeaderboardData = [];
+
+    function calculateDriverPerformanceMetrics(handoversList) {
+      const list = Array.isArray(handoversList) ? handoversList : (AppState.vehicleHandovers || []);
+
+      // Sort chronologically ascending (oldest first)
+      const sorted = [...list].sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+
+      const activePrises = new Map();
+      const completedTrips = [];
+
+      for (const h of sorted) {
+        const vId = String(h.vehicle_id || '').trim();
+        const action = String(h.action_type || '').trim().toLowerCase();
+        const driver = String(h.driver_name || '').trim();
+        const mileage = Number(h.mileage) || 0;
+
+        if (action === 'prise') {
+          activePrises.set(vId, h);
+        } else if (action === 'retour') {
+          const matchingPrise = activePrises.get(vId);
+          let pMileage = 0;
+          let dist = 0;
+          let driverName = driver;
+
+          if (matchingPrise) {
+            pMileage = Number(matchingPrise.mileage) || 0;
+            dist = mileage >= pMileage ? (mileage - pMileage) : 0;
+            if (!driverName) driverName = matchingPrise.driver_name;
+            activePrises.delete(vId);
+          } else {
+            dist = 0;
+          }
+
+          if (driverName) {
+            completedTrips.push({
+              driverName: driverName,
+              priseMileage: pMileage,
+              restitutionMileage: mileage,
+              distance: dist,
+              vehicleId: vId,
+              date: h.created_at
+            });
+          }
+        }
+      }
+
+      // Master driver list initialized to 0
+      const knownDrivers = [
+        'SAADI BILLEL',
+        'SNOUCI SEIF-EDDINE',
+        'BOUKHALFA ADEL',
+        'BALLA YOUCEF'
+      ];
+
+      const driverMap = new Map();
+      knownDrivers.forEach(name => {
+        driverMap.set(name, {
+          driverName: name,
+          missionsCount: 0,
+          totalKm: 0,
+          trips: []
+        });
+      });
+
+      // Aggregate completed trips
+      completedTrips.forEach(trip => {
+        let stats = driverMap.get(trip.driverName);
+        if (!stats) {
+          stats = {
+            driverName: trip.driverName,
+            missionsCount: 0,
+            totalKm: 0,
+            trips: []
+          };
+          driverMap.set(trip.driverName, stats);
+        }
+        stats.missionsCount += 1;
+        stats.totalKm += trip.distance;
+        stats.trips.push(trip);
+      });
+
+      const leaderboard = Array.from(driverMap.values()).map(d => {
+        const avgKm = d.missionsCount > 0 ? Math.round(d.totalKm / d.missionsCount) : 0;
+        return {
+          driverName: d.driverName,
+          missionsCount: d.missionsCount,
+          totalKm: d.totalKm,
+          avgKm: avgKm,
+          trips: d.trips
+        };
+      });
+
+      return {
+        leaderboard,
+        completedTripsCount: completedTrips.length,
+        totalKmFleet: completedTrips.reduce((acc, t) => acc + t.distance, 0),
+        avgKmFleet: completedTrips.length > 0 ? Math.round(completedTrips.reduce((acc, t) => acc + t.distance, 0) / completedTrips.length) : 0
+      };
+    }
+
+    function renderDriverPerformanceTable() {
+      const tbody = document.getElementById('driver-performance-tbody');
+      if (!tbody) return;
+
+      const list = [...cachedLeaderboardData];
+      list.sort((a, b) => {
+        let valA = a[currentLeaderboardSortKey];
+        let valB = b[currentLeaderboardSortKey];
+
+        if (typeof valA === 'string') {
+          return currentLeaderboardSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return currentLeaderboardSortAsc ? (valA - valB) : (valB - valA);
+      });
+
+      // Update header sort icons
+      ['driverName', 'missionsCount', 'totalKm', 'avgKm'].forEach(key => {
+        const icon = document.getElementById(`sort-icon-${key}`);
+        if (icon) {
+          if (key === currentLeaderboardSortKey) {
+            icon.className = `fa-solid ${currentLeaderboardSortAsc ? 'fa-sort-up' : 'fa-sort-down'} text-[10px] ml-1 text-indigo-600`;
+          } else {
+            icon.className = 'fa-solid fa-sort text-[10px] ml-1 text-slate-400';
+          }
+        }
+      });
+
+      tbody.innerHTML = list.map((d, idx) => {
+        const rank = idx + 1;
+        let rankBadge = '';
+        let rowClass = 'hover:bg-slate-50/80 transition-colors';
+
+        if (rank === 1 && d.totalKm > 0) {
+          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-amber-100 text-amber-800 font-extrabold text-xs border border-amber-300 shadow-xs">🥇 1</span>`;
+          rowClass = 'bg-amber-50/30 hover:bg-amber-50/60 transition-colors font-medium';
+        } else if (rank === 2 && d.totalKm > 0) {
+          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs border border-slate-300 shadow-xs">🥈 2</span>`;
+        } else if (rank === 3 && d.totalKm > 0) {
+          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-orange-100 text-orange-800 font-extrabold text-xs border border-orange-300 shadow-xs">🥉 3</span>`;
+        } else {
+          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs">${rank}</span>`;
+        }
+
+        const initials = d.driverName.split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
+        return `
+          <tr class="${rowClass}">
+            <td class="py-3.5 px-3 sm:px-4 text-center">
+              ${rankBadge}
+            </td>
+            <td class="py-3.5 px-3 sm:px-4">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
+                  ${initials}
+                </div>
+                <div>
+                  <span class="font-bold text-slate-900 block leading-tight">${d.driverName}</span>
+                  <span class="text-[10px] text-slate-400 block">${d.missionsCount > 0 ? `${d.missionsCount} mission(s) terminée(s)` : 'Aucune mission enregistrée'}</span>
+                </div>
+              </div>
+            </td>
+            <td class="py-3.5 px-3 sm:px-4 text-center">
+              <span class="inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${d.missionsCount > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400'}">
+                ${d.missionsCount}
+              </span>
+            </td>
+            <td class="py-3.5 px-3 sm:px-4 text-right">
+              <span class="font-mono font-extrabold text-slate-900 text-sm sm:text-base">
+                ${d.totalKm.toLocaleString('fr-FR')}
+              </span>
+              <span class="text-xs text-slate-500 font-normal ml-0.5">km</span>
+            </td>
+            <td class="py-3.5 px-3 sm:px-4 text-right">
+              <span class="font-mono font-bold text-slate-700 text-xs sm:text-sm">
+                ${d.avgKm.toLocaleString('fr-FR')}
+              </span>
+              <span class="text-[11px] text-slate-500 font-normal ml-0.5">km/m</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function toggleLeaderboardSort(key) {
+      if (currentLeaderboardSortKey === key) {
+        currentLeaderboardSortAsc = !currentLeaderboardSortAsc;
+      } else {
+        currentLeaderboardSortKey = key;
+        currentLeaderboardSortAsc = (key === 'driverName'); // Default asc for name, desc for numbers
+      }
+      renderDriverPerformanceTable();
+    }
+
+    async function openDriverPerformanceModal() {
+      const currentUser = AppState.currentUser || getAuthSession();
+      const isRetraitUser = currentUser && ((currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV'));
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      if (!currentUser || (!isAdmin && !isRetraitUser)) {
+        console.warn('[RBAC] Accès réservé aux administrateurs.');
+        return;
+      }
+
+      const modal = document.getElementById('driver-performance-modal');
+      if (!modal) return;
+
+      // Fresh sync from Supabase if online
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('vehicle_handovers').select('*').order('created_at', { ascending: true });
+          if (!error && Array.isArray(data) && data.length > 0) {
+            AppState.vehicleHandovers = data;
+            localStorage.setItem('tradifoot_vehicle_handovers', JSON.stringify(data));
+          }
+        } catch (e) {
+          console.warn('[Leaderboard] Erreur rafraîchissement Supabase:', e);
+        }
+      }
+
+      const stats = calculateDriverPerformanceMetrics(AppState.vehicleHandovers);
+      cachedLeaderboardData = stats.leaderboard;
+
+      const kpiMissions = document.getElementById('perf-kpi-missions');
+      const kpiTotalKm = document.getElementById('perf-kpi-totalkm');
+      const kpiAvgKm = document.getElementById('perf-kpi-avgkm');
+      const countEl = document.getElementById('driver-performance-count');
+
+      if (kpiMissions) kpiMissions.textContent = stats.completedTripsCount;
+      if (kpiTotalKm) kpiTotalKm.innerHTML = `${stats.totalKmFleet.toLocaleString('fr-FR')} <span class="text-xs font-normal text-slate-500">km</span>`;
+      if (kpiAvgKm) kpiAvgKm.innerHTML = `${stats.avgKmFleet.toLocaleString('fr-FR')} <span class="text-xs font-normal text-slate-500">km</span>`;
+      if (countEl) countEl.textContent = `${stats.leaderboard.length} chauffeur(s) analysé(s)`;
+
+      currentLeaderboardSortKey = 'totalKm';
+      currentLeaderboardSortAsc = false;
+      renderDriverPerformanceTable();
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeDriverPerformanceModal() {
+      const modal = document.getElementById('driver-performance-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
     async function adminToggleVehicleStatus(vehicleId, targetStatus = null) {
       const v = AppState.vehicles.find(item => String(item.id) === String(vehicleId));
       if (!v) return;
@@ -6989,6 +7340,10 @@ const LOCAL_DELIVERY_DATA = [
     window.adminToggleVehicleStatus = adminToggleVehicleStatus;
     window.getVehicleImagePath = getVehicleImagePath;
     window.resolveVehicleDetails = resolveVehicleDetails;
+    window.openDriverPerformanceModal = openDriverPerformanceModal;
+    window.closeDriverPerformanceModal = closeDriverPerformanceModal;
+    window.toggleLeaderboardSort = toggleLeaderboardSort;
+    window.calculateDriverPerformanceMetrics = calculateDriverPerformanceMetrics;
 
 
     async function initAuthenticatedApp() {
