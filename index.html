@@ -6414,11 +6414,20 @@ const LOCAL_DELIVERY_DATA = [
             </span>
           `;
         } else if (isEnTournee) {
+          const currentDriverName = String(v.current_driver || '').trim();
           statusBadgeHtml = `
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 shadow-xs">
-              <i class="fa-solid fa-truck-fast text-[11px]"></i>
-              En Tournée
-            </span>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 shadow-xs">
+                <i class="fa-solid fa-truck-fast text-[11px]"></i>
+                En Tournée
+              </span>
+              ${currentDriverName ? `
+                <div class="inline-flex items-center gap-1.5 bg-blue-50/90 text-blue-700 border border-blue-200/90 text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:py-1 rounded-full shadow-xs whitespace-nowrap" title="Conducteur actuellement assigné : ${escapeHtmlSafe(currentDriverName)}">
+                  <i class="fa-solid fa-user-circle text-blue-500 text-xs shrink-0"></i>
+                  <span>Conducteur: <strong class="font-bold text-blue-900">${escapeHtmlSafe(currentDriverName)}</strong></span>
+                </div>
+              ` : ''}
+            </div>
           `;
         } else {
           statusBadgeHtml = `
