@@ -3700,6 +3700,11 @@ const LOCAL_DELIVERY_DATA = [
       };
       setAuthSession(session);
       AppState.currentUser = session;
+      if (found.role === 'chauffeur') {
+        localStorage.setItem('chauffeur', found.chauffeurName || found.username);
+      } else {
+        localStorage.removeItem('chauffeur');
+      }
 
       revealDashboard();
       initAuthenticatedApp();
@@ -6035,7 +6040,8 @@ const LOCAL_DELIVERY_DATA = [
         plate_number: "MERCEDES-01",
         status: "Disponible",
         current_mileage: 12000,
-        fuel_level: "50%"
+        fuel_level: "50%",
+        current_driver: null
       },
       {
         id: "ec09bed4-816a-4327-af1d-4e7362a1cdc7",
@@ -6043,7 +6049,8 @@ const LOCAL_DELIVERY_DATA = [
         plate_number: "MERCEDES-02",
         status: "Disponible",
         current_mileage: 0,
-        fuel_level: "100%"
+        fuel_level: "100%",
+        current_driver: null
       },
       {
         id: "2c43c7e9-5c2a-4ef1-b393-17fb50bf3dc4",
@@ -6051,7 +6058,8 @@ const LOCAL_DELIVERY_DATA = [
         plate_number: "HYUNDAI-01",
         status: "Disponible",
         current_mileage: 0,
-        fuel_level: "100%"
+        fuel_level: "100%",
+        current_driver: null
       },
       {
         id: "c660bb2b-6bbd-4123-ba73-c679bb418716",
@@ -6059,9 +6067,31 @@ const LOCAL_DELIVERY_DATA = [
         plate_number: "NISSAN-01",
         status: "Maintenance",
         current_mileage: 0,
-        fuel_level: "100%"
+        fuel_level: "100%",
+        current_driver: null
       }
     ];
+
+    function getLoggedInChauffeur() {
+      const fromStorage = localStorage.getItem('chauffeur');
+      if (fromStorage && fromStorage.trim()) {
+        return fromStorage.trim();
+      }
+      const session = AppState.currentUser || getAuthSession();
+      if (session && session.role === 'chauffeur') {
+        const name = (session.chauffeurName || session.username || '').trim();
+        if (name) {
+          localStorage.setItem('chauffeur', name);
+          return name;
+        }
+      }
+      return '';
+    }
+
+    function isSameDriver(driverA, driverB) {
+      if (!driverA || !driverB) return false;
+      return String(driverA).trim().toUpperCase().replace(/\s+/g, ' ') === String(driverB).trim().toUpperCase().replace(/\s+/g, ' ');
+    }
 
     function escapeHtmlSafe(str) {
       if (!str) return '';
@@ -6198,11 +6228,12 @@ const LOCAL_DELIVERY_DATA = [
       if (kpiRoute) kpiRoute.textContent = onRoute;
       if (kpiMaint) kpiMaint.textContent = maintenance;
 
-      const currentUser = AppState.currentUser || {};
+      // Current session context
+      const currentChauffeur = getLoggedInChauffeur();
+      const currentUser = AppState.currentUser || getAuthSession() || {};
       const isRetraitUser = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
       const isChauffeur = (currentUser.role === 'chauffeur') && !isRetraitUser;
       const isAdmin = currentUser.role === 'admin';
-      const chauffeurName = (currentUser.chauffeurName || currentUser.username || '').trim().toUpperCase();
 
       grid.innerHTML = vehicles.map(v => {
         const normStatus = getNormalizedStatus(v);
@@ -6210,7 +6241,10 @@ const LOCAL_DELIVERY_DATA = [
         const isEnTournee = normStatus === 'en_tournee';
         const isDisponible = normStatus === 'disponible';
 
-        // 1. Status Badge (Strict Requirement: red badge for Maintenance)
+        // Session-aware ownership check on current_driver
+        const isMyTruck = isEnTournee && Boolean(currentChauffeur) && isSameDriver(v.current_driver, currentChauffeur);
+
+        // 1. Status Badge (Red for Maintenance, Blue for En Tournée, Green for Disponible)
         let statusBadgeHtml = '';
         if (isMaintenance) {
           statusBadgeHtml = `
@@ -6238,16 +6272,14 @@ const LOCAL_DELIVERY_DATA = [
           `;
         }
 
-        const lastDriver = v.last_driver || '';
-        const isAssignedToCurrent = isEnTournee && lastDriver && chauffeurName && lastDriver.toUpperCase().includes(chauffeurName);
-
+        // Fuel level percentage
         let fuelPct = 100;
         const fuelStr = String(v.fuel_level || '100%').trim();
         if (fuelStr === '75%') fuelPct = 75;
         else if (fuelStr === '50%') fuelPct = 50;
         else if (fuelStr === '25%') fuelPct = 25;
 
-        // 2. Banner Html (FIX: Do NOT display "Prêt pour affectation" if Maintenance!)
+        // 2. Banner HTML
         let bannerHtml = '';
         if (isMaintenance) {
           bannerHtml = `
@@ -6259,14 +6291,25 @@ const LOCAL_DELIVERY_DATA = [
             </div>
           `;
         } else if (isEnTournee) {
-          bannerHtml = `
-            <div class="text-xs p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/70 text-blue-900 flex items-center justify-between">
-              <span class="font-medium flex items-center gap-1.5">
-                <i class="fa-solid fa-user-clock text-blue-600"></i>
-                En mission avec : <strong class="font-bold">${v.last_driver || 'Chauffeur assigné'}</strong>
-              </span>
-            </div>
-          `;
+          if (isMyTruck) {
+            bannerHtml = `
+              <div class="text-xs p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 flex items-center justify-between">
+                <span class="font-medium flex items-center gap-1.5">
+                  <i class="fa-solid fa-truck-fast text-blue-600"></i>
+                  En mission avec vous : <strong class="font-bold text-blue-700">${v.current_driver || currentChauffeur}</strong>
+                </span>
+              </div>
+            `;
+          } else {
+            bannerHtml = `
+              <div class="text-xs p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-between">
+                <span class="font-medium flex items-center gap-1.5">
+                  <i class="fa-solid fa-lock text-slate-500"></i>
+                  En mission avec : <strong class="font-bold text-slate-800">${v.current_driver || 'Autre chauffeur'}</strong>
+                </span>
+              </div>
+            `;
+          }
         } else {
           bannerHtml = `
             <div class="text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 flex items-center justify-between">
@@ -6278,31 +6321,43 @@ const LOCAL_DELIVERY_DATA = [
           `;
         }
 
-        // 3. Driver Action Button / Indicator (Strict Requirement: ONLY render "Prendre ce véhicule" if Disponible, replace with "🚫 Véhicule Indisponible" otherwise)
+        // 3. Session-Aware Driver Action Rendering
+        // Requirement 1:
+        // STATE A (Available): If status === 'Disponible', show the "Prendre ce véhicule" button.
+        // STATE B (My Truck): If status === 'En Tournée' AND current_driver === currentChauffeur, hide "Prendre" and display prominent "Restituer le véhicule" (Return) button.
+        // STATE C (Someone Else's Truck): If status === 'En Tournée' AND current_driver !== currentChauffeur, hide all action buttons. Display locked badge: <span class="bg-gray-200 text-gray-700 font-bold">🔒 En utilisation par ${item.current_driver}</span>
         let chauffeurActionHtml = '';
         if (isChauffeur) {
-          if (isDisponible) {
-            chauffeurActionHtml = `
-              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
-                <i class="fa-solid fa-key"></i>
-                <span>Prendre ce véhicule</span>
-              </button>
-            `;
-          } else if (isEnTournee && isAssignedToCurrent) {
-            chauffeurActionHtml = `
-              <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] text-white text-xs font-bold transition shadow-md shadow-[#3076BB]/25 active:scale-95 min-h-[40px]">
-                <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                <span>Restituer le véhicule</span>
-              </button>
-            `;
-          } else {
-            // Hard block: Maintenance or En Tournée par un autre chauffeur
+          if (isMaintenance) {
             chauffeurActionHtml = `
               <div class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 min-h-[40px]">
                 <span class="text-red-500 font-bold text-xs flex items-center gap-1.5">
                   🚫 Véhicule Indisponible
                 </span>
               </div>
+            `;
+          } else if (isDisponible) {
+            // STATE A (Available)
+            chauffeurActionHtml = `
+              <button onclick="openHandoverModal('${v.id}', 'Prise')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/25 active:scale-95 min-h-[40px]">
+                <i class="fa-solid fa-key"></i>
+                <span>Prendre ce véhicule</span>
+              </button>
+            `;
+          } else if (isEnTournee && isMyTruck) {
+            // STATE B (My Truck)
+            chauffeurActionHtml = `
+              <button onclick="openHandoverModal('${v.id}', 'Retour')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-md shadow-blue-600/25 active:scale-95 min-h-[40px]">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                <span>Restituer le véhicule</span>
+              </button>
+            `;
+          } else if (isEnTournee && !isMyTruck) {
+            // STATE C (Someone Else's Truck)
+            chauffeurActionHtml = `
+              <span class="bg-gray-200 text-gray-700 font-bold px-3 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 flex-1 min-h-[40px]">
+                🔒 En utilisation par ${v.current_driver || 'un autre chauffeur'}
+              </span>
             `;
           }
         }
@@ -6377,7 +6432,7 @@ const LOCAL_DELIVERY_DATA = [
               ${chauffeurActionHtml}
 
               ${isAdmin ? `
-                <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border ${
+                <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border ${
                   isMaintenance 
                     ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800' 
                     : 'border-red-300 bg-red-50 hover:bg-red-100 text-red-800'
@@ -6397,15 +6452,36 @@ const LOCAL_DELIVERY_DATA = [
       const vehicle = AppState.vehicles.find(v => String(v.id) === String(vehicleId));
       if (!vehicle) return;
 
+      const currentUser = AppState.currentUser || getAuthSession() || {};
+      const isRetrait = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
+      
+      // Guard 1: RBAC - Block Admin and ADV accounts from taking or returning
+      if (currentUser.role !== 'chauffeur' || isRetrait) {
+        showNotification("Seuls les chauffeurs assignés peuvent prendre ou restituer un véhicule.", "warning");
+        return;
+      }
+
+      const currentChauffeur = getLoggedInChauffeur();
       const vStatus = String(vehicle.status || '').trim().toLowerCase();
-      if (actionType === 'Prise' && (vStatus === 'maintenance' || vStatus === 'en maintenance' || vStatus === 'panne')) {
+
+      // Guard 2: Maintenance block
+      if (vStatus === 'maintenance' || vStatus === 'en maintenance' || vStatus === 'panne') {
         showNotification("🚫 Ce véhicule est actuellement en maintenance et ne peut pas être pris en charge.", "error");
         return;
       }
 
+      // Guard 3: Prise block if already on route
       if (actionType === 'Prise' && (vStatus === 'en tournée' || vStatus === 'en tournee' || vStatus === 'tournée' || vStatus === 'tournee')) {
-        showNotification("Ce véhicule est déjà en tournée.", "warning");
+        showNotification(`Ce véhicule est déjà en tournée avec ${vehicle.current_driver || 'un autre chauffeur'}.`, "warning");
         return;
+      }
+
+      // Guard 4: Retour block if not my truck
+      if (actionType === 'Retour') {
+        if (!isSameDriver(vehicle.current_driver, currentChauffeur)) {
+          showNotification(`Vous ne pouvez pas restituer ce véhicule : il est sous la responsabilité de ${vehicle.current_driver || 'un autre chauffeur'}.`, "error");
+          return;
+        }
       }
 
       AppState.currentHandoverVehicle = vehicle;
@@ -6424,20 +6500,21 @@ const LOCAL_DELIVERY_DATA = [
       const remarqueInput = document.getElementById('handover-remarque-input');
       const submitText = document.getElementById('btn-submit-handover-text');
 
-      const currentUser = AppState.currentUser || {};
-      const currentDriver = currentUser.chauffeurName || currentUser.username || 'Chauffeur';
-
       if (title) title.textContent = actionType === 'Prise' ? "Passation de Véhicule - Prise en charge" : "Restitution de Véhicule - Fin de tournée";
-      if (subtitle) subtitle.textContent = actionType === 'Prise' ? "Enregistrement du départ en tournée et inspection" : "Enregistrement du retour au dépôt et contrôle";
+      if (subtitle) subtitle.textContent = actionType === 'Prise' ? "Enregistrement du départ en tournée et inspection" : "Enregistrement du retour au dépôt, kilométrage final et contrôle";
       if (truckBrand) truckBrand.textContent = vehicle.brand || 'Camion';
       if (truckPlate) truckPlate.textContent = vehicle.plate_number || 'Sans matricule';
-      if (driverName) driverName.textContent = currentDriver;
+      if (driverName) driverName.textContent = currentChauffeur;
       if (mileageInput) {
         mileageInput.value = vehicle.current_mileage || '';
         mileageInput.min = vehicle.current_mileage || 0;
       }
       if (mileageHint) {
-        mileageHint.textContent = `Dernier relevé : ${Number(vehicle.current_mileage || 0).toLocaleString('fr-FR')} km`;
+        if (actionType === 'Prise') {
+          mileageHint.textContent = `Dernier relevé : ${Number(vehicle.current_mileage || 0).toLocaleString('fr-FR')} km`;
+        } else {
+          mileageHint.textContent = `Kilométrage de départ : ${Number(vehicle.current_mileage || 0).toLocaleString('fr-FR')} km (saisissez le compteur de fin)`;
+        }
       }
       if (fuelSelect) fuelSelect.value = vehicle.fuel_level || '100%';
       if (remarqueInput) remarqueInput.value = '';
@@ -6520,14 +6597,31 @@ const LOCAL_DELIVERY_DATA = [
       const vehicle = AppState.currentHandoverVehicle;
       if (!vehicle) return;
 
+      const actionType = AppState.currentHandoverAction || "Prise";
+      const currentChauffeur = getLoggedInChauffeur();
+
+      // Guard: RBAC - Block Admin and ADV
+      const currentUser = AppState.currentUser || getAuthSession() || {};
+      const isRetrait = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
+      if (currentUser.role !== 'chauffeur' || isRetrait) {
+        showNotification("Seuls les chauffeurs assignés peuvent valider une passation.", "error");
+        return;
+      }
+
+      // Guard: Check lock on Return
+      if (actionType === 'Retour' && vehicle.current_driver && !isSameDriver(vehicle.current_driver, currentChauffeur)) {
+        showNotification(`Vous ne pouvez pas restituer ce véhicule : il est sous la responsabilité de ${vehicle.current_driver}.`, "error");
+        return;
+      }
+
       const mileageInput = document.getElementById('handover-mileage-input');
       const fuelSelect = document.getElementById('handover-fuel-select');
       const remarqueInput = document.getElementById('handover-remarque-input');
       const submitBtn = document.getElementById('btn-submit-handover');
       const submitText = document.getElementById('btn-submit-handover-text');
 
-      const mileageVal = parseInt(mileageInput ? mileageInput.value : 0, 10);
-      if (isNaN(mileageVal) || mileageVal <= 0) {
+      const enteredMileage = parseInt(mileageInput ? mileageInput.value : 0, 10);
+      if (isNaN(enteredMileage) || enteredMileage <= 0) {
         showNotification("Veuillez saisir un kilométrage valide.", "warning");
         if (mileageInput) mileageInput.focus();
         return;
@@ -6535,8 +6629,6 @@ const LOCAL_DELIVERY_DATA = [
 
       const fuelVal = fuelSelect ? fuelSelect.value : "100%";
       const remarqueVal = remarqueInput ? remarqueInput.value.trim() : "";
-      const actionType = AppState.currentHandoverAction || "Prise";
-      const driverName = (AppState.currentUser && (AppState.currentUser.chauffeurName || AppState.currentUser.username)) || "Chauffeur";
 
       if (submitBtn) submitBtn.disabled = true;
       if (submitText) submitText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traitement...';
@@ -6588,9 +6680,9 @@ const LOCAL_DELIVERY_DATA = [
           id: 'ho_' + Date.now(),
           created_at: new Date().toISOString(),
           vehicle_id: vehicle.id,
-          driver_name: driverName,
-          action_type: actionType,
-          mileage: mileageVal,
+          driver_name: currentChauffeur,
+          action_type: actionType, // 'Prise' or 'Retour'
+          mileage: enteredMileage,
           fuel_level: fuelVal,
           remarque: remarqueVal,
           photo_urls: photoUrls
@@ -6604,9 +6696,9 @@ const LOCAL_DELIVERY_DATA = [
               console.warn('[Handover] Retrying base columns insert:', insErr.message);
               await supabaseClient.from('vehicle_handovers').insert({
                 vehicle_id: vehicle.id,
-                driver_name: driverName,
+                driver_name: currentChauffeur,
                 action_type: actionType,
-                mileage: mileageVal,
+                mileage: enteredMileage,
                 fuel_level: fuelVal
               });
             }
@@ -6615,17 +6707,33 @@ const LOCAL_DELIVERY_DATA = [
           }
         }
 
-        // 4. Update Vehicle State in Supabase
+        // 4. Update Vehicle State in Supabase:
+        // Requirement 2 (Prise): { status: 'En Tournée', current_driver: currentChauffeur, current_mileage: enteredMileage }
+        // Requirement 3 (Retour): { status: 'Disponible', current_driver: null, current_mileage: enteredMileage }
         const newStatus = actionType === 'Prise' ? 'En Tournée' : 'Disponible';
+        const newDriver = actionType === 'Prise' ? currentChauffeur : null;
+
+        const vehicleUpdatePayload = {
+          status: newStatus,
+          current_driver: newDriver,
+          current_mileage: enteredMileage,
+          fuel_level: fuelVal
+        };
+
         if (supabaseClient) {
           try {
-            await supabaseClient.from('vehicles').update({
-              status: newStatus,
-              current_mileage: mileageVal,
-              fuel_level: fuelVal
-            }).eq('id', vehicle.id);
+            const { error: vUpErr } = await supabaseClient
+              .from('vehicles')
+              .update(vehicleUpdatePayload)
+              .eq('id', vehicle.id);
+
+            if (vUpErr) {
+              console.warn('[Handover] Supabase vehicle update warning:', vUpErr);
+            } else {
+              console.log(`[Handover] Véhicule mis à jour dans Supabase : status=${newStatus}, current_driver=${newDriver}`);
+            }
           } catch (e) {
-            console.warn('[Handover] Supabase vehicle update warning:', e);
+            console.warn('[Handover] Supabase vehicle update exception:', e);
           }
         }
 
@@ -6635,9 +6743,10 @@ const LOCAL_DELIVERY_DATA = [
             return {
               ...v,
               status: newStatus,
-              current_mileage: mileageVal,
+              current_driver: newDriver,
+              current_mileage: enteredMileage,
               fuel_level: fuelVal,
-              last_driver: actionType === 'Prise' ? driverName : ''
+              last_driver: actionType === 'Prise' ? currentChauffeur : (v.last_driver || currentChauffeur)
             };
           }
           return v;
@@ -6652,8 +6761,8 @@ const LOCAL_DELIVERY_DATA = [
         renderFleetDashboard();
 
         const successMsg = actionType === 'Prise'
-          ? `Prise du véhicule ${vehicle.brand} confirmée ! Bonne tournée.`
-          : `Restitution du véhicule ${vehicle.brand} enregistrée avec succès.`;
+          ? `Prise du véhicule ${vehicle.brand} confirmée pour ${currentChauffeur} ! Véhicule verrouillé à votre session.`
+          : `Restitution du véhicule ${vehicle.brand} enregistrée. Le camion est désormais disponible.`;
         showNotification(successMsg, "success");
 
       } catch (error) {
@@ -6789,21 +6898,24 @@ const LOCAL_DELIVERY_DATA = [
           : 'Maintenance';
       }
 
-      // 1. Synchronously update in-memory object
+      // Synchronously update in-memory object
       v.status = nextStatus;
+      if (nextStatus === 'Disponible' || nextStatus === 'Maintenance') {
+        v.current_driver = null;
+      }
 
-      // 2. Immediate local storage persistence
+      // Immediate local storage persistence
       localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
 
-      // 3. Immediately re-render the DOM without requiring a page reload
+      // Immediately re-render the DOM without requiring a page reload
       renderFleetDashboard();
 
-      // 4. Update remote Supabase vehicles table
+      // Update remote Supabase vehicles table
       if (supabaseClient) {
         try {
           const { error: upErr } = await supabaseClient
             .from('vehicles')
-            .update({ status: nextStatus })
+            .update({ status: nextStatus, current_driver: v.current_driver })
             .eq('id', v.id);
 
           if (upErr) {
@@ -6840,6 +6952,9 @@ const LOCAL_DELIVERY_DATA = [
 
     async function initAuthenticatedApp() {
       if (!AppState.currentUser) return;
+      if (AppState.currentUser.role === 'chauffeur') {
+        localStorage.setItem('chauffeur', AppState.currentUser.chauffeurName || AppState.currentUser.username);
+      }
       initLocalDeliveryStates();
       loadFleetData(false);
 
