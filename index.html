@@ -6198,6 +6198,16 @@ const LOCAL_DELIVERY_DATA = [
       }
     }
 
+    // Brand to vehicle image mapping helper
+    function getVehicleImagePath(brand) {
+      if (!brand) return null;
+      const b = String(brand).trim().toUpperCase();
+      if (b.includes('MERCEDES')) return 'assets/mercedes.png';
+      if (b.includes('HYUNDAI')) return 'assets/hyundai.png';
+      if (b.includes('NISSAN')) return 'assets/nissan.png';
+      return null;
+    }
+
     function renderFleetDashboard() {
       const grid = document.getElementById('fleet-cards-grid');
       if (!grid) return;
@@ -6213,15 +6223,7 @@ const LOCAL_DELIVERY_DATA = [
         return 'disponible';
       }
 
-      // Brand to vehicle image mapping helper
-      function getVehicleImagePath(brand) {
-        if (!brand) return null;
-        const b = String(brand).trim().toUpperCase();
-        if (b.includes('MERCEDES')) return 'assets/mercedes.png';
-        if (b.includes('HYUNDAI')) return 'assets/hyundai.png';
-        if (b.includes('NISSAN')) return 'assets/nissan.png';
-        return null;
-      }
+
 
       const total = vehicles.length;
       const available = vehicles.filter(v => getNormalizedStatus(v) === 'disponible').length;
