@@ -6213,6 +6213,16 @@ const LOCAL_DELIVERY_DATA = [
         return 'disponible';
       }
 
+      // Brand to vehicle image mapping helper
+      function getVehicleImagePath(brand) {
+        if (!brand) return null;
+        const b = String(brand).trim().toUpperCase();
+        if (b.includes('MERCEDES')) return 'assets/mercedes.png';
+        if (b.includes('HYUNDAI')) return 'assets/hyundai.png';
+        if (b.includes('NISSAN')) return 'assets/nissan.png';
+        return null;
+      }
+
       const total = vehicles.length;
       const available = vehicles.filter(v => getNormalizedStatus(v) === 'disponible').length;
       const onRoute = vehicles.filter(v => getNormalizedStatus(v) === 'en_tournee').length;
@@ -6238,6 +6248,7 @@ const LOCAL_DELIVERY_DATA = [
 
       grid.innerHTML = vehicles.map(v => {
         const normStatus = getNormalizedStatus(v);
+        const vehicleImg = getVehicleImagePath(v.brand);
         const isMaintenance = normStatus === 'maintenance';
         const isEnTournee = normStatus === 'en_tournee';
         const isDisponible = normStatus === 'disponible';
@@ -6326,16 +6337,16 @@ const LOCAL_DELIVERY_DATA = [
         return `
           <div class="glass-panel bg-white/95 backdrop-blur-md rounded-2xl md:rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-fluent hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-5">
             
-            <!-- Card Header: Brand, Plate, Status -->
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center space-x-3.5">
-                <div class="w-12 h-12 rounded-2xl ${
+            <!-- Card Header: Brand, Plate, Truck Image, Status -->
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl ${
                   isMaintenance 
                     ? 'bg-red-50 text-red-700 border border-red-200' 
                     : (isEnTournee 
                       ? 'bg-blue-50 text-blue-700 border border-blue-200' 
                       : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
-                } flex items-center justify-center text-xl shadow-xs shrink-0">
+                } flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
                   <i class="fa-solid ${isMaintenance ? 'fa-wrench' : 'fa-truck-moving'}"></i>
                 </div>
                 <div>
@@ -6346,8 +6357,13 @@ const LOCAL_DELIVERY_DATA = [
                     </span>
                   </div>
                 </div>
+                ${vehicleImg ? `
+                  <div class="pl-2 sm:pl-3 flex items-center justify-center shrink-0">
+                    <img src="${vehicleImg}" alt="${v.brand || 'Véhicule'}" class="h-16 sm:h-24 w-auto max-w-[110px] sm:max-w-[150px] object-contain drop-shadow-md mix-blend-multiply transition-transform duration-300 hover:scale-105" onerror="if(!this.src.endsWith('.jpg')){this.src=this.src.replace('.png','.jpg');}else{this.style.display='none';}" loading="lazy" />
+                  </div>
+                ` : ''}
               </div>
-              <div>
+              <div class="shrink-0">
                 ${statusBadgeHtml}
               </div>
             </div>
@@ -6922,6 +6938,7 @@ const LOCAL_DELIVERY_DATA = [
     window.openVehicleHistoryModal = openVehicleHistoryModal;
     window.closeVehicleHistoryModal = closeVehicleHistoryModal;
     window.adminToggleVehicleStatus = adminToggleVehicleStatus;
+    window.getVehicleImagePath = getVehicleImagePath;
 
 
     async function initAuthenticatedApp() {
