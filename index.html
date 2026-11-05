@@ -6234,6 +6234,7 @@ const LOCAL_DELIVERY_DATA = [
       const isRetraitUser = (currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV');
       const isChauffeur = (currentUser.role === 'chauffeur') && !isRetraitUser;
       const isAdmin = currentUser.role === 'admin';
+      const canManageMaintenance = isAdmin || isRetraitUser;
 
       grid.innerHTML = vehicles.map(v => {
         const normStatus = getNormalizedStatus(v);
@@ -6388,16 +6389,26 @@ const LOCAL_DELIVERY_DATA = [
 
               ${chauffeurActionHtml}
 
-              ${isAdmin ? `
-                <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border ${
-                  isMaintenance 
-                    ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800' 
-                    : 'border-red-300 bg-red-50 hover:bg-red-100 text-red-800'
-                } text-xs font-bold transition min-h-[40px]" title="Changer l'état du camion (Admin)">
-                  <i class="fa-solid ${isMaintenance ? 'fa-check' : 'fa-wrench'} text-xs"></i>
-                  <span>${isMaintenance ? 'Remettre Disponible' : 'Mettre en Maintenance'}</span>
-                </button>
-              ` : ''}
+              ${canManageMaintenance ? (
+                isMaintenance ? `
+                  <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition min-h-[40px]" title="Remettre le camion en service">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span>Remettre Disponible</span>
+                  </button>
+                ` : (
+                  isDisponible ? `
+                    <button onclick="adminToggleVehicleStatus('${v.id}')" class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition min-h-[40px]" title="Mettre le véhicule en maintenance">
+                      <i class="fa-solid fa-wrench text-xs"></i>
+                      <span>Mettre en Maintenance</span>
+                    </button>
+                  ` : `
+                    <button disabled class="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed text-xs font-bold min-h-[40px]" title="Impossible de mettre en maintenance pendant une tournée en cours">
+                      <i class="fa-solid fa-lock text-xs"></i>
+                      <span>Bloqué (En Tournée)</span>
+                    </button>
+                  `
+                )
+              ) : ''}
             </div>
 
           </div>
@@ -6846,6 +6857,12 @@ const LOCAL_DELIVERY_DATA = [
       if (!v) return;
 
       const currentNorm = String(v.status || '').trim().toLowerCase();
+      const isEnTournee = currentNorm === 'en tournée' || currentNorm === 'en tournee' || currentNorm === 'tournée' || currentNorm === 'tournee';
+      if (isEnTournee) {
+        showNotification("Impossible de mettre en maintenance : ce véhicule est actuellement en cours de tournée.", "warning");
+        return;
+      }
+
       let nextStatus = 'Maintenance';
       if (targetStatus) {
         nextStatus = targetStatus;
