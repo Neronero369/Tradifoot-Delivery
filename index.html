@@ -186,6 +186,9 @@
   <!-- TOAST NOTIFICATIONS CONTAINER -->
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center space-y-2 pointer-events-none transition-all duration-300"></div>
 
+  <!-- REALTIME OFFICE TOAST NOTIFICATIONS CONTAINER (TOP-RIGHT) -->
+  <div id="realtime-toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col space-y-3 max-w-sm sm:max-w-md w-full pointer-events-none transition-all duration-300"></div>
+
   <!-- ======================================================== -->
   <!-- 1. ZERO-TRUST AUTHENTICATION SCREEN (PRE-AUTHORIZED GATE) -->
   <!-- ======================================================== -->
@@ -1168,6 +1171,7 @@
     const SUPABASE_URL = 'https://gmdgnzokgqyivlfeosdy.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_JPqzQ4b11U9BU8HzG16k2g_O2cHl5ur';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = supabaseClient;
 
 const LOCAL_DELIVERY_DATA = [
   {
@@ -2934,8 +2938,11 @@ const LOCAL_DELIVERY_DATA = [
       adminFilterBoutique: 'ALL',
       adminFilterSearch: '',
       isSyncingRemote: false,
-      isFetchingRemote: false
+      isFetchingRemote: false,
+      supabaseRealtimeChannel: null,
+      officeNotificationsChannel: null
     };
+    window.AppState = AppState;
 
     let autoPollingTimer = null;
     let DOM = {};
@@ -2982,6 +2989,7 @@ const LOCAL_DELIVERY_DATA = [
         userRoleBadge:        document.getElementById('user-role-badge'),
         userRoleSubtitle:     document.getElementById('user-role-subtitle'),
         toastContainer:       document.getElementById('toast-container'),
+        realtimeToastContainer: document.getElementById('realtime-toast-container'),
         supabaseBadge:        document.getElementById('supabase-badge'),
         supabaseStatusText:   document.getElementById('supabase-status-text'),
         btnSyncRefresh:       document.getElementById('btn-sync-refresh'),
@@ -3195,6 +3203,91 @@ const LOCAL_DELIVERY_DATA = [
         setTimeout(() => toast.remove(), 300);
       }, 3500);
     }
+
+    /**
+     * Reusable Tailwind Toast UI Engine:
+     * Injects temporary notification cards into top-right of DOM with slide-in animation,
+     * beautiful white/green styling, shadow-lg, rounded-md, and automatic dismiss in 5s.
+     */
+    function showToastNotification(message, type = "success") {
+      let container = (DOM && DOM.realtimeToastContainer) || document.getElementById('realtime-toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'realtime-toast-container';
+        container.className = 'fixed top-5 right-5 z-[9999] flex flex-col space-y-3 max-w-sm sm:max-w-md w-full pointer-events-none transition-all duration-300';
+        document.body.appendChild(container);
+        if (DOM) DOM.realtimeToastContainer = container;
+      }
+
+      const isWarning = (type === 'warning');
+      const isError = (type === 'error');
+
+      const bgClasses = isWarning
+        ? 'bg-amber-50/95 border-amber-300 text-amber-950 shadow-amber-900/10'
+        : (isError
+            ? 'bg-rose-50/95 border-rose-300 text-rose-950 shadow-rose-900/10'
+            : 'bg-white/95 border-emerald-300 text-slate-800 shadow-emerald-950/10');
+
+      const iconBg = isWarning
+        ? 'bg-amber-100 text-amber-600'
+        : (isError
+            ? 'bg-rose-100 text-rose-600'
+            : 'bg-emerald-100 text-emerald-600');
+
+      const iconSvg = isWarning
+        ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
+        : (isError
+            ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>'
+            : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>');
+
+      const badgeText = isWarning ? 'Alerte Réserve' : (isError ? 'Alerte Système' : 'En Direct');
+      const badgeColor = isWarning ? 'text-amber-700 bg-amber-100/80 border-amber-200' : (isError ? 'text-rose-700 bg-rose-100/80 border-rose-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200');
+
+      const toast = document.createElement("div");
+      toast.className = `pointer-events-auto flex items-start gap-3 p-3.5 sm:p-4 rounded-md border shadow-lg backdrop-blur-md transition-all duration-300 ease-out transform translate-x-full opacity-0 ${bgClasses}`;
+      toast.setAttribute('role', 'alert');
+
+      const safeMsg = String(message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      toast.innerHTML = `
+        <div class="flex-shrink-0 mt-0.5">
+          <div class="w-7 h-7 rounded-full ${iconBg} flex items-center justify-center font-bold shadow-xs">
+            ${iconSvg}
+          </div>
+        </div>
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="flex items-center gap-1.5 mb-0.5">
+            <span class="inline-block w-2 h-2 rounded-full ${isWarning ? 'bg-amber-500' : (isError ? 'bg-rose-500' : 'bg-emerald-500')} animate-pulse"></span>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded border ${badgeColor}">${badgeText}</span>
+          </div>
+          <div class="text-xs sm:text-sm font-semibold leading-snug">
+            ${safeMsg}
+          </div>
+        </div>
+        <button type="button" class="flex-shrink-0 text-slate-400 hover:text-slate-700 p-1 -mr-1 rounded transition-colors" aria-label="Fermer" onclick="this.closest('[role=alert]')?.remove()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      `;
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove("translate-x-full", "opacity-0");
+        toast.classList.add("translate-x-0", "opacity-100");
+      });
+
+      const dismissTimer = setTimeout(() => {
+        toast.classList.remove("translate-x-0", "opacity-100");
+        toast.classList.add("translate-x-full", "opacity-0");
+        setTimeout(() => {
+          try { toast.remove(); } catch (e) {}
+        }, 300);
+      }, 5000);
+
+      toast.dataset.dismissTimer = String(dismissTimer);
+      return toast;
+    }
+    window.showToastNotification = showToastNotification;
 
     function updateSupabaseSyncBadge(status, customText) {
       const statusTextEl = (DOM && DOM.supabaseStatusText) || document.getElementById('supabase-status-text');
@@ -3810,8 +3903,13 @@ const LOCAL_DELIVERY_DATA = [
      */
     function handleLogout() {
       stopAutoPolling();
-      if (supabaseClient && AppState.supabaseRealtimeChannel) {
-        try { supabaseClient.removeChannel(AppState.supabaseRealtimeChannel); AppState.supabaseRealtimeChannel = null; } catch(e) {}
+      if (supabaseClient) {
+        if (AppState.supabaseRealtimeChannel) {
+          try { supabaseClient.removeChannel(AppState.supabaseRealtimeChannel); AppState.supabaseRealtimeChannel = null; } catch(e) {}
+        }
+        if (AppState.officeNotificationsChannel) {
+          try { supabaseClient.removeChannel(AppState.officeNotificationsChannel); AppState.officeNotificationsChannel = null; } catch(e) {}
+        }
       }
 
       // Nuclear wipe of all browser local storage
@@ -3855,6 +3953,7 @@ const LOCAL_DELIVERY_DATA = [
 
       showNotification("Déconnexion réussie. Données locales effacées.", "info");
     }
+    window.handleLogout = handleLogout;
 
     function revealDashboard() {
       if (DOM.authScreen) {
@@ -6073,6 +6172,135 @@ const LOCAL_DELIVERY_DATA = [
     }
 
 
+    function isOfficeAdminOrAdv(user) {
+      const u = user || AppState.currentUser || (typeof getAuthSession === 'function' ? getAuthSession() : null);
+      if (!u) return false;
+      const isAdmin = u.role === 'admin' || (u.username && u.username.toUpperCase() === 'ADMIN') || (typeof isAdminUser === 'function' && isAdminUser(u));
+      const isRetraitUser = (u.chauffeurName === 'RETRAIT DÉPÔT') || (u.username && u.username.toUpperCase() === 'ADV');
+      return Boolean(isAdmin || isRetraitUser);
+    }
+    window.isOfficeAdminOrAdv = isOfficeAdminOrAdv;
+
+    function getVehicleDisplayBrand(vehicleId) {
+      if (!vehicleId) return "Véhicule";
+      const list = (AppState.vehicles && AppState.vehicles.length > 0) ? AppState.vehicles : (typeof DEFAULT_FLEET_VEHICLES !== 'undefined' ? DEFAULT_FLEET_VEHICLES : []);
+      const v = list.find(veh => String(veh.id) === String(vehicleId) || String(veh.plate_number) === String(vehicleId));
+      if (v) {
+        return v.brand || v.matricule || "Véhicule";
+      }
+      return "Véhicule";
+    }
+    window.getVehicleDisplayBrand = getVehicleDisplayBrand;
+
+    const recentToastEvents = new Set();
+
+    function handleDeliveryRealtimeUpdate(payload) {
+      if (!payload || !payload.new) return;
+      const newRow = payload.new;
+      const statusStr = String(newRow.status || '').trim();
+
+      // Check for completion status: 'Livré' or variants
+      const isDelivered = statusStr.toLowerCase().includes('livr') || statusStr.toLowerCase() === 'termine' || statusStr.toLowerCase() === 'terminée';
+      if (!isDelivered) return;
+
+      const rowId = newRow.delivery_key || newRow.delivery_id || newRow.id || '';
+      const eventKey = `deliv_${rowId}_${statusStr}_${newRow.quantite_recue || ''}`;
+      if (recentToastEvents.has(eventKey)) return;
+      recentToastEvents.add(eventKey);
+      setTimeout(() => recentToastEvents.delete(eventKey), 10000);
+
+      const driverTag = newRow.delivered_by || newRow.chauffeur || "Chauffeur";
+      const storeTag = newRow.magasin || newRow.destination || newRow.delivery_id || "Magasin";
+      const qPlanned = Number(newRow.quantite !== undefined ? newRow.quantite : newRow.quantity) || 0;
+      const qRec = newRow.quantite_recue !== undefined && newRow.quantite_recue !== null ? Number(newRow.quantite_recue) : qPlanned;
+      const isReserve = newRow.statut_reserve === "Avec Réserve" || (qRec !== qPlanned);
+
+      if (isReserve) {
+        const rVariance = qRec - qPlanned;
+        const rVarStr = rVariance > 0 ? `+${rVariance}` : (rVariance < 0 ? `${rVariance}` : `±${newRow.quantite_litige || 0}`);
+        showToastNotification(`⚠️ Livraison avec Réserve : ${storeTag} (${rVarStr} p.) par ${driverTag}.`, 'warning');
+      } else {
+        showToastNotification(`✅ Livraison Livrée : ${storeTag} par ${driverTag}.`, 'success');
+      }
+    }
+    window.handleDeliveryRealtimeUpdate = handleDeliveryRealtimeUpdate;
+
+    function handleHandoverRealtimeEvent(payload) {
+      if (!payload || !payload.new) return;
+      const newRow = payload.new;
+      const actionType = String(newRow.action_type || newRow.action || '').trim().toLowerCase();
+      const statusStr = String(newRow.status || '').trim().toLowerCase();
+
+      // Detect vehicle mission completion / return
+      const isRestitution = actionType === 'retour' || actionType === 'restitué' || actionType === 'restitue' || statusStr === 'restitué' || statusStr === 'restitue' || statusStr === 'terminée' || statusStr === 'terminee';
+      if (!isRestitution) return;
+
+      const handoverKey = `ho_${newRow.id || (newRow.vehicle_id + '_' + actionType + '_' + (newRow.mileage || ''))}`;
+      if (recentToastEvents.has(handoverKey)) return;
+      recentToastEvents.add(handoverKey);
+      setTimeout(() => recentToastEvents.delete(handoverKey), 10000);
+
+      const driverName = newRow.driver_name || newRow.chauffeur || "Un chauffeur";
+      const vehicleBrand = newRow.brand || getVehicleDisplayBrand(newRow.vehicle_id);
+
+      showToastNotification(`✅ Mission Terminée : ${driverName} a restitué le ${vehicleBrand}.`, 'success');
+    }
+    window.handleHandoverRealtimeEvent = handleHandoverRealtimeEvent;
+
+    function handleVehicleRealtimeUpdate(payload) {
+      if (!payload || !payload.new) return;
+      const newRow = payload.new;
+      const oldRow = payload.old || {};
+
+      const isNowAvailable = String(newRow.status || '').trim().toLowerCase() === 'disponible';
+      const wasOnTrip = oldRow.status && String(oldRow.status).trim().toLowerCase().includes('tourn');
+      const hadDriver = Boolean(oldRow.current_driver);
+
+      if (isNowAvailable && (wasOnTrip || hadDriver)) {
+        const eventKey = `veh_ret_${newRow.id || newRow.plate_number}_${newRow.current_mileage || ''}`;
+        if (recentToastEvents.has(eventKey)) return;
+        recentToastEvents.add(eventKey);
+        setTimeout(() => recentToastEvents.delete(eventKey), 10000);
+
+        const vehicleBrand = newRow.brand || getVehicleDisplayBrand(newRow.id);
+        const driverName = oldRow.current_driver || "Le chauffeur";
+        showToastNotification(`✅ Mission Terminée : ${driverName} a restitué le ${vehicleBrand}.`, 'success');
+      }
+    }
+    window.handleVehicleRealtimeUpdate = handleVehicleRealtimeUpdate;
+
+    function setupOfficeNotificationsRealtime() {
+      if (!supabaseClient || typeof supabaseClient.channel !== 'function') return;
+
+      if (AppState.officeNotificationsChannel) {
+        try { supabaseClient.removeChannel(AppState.officeNotificationsChannel); } catch (e) {}
+        AppState.officeNotificationsChannel = null;
+      }
+
+      const currentUser = AppState.currentUser || (typeof getAuthSession === 'function' ? getAuthSession() : null);
+      if (!isOfficeAdminOrAdv(currentUser)) {
+        console.log('[Office Realtime] Utilisateur non éligible aux alertes bureau.');
+        return;
+      }
+
+      console.log('[Office Realtime] Inscription aux alertes bureau (Admin/ADV)...');
+      AppState.officeNotificationsChannel = supabaseClient
+        .channel('office-completion-alerts')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deliveries' }, (payload) => {
+          handleDeliveryRealtimeUpdate(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_handovers' }, (payload) => {
+          handleHandoverRealtimeEvent(payload);
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'vehicles' }, (payload) => {
+          handleVehicleRealtimeUpdate(payload);
+        })
+        .subscribe((status, err) => {
+          console.log('[Office Realtime] Statut souscription alertes:', status, err || '');
+        });
+    }
+    window.setupOfficeNotificationsRealtime = setupOfficeNotificationsRealtime;
+
     function setupRealtimeSubscription() {
       if (!supabaseClient || typeof supabaseClient.channel !== 'function') return;
 
@@ -6086,18 +6314,6 @@ const LOCAL_DELIVERY_DATA = [
         .channel('public:deliveries')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, (payload) => {
           console.log('[Supabase Realtime] Événement reçu:', payload);
-          const newRow = payload.new;
-          if (newRow && newRow.status === "Livré") {
-            const driverTag = newRow.delivered_by || newRow.chauffeur || "Chauffeur";
-            const storeTag = newRow.magasin || newRow.delivery_id;
-            const qPlanned = Number(newRow.quantite !== undefined ? newRow.quantite : newRow.quantity) || 0;
-            const qRec = newRow.quantite_recue !== undefined && newRow.quantite_recue !== null ? Number(newRow.quantite_recue) : qPlanned;
-            const rVariance = qRec - qPlanned;
-            const rVarStr = rVariance > 0 ? `+${rVariance}` : (rVariance < 0 ? `${rVariance}` : `±${newRow.quantite_litige || 0}`);
-            const isReserve = newRow.statut_reserve === "Avec Réserve" || (qRec !== qPlanned);
-            const reserveTag = isReserve ? ` ⚠️ (Réserve: ${rVarStr} p.)` : " ✓";
-            showNotification(`⚡ [En direct] ${storeTag} validé Livré${reserveTag} par ${driverTag}`, isReserve ? "warning" : "success");
-          }
           fetchRemoteDeliveries(false);
         })
         .subscribe((status, err) => {
@@ -6108,6 +6324,14 @@ const LOCAL_DELIVERY_DATA = [
             updateSupabaseSyncBadge('error', 'Supabase Reconnexion...');
           }
         });
+
+      // ONLY initialize office Realtime completion listener if the user is an 'Admin' or 'ADV'
+      if (isOfficeAdminOrAdv()) {
+        setupOfficeNotificationsRealtime();
+      } else if (AppState.officeNotificationsChannel) {
+        try { supabaseClient.removeChannel(AppState.officeNotificationsChannel); } catch (e) {}
+        AppState.officeNotificationsChannel = null;
+      }
     }
 
     // Réveil mobile & reconnexion instantanée multi-événements
