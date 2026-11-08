@@ -188,6 +188,7 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
         col_livraison = None
         col_remarque = None
         col_materiel = None
+        col_wilaya = None
 
         for col in df.columns:
             c_clean = str(col).strip()
@@ -204,11 +205,19 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
                 col_remarque = col
             elif ("materiel" in c_lower or "matériel" in c_lower or "vehicule" in c_lower or "véhicule" in c_lower or "camion" in c_lower or "engin" in c_lower) and col_materiel is None:
                 col_materiel = col
+            elif ("wilaya" in c_lower or "province" in c_lower) and col_wilaya is None:
+                col_wilaya = col
 
         if col_boutique is None:
             for cand in ['Boutique', 'Magasin', 'BOUTIQUE', 'MAGASIN', 'Destinataire']:
                 if cand in df.columns:
                     col_boutique = cand
+                    break
+
+        if col_wilaya is None:
+            for cand in ['Wilaya', 'WILAYA', 'wilaya', 'Province', 'PROVINCE', 'province']:
+                if cand in df.columns:
+                    col_wilaya = cand
                     break
 
         if col_boutique is None:
@@ -350,6 +359,23 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
 
             materiel = mat_val if mat_val and mat_val.lower() != 'nan' and mat_val.lower() not in ("none", "null", "-", "/") else None
 
+            # Column 6: Wilaya -> destination province (case-sensitive check and fallbacks)
+            raw_wilaya = ""
+            if col_wilaya is not None and col_wilaya in df.columns:
+                val_wilaya = row.get(col_wilaya)
+                if val_wilaya is not None and pd.notna(val_wilaya):
+                    raw_wilaya = str(val_wilaya).strip()
+            if not raw_wilaya or raw_wilaya.lower() == 'nan':
+                for key_cand in ['Wilaya', 'WILAYA', 'wilaya', 'Province', 'PROVINCE', 'province']:
+                    if key_cand in df.columns:
+                        val_w = row.get(key_cand)
+                        if val_w is not None and pd.notna(val_w):
+                            cand_w = str(val_w).strip()
+                            if cand_w and cand_w.lower() not in ("nan", "none", "null", "-", "/"):
+                                raw_wilaya = cand_w
+                                break
+            wilaya_val = " ".join(raw_wilaya.split()) if raw_wilaya and raw_wilaya.lower() not in ("nan", "none", "null", "-", "/") else None
+
             # Occurrence tracker for deterministic unique delivery_id
             store_name = re.sub(r'[^A-Z0-9]', '', magasin.upper())
             driver_key_part = re.sub(r'[^A-Z0-9]', '', chauffeur.upper()) if chauffeur else "NONE"
@@ -378,7 +404,9 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
                 "materiel": materiel,
                 "quantite": qty,
                 "status": "Non Livré",
-                "delivery_key": delivery_key
+                "delivery_key": delivery_key,
+                "wilaya": wilaya_val,
+                "Wilaya": wilaya_val
             }
             records.append(record)
 
@@ -453,6 +481,10 @@ def upsert_manifest_records(incoming_records, existing_records):
                 new_item["recouvrement_url"] = matched["recouvrement_url"]
             if matched.get("materiel") and not new_item.get("materiel"):
                 new_item["materiel"] = matched["materiel"]
+            if matched.get("wilaya") and not new_item.get("wilaya"):
+                new_item["wilaya"] = matched["wilaya"]
+            if matched.get("Wilaya") and not new_item.get("Wilaya"):
+                new_item["Wilaya"] = matched["Wilaya"]
         else:
             if new_item.get("status") != "Livré":
                 new_item["status"] = "Non Livré"
@@ -471,7 +503,7 @@ def fetch_supabase_records(supabase_url=None, api_key=None):
     """
     url = (supabase_url or DEFAULT_SUPABASE_REST_URL).split("?")[0]
     key = api_key or DEFAULT_SUPABASE_API_KEY
-    endpoint = f"{url}?select=delivery_id,delivery_key,date,magasin,chauffeur,quantite,status,delivered_by,materiel,photo_url,recouvrement_url,latitude,longitude,statut_reserve,quantite_recue,quantite_litige"
+    endpoint = f"{url}?select=*"
     headers = {
         "apikey": key,
         "Authorization": f"Bearer {key}"
@@ -545,6 +577,9 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
         mat_val = str(r.get("materiel") or r.get("Materiel") or r.get("Materiel ") or "").strip()
         materiel_val = mat_val if mat_val and mat_val.lower() != "nan" and mat_val.lower() not in ("none", "null", "-", "/") else None
 
+        raw_w = str(r.get("Wilaya") or r.get("wilaya") or "").strip()
+        wilaya_val = raw_w if raw_w and raw_w.lower() not in ("nan", "none", "null", "-", "/") else None
+
         mapped = {
             "delivery_id": rec_id,
             "date": deliv_date,
@@ -564,6 +599,8 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
             "latitude": None,
             "longitude": None
         }
+        if wilaya_val:
+            mapped["wilaya"] = wilaya_val
         payload.append(mapped)
 
     if not payload:
@@ -590,7 +627,23 @@ def push_manifest_to_supabase(records, supabase_url=None, api_key=None, only_new
                 with urllib.request.urlopen(req, timeout=45) as resp:
                     pass
             except urllib.error.HTTPError as he:
-                if he.code == 400 and endpoint_url != url:
+                err_text = he.read().decode("utf-8", errors="ignore")
+                # If Supabase complains that column 'wilaya' does not exist in schema, retry without wilaya
+                if he.code == 400 and ("wilaya" in err_text.lower() or "column" in err_text.lower()) and any("wilaya" in item for item in batch):
+                    clean_batch = [{k: v for k, v in item.items() if k != "wilaya"} for item in batch]
+                    req_data_clean = json.dumps(clean_batch).encode("utf-8")
+                    try:
+                        req_clean = urllib.request.Request(endpoint_url, data=req_data_clean, headers=headers, method="POST")
+                        with urllib.request.urlopen(req_clean, timeout=45) as resp:
+                            pass
+                    except urllib.error.HTTPError as he2:
+                        if he2.code == 400 and endpoint_url != url:
+                            fallback_req = urllib.request.Request(url, data=req_data_clean, headers=headers, method="POST")
+                            with urllib.request.urlopen(fallback_req, timeout=45) as resp:
+                                pass
+                        else:
+                            raise he2
+                elif he.code == 400 and endpoint_url != url:
                     fallback_req = urllib.request.Request(url, data=req_data, headers=headers, method="POST")
                     with urllib.request.urlopen(fallback_req, timeout=45) as resp:
                         pass

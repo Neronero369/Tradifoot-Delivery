@@ -261,7 +261,9 @@ def extract_routes_from_programs(programs, index_path=None):
                 "quantite": qty,
                 "quantity": qty,
                 "status": final_status,
-                "completed": final_completed
+                "completed": final_completed,
+                "wilaya": (d.get("wilaya") or "").strip() or None,
+                "Wilaya": (d.get("wilaya") or "").strip() or None
             })
 
     return all_routes
