@@ -16,6 +16,9 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- HTML5 QR Code Scanner CDN -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   
   <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -168,6 +171,45 @@
     }
     .swipeable-card:active {
       cursor: grabbing;
+    }
+
+    /* HTML5-QRCode Scanner UI polish */
+    #qr-reader {
+      border: none !important;
+      background: transparent !important;
+    }
+    #qr-reader button {
+      background-color: #2563eb !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.75rem !important;
+      border-radius: 0.75rem !important;
+      padding: 0.5rem 1rem !important;
+      border: none !important;
+      margin: 0.35rem 0.25rem !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
+    }
+    #qr-reader button:hover {
+      background-color: #1d4ed8 !important;
+    }
+    #qr-reader select {
+      padding: 0.4rem 0.75rem !important;
+      border-radius: 0.6rem !important;
+      border: 1px solid #cbd5e1 !important;
+      font-size: 0.75rem !important;
+      background-color: #ffffff !important;
+      color: #1e293b !important;
+      margin: 0.25rem !important;
+    }
+    #qr-reader__scan_region video {
+      border-radius: 1rem !important;
+      object-fit: cover !important;
+    }
+    #qr-reader__status_span {
+      font-size: 0.75rem !important;
+      color: #64748b !important;
     }
   </style>
 </head>
@@ -828,6 +870,70 @@
           Fermer
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: PHYSICAL QR CODE SCANNER CHECK-IN -->
+  <!-- ======================================================== -->
+  <div id="qr-scanner-modal" class="fixed inset-0 z-50 bg-[#0E2340]/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-2xl bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+            <i class="fa-solid fa-qrcode text-lg"></i>
+          </div>
+          <div>
+            <h4 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Scannez le QR Code du véhicule</h4>
+            <p id="qr-scanner-target-desc" class="text-xs text-slate-500 font-medium">Contrôle physique de sécurité avant prise en charge</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeQrScannerModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95" aria-label="Fermer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-6 space-y-3.5">
+        <!-- Target Vehicle Identification Tag -->
+        <div id="qr-scanner-vehicle-info" class="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2.5 min-w-0">
+            <i class="fa-solid fa-truck text-blue-600 shrink-0"></i>
+            <div class="truncate">
+              <span class="font-bold text-slate-800" id="qr-scanner-truck-brand">Véhicule</span>
+              <span class="text-slate-500 font-medium ml-1.5" id="qr-scanner-truck-plate">000000 000 00</span>
+            </div>
+          </div>
+          <span class="shrink-0 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] uppercase">À scanner</span>
+        </div>
+
+        <!-- Scanner Viewport Area -->
+        <div class="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-inner flex flex-col items-center justify-center min-h-[260px]">
+          <div id="qr-reader" class="w-full"></div>
+        </div>
+
+        <!-- Inline Error Alert -->
+        <div id="qr-scanner-error" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-circle-xmark text-rose-500 shrink-0 text-sm"></i>
+          <span id="qr-scanner-error-text">❌ QR Code invalide. Ceci n'est pas le bon véhicule.</span>
+        </div>
+
+        <!-- Inline Success Alert -->
+        <div id="qr-scanner-success" class="hidden p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-circle-check text-emerald-600 shrink-0 text-base"></i>
+          <span>✅ QR Code validé ! Déverrouillage de la passation...</span>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 sm:px-6 py-3.5 bg-slate-50/70 border-t border-slate-200/80 flex items-center justify-end shrink-0">
+        <button type="button" onclick="closeQrScannerModal()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs transition active:scale-95 shadow-xs">
+          Annuler
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -2940,7 +3046,9 @@ const LOCAL_DELIVERY_DATA = [
       isSyncingRemote: false,
       isFetchingRemote: false,
       supabaseRealtimeChannel: null,
-      officeNotificationsChannel: null
+      officeNotificationsChannel: null,
+      pendingQrVehicle: null,
+      qrScannerInstance: null
     };
     window.AppState = AppState;
 
@@ -3000,6 +3108,7 @@ const LOCAL_DELIVERY_DATA = [
         navBtnFleet:          document.getElementById('nav-btn-fleet'),
         fleetCardsGrid:       document.getElementById('fleet-cards-grid'),
         handoverModal:        document.getElementById('handover-modal'),
+        qrScannerModal:       document.getElementById('qr-scanner-modal'),
         vehicleHistoryModal:  document.getElementById('vehicle-history-modal')
       };
     }
@@ -6832,7 +6941,219 @@ const LOCAL_DELIVERY_DATA = [
       }).join('');
     }
 
-    function openHandoverModal(vehicleId, actionType = 'Prise') {
+    /**
+     * Web Audio API Success Chime:
+     * Synthesizes a crisp two-tone confirmation beep upon valid QR scan.
+     */
+    function playQrSuccessSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        }
+      } catch (e) {
+        console.warn('[Audio] Beep exception:', e);
+      }
+    }
+    window.playQrSuccessSound = playQrSuccessSound;
+
+    /**
+     * Vehicle QR Code Validation Engine:
+     * Compares decoded QR string to target vehicle's license plate (official or DB plate).
+     */
+    function isPlateMatch(decodedText, vehicle) {
+      if (!decodedText || !vehicle) return false;
+      const cleanDecoded = String(decodedText).trim().toUpperCase();
+      const normDecoded = cleanDecoded.replace(/[^A-Z0-9]/g, '');
+      if (!normDecoded) return false;
+
+      const vDetails = resolveVehicleDetails(vehicle);
+      const expectedPlates = [
+        String(vehicle.plate_number || '').trim().toUpperCase(),
+        String(vDetails.plate || '').trim().toUpperCase(),
+        String(vehicle.id || '').trim().toUpperCase()
+      ].filter(Boolean);
+
+      for (const exp of expectedPlates) {
+        if (exp === cleanDecoded) return true;
+        const normExp = exp.replace(/[^A-Z0-9]/g, '');
+        if (normExp && (normDecoded === normExp || normDecoded.includes(normExp) || normExp.includes(normDecoded))) {
+          return true;
+        }
+      }
+      return false;
+    }
+    window.isPlateMatch = isPlateMatch;
+
+    /**
+     * Starts the Physical QR Code Check-In workflow for a vehicle
+     */
+    function startQrVehicleCheckin(vehicle) {
+      if (!vehicle) return;
+      AppState.pendingQrVehicle = vehicle;
+
+      const modal = document.getElementById('qr-scanner-modal');
+      const truckBrand = document.getElementById('qr-scanner-truck-brand');
+      const truckPlate = document.getElementById('qr-scanner-truck-plate');
+      const errEl = document.getElementById('qr-scanner-error');
+      const succEl = document.getElementById('qr-scanner-success');
+
+      const vDetails = resolveVehicleDetails(vehicle);
+      if (truckBrand) truckBrand.textContent = vDetails.brand;
+      if (truckPlate) truckPlate.textContent = vDetails.plate;
+      if (errEl) errEl.classList.add('hidden');
+      if (succEl) succEl.classList.add('hidden');
+
+      if (modal) modal.classList.remove('hidden');
+
+      // Clear any prior scanner instance
+      if (AppState.qrScannerInstance) {
+        try {
+          AppState.qrScannerInstance.clear();
+        } catch (e) {}
+        AppState.qrScannerInstance = null;
+      }
+
+      const qrContainer = document.getElementById('qr-reader');
+      if (qrContainer) qrContainer.innerHTML = '';
+
+      // Initialize Html5QrcodeScanner if library is available
+      if (typeof Html5QrcodeScanner !== 'undefined') {
+        try {
+          const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true
+          };
+          AppState.qrScannerInstance = new Html5QrcodeScanner("qr-reader", config, /* verbose= */ false);
+          AppState.qrScannerInstance.render(onQrScanSuccess, onQrScanError);
+        } catch (err) {
+          console.warn('[QR Scanner] Erreur initialisation scanner:', err);
+        }
+      } else {
+        console.warn('[QR Scanner] Bibliothèque Html5QrcodeScanner non chargée.');
+      }
+    }
+    window.startQrVehicleCheckin = startQrVehicleCheckin;
+
+    function onQrScanError(err) {
+      // Frame errors are expected while searching for QR codes
+    }
+
+    /**
+     * Handler invoked when QR code is detected and decoded
+     */
+    function onQrScanSuccess(decodedText, decodedResult) {
+      console.log('[QR Scanner] Code scanné:', decodedText);
+      const vehicle = AppState.pendingQrVehicle;
+      if (!vehicle) return;
+
+      const errEl = document.getElementById('qr-scanner-error');
+      const errText = document.getElementById('qr-scanner-error-text');
+      const succEl = document.getElementById('qr-scanner-success');
+
+      if (isPlateMatch(decodedText, vehicle)) {
+        // MATCH: Success workflow
+        if (errEl) errEl.classList.add('hidden');
+        if (succEl) succEl.classList.remove('hidden');
+
+        playQrSuccessSound();
+        showNotification("✅ Véhicule authentifié avec succès !", "success");
+
+        // Stop camera and clear scanner
+        if (AppState.qrScannerInstance) {
+          try {
+            AppState.qrScannerInstance.clear().catch(e => console.warn(e));
+          } catch (e) {}
+          AppState.qrScannerInstance = null;
+        }
+
+        const matchedVehicle = vehicle;
+        AppState.pendingQrVehicle = null;
+
+        setTimeout(() => {
+          console.log('[QR Scanner] Inside setTimeout callback, unlocking modal for:', matchedVehicle ? matchedVehicle.id : null);
+          const modal = document.getElementById('qr-scanner-modal');
+          if (modal) modal.classList.add('hidden');
+          if (succEl) succEl.classList.add('hidden');
+
+          // Immediately unlock standard Check-in (Prise) modal
+          openHandoverModal(matchedVehicle.id, 'Prise', true);
+          console.log('[QR Scanner] openHandoverModal completed');
+        }, 400);
+
+      } else {
+        // NO MATCH: Error workflow
+        if (succEl) succEl.classList.add('hidden');
+        if (errEl) errEl.classList.remove('hidden');
+        if (errText) errText.textContent = "❌ QR Code invalide. Ceci n'est pas le bon véhicule.";
+        showNotification("❌ QR Code invalide. Ceci n'est pas le bon véhicule.", "error");
+      }
+    }
+    window.onQrScanSuccess = onQrScanSuccess;
+
+    /**
+     * Cancels the QR Code scan, immediately stopping camera streams and cleaning UI
+     */
+    function closeQrScannerModal() {
+      const modal = document.getElementById('qr-scanner-modal');
+      if (modal) modal.classList.add('hidden');
+
+      if (AppState.qrScannerInstance) {
+        try {
+          AppState.qrScannerInstance.clear().catch(e => console.warn('[QR Scanner] Clear warning:', e));
+        } catch (e) {
+          console.warn('[QR Scanner] Clear exception:', e);
+        }
+        AppState.qrScannerInstance = null;
+      }
+
+      // Hard stop on any remaining camera streams in DOM
+      try {
+        const videoElements = document.querySelectorAll('#qr-reader video');
+        videoElements.forEach(vid => {
+          if (vid && vid.srcObject) {
+            const stream = vid.srcObject;
+            if (typeof stream.getTracks === 'function') {
+              stream.getTracks().forEach(track => {
+                try { track.stop(); } catch (e) {}
+              });
+            }
+            vid.srcObject = null;
+          }
+        });
+      } catch (e) {}
+
+      const qrContainer = document.getElementById('qr-reader');
+      if (qrContainer) qrContainer.innerHTML = '';
+
+      const errEl = document.getElementById('qr-scanner-error');
+      if (errEl) errEl.classList.add('hidden');
+      const succEl = document.getElementById('qr-scanner-success');
+      if (succEl) succEl.classList.add('hidden');
+
+      AppState.pendingQrVehicle = null;
+    }
+    window.closeQrScannerModal = closeQrScannerModal;
+
+    // Simulation hook for automated tests or environments without webcams
+    window.simulateQrScan = function(decodedText) {
+      onQrScanSuccess(decodedText, { text: decodedText });
+    };
+
+    function openHandoverModal(vehicleId, actionType = 'Prise', isQrBypassed = false) {
       const vehicle = AppState.vehicles.find(v => String(v.id) === String(vehicleId));
       if (!vehicle) return;
 
@@ -6881,6 +7202,13 @@ const LOCAL_DELIVERY_DATA = [
         }
       }
 
+      // Guard 5: Physical QR Code Check-In for Prise de Véhicule (Chauffeurs only)
+      if (actionType === 'Prise' && !isQrBypassed) {
+        startQrVehicleCheckin(vehicle);
+        return;
+      }
+
+      console.log('DEBUG: Passed all guards! Setting currentHandoverVehicle');
       AppState.currentHandoverVehicle = vehicle;
       AppState.currentHandoverAction = actionType;
       AppState.handoverPhotos = [null, null, null, null, null];
@@ -7595,6 +7923,11 @@ const LOCAL_DELIVERY_DATA = [
     window.loadFleetData = loadFleetData;
     window.openHandoverModal = openHandoverModal;
     window.closeHandoverModal = closeHandoverModal;
+    window.startQrVehicleCheckin = startQrVehicleCheckin;
+    window.closeQrScannerModal = closeQrScannerModal;
+    window.isPlateMatch = isPlateMatch;
+    window.onQrScanSuccess = onQrScanSuccess;
+    window.playQrSuccessSound = playQrSuccessSound;
     window.triggerPhotoSlot = triggerPhotoSlot;
     window.handlePhotoSlotChange = handlePhotoSlotChange;
     window.removePhotoSlot = removePhotoSlot;
