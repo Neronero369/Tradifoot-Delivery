@@ -526,7 +526,7 @@
               <i class="fa-solid fa-truck-ramp-box"></i>
             </div>
             <div>
-              <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">🚙 Parc Auto & Flotte Logistique</h2>
+              <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">🚙 Parc Auto Distribution</h2>
               <p class="text-xs text-slate-500 font-medium">Gestion du matériel roulant, passation des chauffeurs & état des véhicules</p>
             </div>
           </div>
@@ -1206,9 +1206,15 @@
             <p class="text-xs text-slate-500 font-medium">Calculé strictement sur le delta odométrique (Restitution - Prise)</p>
           </div>
         </div>
-        <button onclick="closeDriverPerformanceModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95" title="Fermer">
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="resetDriverPerformanceKPIs()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-xs active:scale-95" title="Réinitialiser les compteurs de performances">
+            <i class="fa-solid fa-rotate-left text-[11px] text-slate-500"></i>
+            <span>Réinitialiser</span>
+          </button>
+          <button onclick="closeDriverPerformanceModal()" class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition active:scale-95" title="Fermer">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Quick KPI Aggregates -->
@@ -7838,8 +7844,29 @@ const LOCAL_DELIVERY_DATA = [
     let currentLeaderboardSortAsc = false;
     let cachedLeaderboardData = [];
 
+    // Baseline reset cutoff (filters out past test records so KPIs start at 0)
+    const DRIVER_PERFORMANCE_DEFAULT_RESET = '2026-11-09T12:00:00.000Z';
+
+    function getDriverPerformanceResetCutoff() {
+      try {
+        const stored = localStorage.getItem('tradifoot_perf_reset_timestamp');
+        if (stored) return new Date(stored).getTime();
+      } catch (e) {}
+      return new Date(DRIVER_PERFORMANCE_DEFAULT_RESET).getTime();
+    }
+
+    function resetDriverPerformanceKPIs() {
+      const nowIso = new Date().toISOString();
+      try {
+        localStorage.setItem('tradifoot_perf_reset_timestamp', nowIso);
+      } catch (e) {}
+      showNotification("Performances Chauffeurs réinitialisées à zéro.", "success");
+      openDriverPerformanceModal();
+    }
+
     function calculateDriverPerformanceMetrics(handoversList) {
       const list = Array.isArray(handoversList) ? handoversList : (AppState.vehicleHandovers || []);
+      const cutoffTime = getDriverPerformanceResetCutoff();
 
       // Sort chronologically ascending (oldest first)
       const sorted = [...list].sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
@@ -7848,6 +7875,10 @@ const LOCAL_DELIVERY_DATA = [
       const completedTrips = [];
 
       for (const h of sorted) {
+        const hTime = new Date(h.created_at || h.timestamp || 0).getTime();
+        // Skip handovers prior to the reset timestamp
+        if (hTime < cutoffTime) continue;
+
         const vId = String(h.vehicle_id || '').trim();
         const action = String(h.action_type || '').trim().toLowerCase();
         const driver = String(h.driver_name || '').trim();
@@ -8169,6 +8200,8 @@ const LOCAL_DELIVERY_DATA = [
     window.closeDriverPerformanceModal = closeDriverPerformanceModal;
     window.toggleLeaderboardSort = toggleLeaderboardSort;
     window.calculateDriverPerformanceMetrics = calculateDriverPerformanceMetrics;
+    window.resetDriverPerformanceKPIs = resetDriverPerformanceKPIs;
+    window.getDriverPerformanceResetCutoff = getDriverPerformanceResetCutoff;
 
 
     async function initAuthenticatedApp() {
