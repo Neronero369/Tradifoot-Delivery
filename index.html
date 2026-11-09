@@ -6577,6 +6577,16 @@ const LOCAL_DELIVERY_DATA = [
       const newRow = payload.new;
       const oldRow = payload.old || {};
 
+      // Realtime in-memory state synchronization across all connected clients
+      if (AppState.vehicles && Array.isArray(AppState.vehicles)) {
+        const idx = AppState.vehicles.findIndex(v => String(v.id) === String(newRow.id));
+        if (idx !== -1) {
+          AppState.vehicles[idx] = { ...AppState.vehicles[idx], ...newRow };
+          localStorage.setItem('tradifoot_vehicles', JSON.stringify(AppState.vehicles));
+          renderFleetDashboard();
+        }
+      }
+
       const isNowAvailable = String(newRow.status || '').trim().toLowerCase() === 'disponible';
       const wasOnTrip = oldRow.status && String(oldRow.status).trim().toLowerCase().includes('tourn');
       const hadDriver = Boolean(oldRow.current_driver);
@@ -6706,7 +6716,7 @@ const LOCAL_DELIVERY_DATA = [
         id: "c660bb2b-6bbd-4123-ba73-c679bb418716",
         brand: "NISSAN",
         plate_number: "013869 317 16",
-        status: "Maintenance",
+        status: "En Maintenance",
         current_mileage: 0,
         fuel_level: "100%",
         current_driver: null
@@ -6957,10 +6967,7 @@ const LOCAL_DELIVERY_DATA = [
         let statusBadgeHtml = '';
         if (isMaintenance) {
           statusBadgeHtml = `
-            <span class="bg-red-100 text-red-800 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-red-300 shadow-xs">
-              <i class="fa-solid fa-triangle-exclamation text-[11px] text-red-600"></i>
-              En Maintenance
-            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700 border border-red-200"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Indisponible (Maintenance)</span>
           `;
         } else if (isEnTournee) {
           const currentDriverName = String(v.current_driver || '').trim();
@@ -7008,11 +7015,10 @@ const LOCAL_DELIVERY_DATA = [
         if (isChauffeur) {
           if (isMaintenance) {
             chauffeurActionHtml = `
-              <div class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 min-h-[40px]">
-                <span class="text-red-500 font-bold text-xs flex items-center gap-1.5">
-                  🚫 Véhicule Indisponible
-                </span>
-              </div>
+              <button disabled class="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl opacity-50 cursor-not-allowed bg-red-50 text-red-700 border border-red-200 text-xs font-bold transition min-h-[40px]" title="Véhicule actuellement indisponible (En Maintenance)">
+                <i class="fa-solid fa-ban text-xs text-red-500"></i>
+                <span>Indisponible (Maintenance)</span>
+              </button>
             `;
           } else if (isDisponible) {
             // STATE A (Available)
@@ -7132,18 +7138,16 @@ const LOCAL_DELIVERY_DATA = [
 
               ${canManageMaintenance ? (
                 isMaintenance ? `
-                  <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition min-h-[40px]" title="Remettre le camion en service">
-                    <i class="fa-solid fa-check text-xs"></i>
-                    <span>Remettre Disponible</span>
+                  <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-green-500 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold transition min-h-[40px] shadow-xs active:scale-95" title="Remettre le véhicule en service (Disponible)">
+                    <span>✅ Rendre Disponible</span>
                   </button>
                 ` : (
                   isDisponible ? `
-                    <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition min-h-[40px]" title="Mettre le véhicule en maintenance">
-                      <i class="fa-solid fa-wrench text-xs"></i>
-                      <span>Mettre en Maintenance</span>
+                    <button onclick="adminToggleVehicleStatus('${v.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-red-400 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition min-h-[40px] shadow-xs active:scale-95" title="Mettre le véhicule en maintenance">
+                      <span>🔧 Mettre en Maintenance</span>
                     </button>
                   ` : `
-                    <button disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed text-xs font-bold min-h-[40px]" title="Impossible de mettre en maintenance pendant une tournée en cours">
+                    <button disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed text-xs font-bold min-h-[40px]" title="Impossible de mettre en maintenance pendant une tournée en cours">
                       <i class="fa-solid fa-lock text-xs"></i>
                       <span>Bloqué (En Tournée)</span>
                     </button>
@@ -8087,13 +8091,13 @@ const LOCAL_DELIVERY_DATA = [
         return;
       }
 
-      let nextStatus = 'Maintenance';
+      let nextStatus = 'En Maintenance';
       if (targetStatus) {
         nextStatus = targetStatus;
       } else {
-        nextStatus = (currentNorm === 'maintenance' || currentNorm === 'en maintenance' || currentNorm === 'panne') 
+        nextStatus = (currentNorm === 'maintenance' || currentNorm === 'en maintenance' || currentNorm === 'panne' || currentNorm === 'indisponible') 
           ? 'Disponible' 
-          : 'Maintenance';
+          : 'En Maintenance';
       }
 
       // Synchronously update in-memory object
@@ -8150,6 +8154,14 @@ const LOCAL_DELIVERY_DATA = [
     window.submitHandover = submitHandover;
     window.openVehicleHistoryModal = openVehicleHistoryModal;
     window.closeVehicleHistoryModal = closeVehicleHistoryModal;
+    async function setVehicleMaintenance(vehicleId) {
+      return adminToggleVehicleStatus(vehicleId, 'En Maintenance');
+    }
+    async function setVehicleDisponible(vehicleId) {
+      return adminToggleVehicleStatus(vehicleId, 'Disponible');
+    }
+    window.setVehicleMaintenance = setVehicleMaintenance;
+    window.setVehicleDisponible = setVehicleDisponible;
     window.adminToggleVehicleStatus = adminToggleVehicleStatus;
     window.getVehicleImagePath = getVehicleImagePath;
     window.resolveVehicleDetails = resolveVehicleDetails;
