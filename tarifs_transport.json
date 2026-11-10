@@ -1,0 +1,579 @@
+{
+  "transporteur": {
+    "Nom": "GHERNAOUTI Walid",
+    "Adresse": "03, Lot Dely Ibrahim, Chéraga - Alger",
+    "R.C": "16/00 - 4933691 A 13",
+    "Téléphone": "0550 40 55 02",
+    "Activité": "Transport sur toutes Distances de Marchandises"
+  },
+  "remarques": [
+    "Retour de marchandises coût : tarif de course en H.T (100%)",
+    "Point de chargement ou déchargement coût (2000) dans wilaya (2 000 DZD)",
+    "Point de chargement ou déchargement coût (4000) hors wilaya (4 000 DZD)"
+  ],
+  "regles_couts": {
+    "retour_marchandise_taux": 1.0,
+    "cout_point_supplementaire_dans_wilaya": 2000,
+    "cout_point_supplementaire_hors_wilaya": 4000
+  },
+  "destinations": [
+    {
+      "code": "09",
+      "dest": "BLIDA",
+      "nom_complet": "BLIDA",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 6000,
+      "tarif_ttc": 7140
+    },
+    {
+      "code": "35",
+      "dest": "BOUMERDES",
+      "nom_complet": "BOUMERDES",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 7000,
+      "tarif_ttc": 8330
+    },
+    {
+      "code": "42",
+      "dest": "TIPAZA",
+      "nom_complet": "TIPAZA",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 8000,
+      "tarif_ttc": 9520
+    },
+    {
+      "code": "26",
+      "dest": "MEDEA",
+      "nom_complet": "MEDEA",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 9000,
+      "tarif_ttc": 10710
+    },
+    {
+      "code": "10",
+      "dest": "BOUIRA",
+      "nom_complet": "BOUIRA",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 10000,
+      "tarif_ttc": 11900
+    },
+    {
+      "code": "15",
+      "dest": "TIZI OUZOU",
+      "nom_complet": "TIZI OUZOU",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 10000,
+      "tarif_ttc": 11900
+    },
+    {
+      "code": "44",
+      "dest": "AIN DEFLA",
+      "nom_complet": "AIN DEFLA",
+      "type": "Wilaya",
+      "region": "Centre",
+      "tarif_ht": 11000,
+      "tarif_ttc": 13090
+    },
+    {
+      "code": "02",
+      "dest": "CHLEF",
+      "nom_complet": "CHLEF",
+      "type": "Wilaya",
+      "region": "Centre-Ouest",
+      "tarif_ht": 12000,
+      "tarif_ttc": 14280
+    },
+    {
+      "code": "34",
+      "dest": "B.B.A",
+      "nom_complet": "Bordj Bou Arreridj",
+      "type": "Wilaya",
+      "region": "Hauts Plateaux Est",
+      "tarif_ht": 15000,
+      "tarif_ttc": 17850
+    },
+    {
+      "code": "06",
+      "dest": "BEJAIA",
+      "nom_complet": "BEJAIA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 15000,
+      "tarif_ttc": 17850
+    },
+    {
+      "code": "38",
+      "dest": "TISSEMSILT",
+      "nom_complet": "TISSEMSILT",
+      "type": "Wilaya",
+      "region": "Centre-Ouest",
+      "tarif_ht": 15000,
+      "tarif_ttc": 17850
+    },
+    {
+      "code": "28",
+      "dest": "M SILA",
+      "nom_complet": "M'Sila",
+      "type": "Wilaya",
+      "region": "Hauts Plateaux",
+      "tarif_ht": 15000,
+      "tarif_ttc": 17850
+    },
+    {
+      "code": "19",
+      "dest": "SETIF",
+      "nom_complet": "SETIF",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 17000,
+      "tarif_ttc": 20230
+    },
+    {
+      "code": "17",
+      "dest": "DJELFA",
+      "nom_complet": "DJELFA",
+      "type": "Wilaya",
+      "region": "Hauts Plateaux Sud",
+      "tarif_ht": 17000,
+      "tarif_ttc": 20230
+    },
+    {
+      "code": "48",
+      "dest": "RELIZANE",
+      "nom_complet": "RELIZANE",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 17000,
+      "tarif_ttc": 20230
+    },
+    {
+      "code": "19-Hub",
+      "dest": "EL EULMA",
+      "nom_complet": "El Eulma (Sétif)",
+      "type": "Hub Commercial",
+      "region": "Est",
+      "tarif_ht": 18000,
+      "tarif_ttc": 21420
+    },
+    {
+      "code": "43-Hub",
+      "dest": "TAJNANTE",
+      "nom_complet": "Tadjenanet (Mila)",
+      "type": "Hub Commercial",
+      "region": "Est",
+      "tarif_ht": 19000,
+      "tarif_ttc": 22610
+    },
+    {
+      "code": "27",
+      "dest": "MOSTAGANEM",
+      "nom_complet": "MOSTAGANEM",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 19000,
+      "tarif_ttc": 22610
+    },
+    {
+      "code": "14",
+      "dest": "TIARET",
+      "nom_complet": "TIARET",
+      "type": "Wilaya",
+      "region": "Hauts Plateaux Ouest",
+      "tarif_ht": 22000,
+      "tarif_ttc": 26180
+    },
+    {
+      "code": "29",
+      "dest": "MASCARA",
+      "nom_complet": "MASCARA",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 22000,
+      "tarif_ttc": 26180
+    },
+    {
+      "code": "25",
+      "dest": "CONSTANTINE",
+      "nom_complet": "CONSTANTINE",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 22000,
+      "tarif_ttc": 26180
+    },
+    {
+      "code": "18",
+      "dest": "JIJEL",
+      "nom_complet": "JIJEL",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 22000,
+      "tarif_ttc": 26180
+    },
+    {
+      "code": "31",
+      "dest": "ORAN",
+      "nom_complet": "ORAN",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 22000,
+      "tarif_ttc": 26180
+    },
+    {
+      "code": "03",
+      "dest": "LAGHOUAT",
+      "nom_complet": "LAGHOUAT",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 24000,
+      "tarif_ttc": 28560
+    },
+    {
+      "code": "22",
+      "dest": "SIDI B.ABESS",
+      "nom_complet": "Sidi Bel Abbès",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 24000,
+      "tarif_ttc": 28560
+    },
+    {
+      "code": "43",
+      "dest": "MILA",
+      "nom_complet": "MILA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 25000,
+      "tarif_ttc": 29750
+    },
+    {
+      "code": "05",
+      "dest": "BATNA",
+      "nom_complet": "BATNA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 25000,
+      "tarif_ttc": 29750
+    },
+    {
+      "code": "46",
+      "dest": "AIN TMOUCHENT",
+      "nom_complet": "Aïn Témouchent",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 28000,
+      "tarif_ttc": 33320
+    },
+    {
+      "code": "04",
+      "dest": "OUM EL BOUAGHI",
+      "nom_complet": "OUM EL BOUAGHI",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 28000,
+      "tarif_ttc": 33320
+    },
+    {
+      "code": "20",
+      "dest": "SAIDA",
+      "nom_complet": "SAIDA",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 28000,
+      "tarif_ttc": 33320
+    },
+    {
+      "code": "13",
+      "dest": "TLEMCEN",
+      "nom_complet": "TLEMCEN",
+      "type": "Wilaya",
+      "region": "Ouest",
+      "tarif_ht": 28000,
+      "tarif_ttc": 33320
+    },
+    {
+      "code": "21",
+      "dest": "SKIKDA",
+      "nom_complet": "SKIKDA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 28000,
+      "tarif_ttc": 33320
+    },
+    {
+      "code": "51",
+      "dest": "OULED DJELAL",
+      "nom_complet": "Ouled Djellal",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 30000,
+      "tarif_ttc": 35700
+    },
+    {
+      "code": "07",
+      "dest": "BISKRA",
+      "nom_complet": "BISKRA",
+      "type": "Wilaya",
+      "region": "Sud-Est",
+      "tarif_ht": 30000,
+      "tarif_ttc": 35700
+    },
+    {
+      "code": "24",
+      "dest": "GUELMA",
+      "nom_complet": "GUELMA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "41",
+      "dest": "SOUK AHRASS",
+      "nom_complet": "Souk Ahras",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "32",
+      "dest": "EL BEYADH",
+      "nom_complet": "El Bayadh",
+      "type": "Wilaya",
+      "region": "Hauts Plateaux Ouest",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "23",
+      "dest": "ANNABA",
+      "nom_complet": "ANNABA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "40",
+      "dest": "KHENCHLA",
+      "nom_complet": "Khenchela",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "13-Hub",
+      "dest": "MAGHNIA",
+      "nom_complet": "Maghnia (Tlemcen)",
+      "type": "Hub Commercial",
+      "region": "Ouest",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "57",
+      "dest": "EL MEGHAIR",
+      "nom_complet": "El M'Ghair",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 32000,
+      "tarif_ttc": 38080
+    },
+    {
+      "code": "47",
+      "dest": "GHARDAIA",
+      "nom_complet": "GHARDAIA",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 35000,
+      "tarif_ttc": 41650
+    },
+    {
+      "code": "12",
+      "dest": "TEBESSA",
+      "nom_complet": "TEBESSA",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 35000,
+      "tarif_ttc": 41650
+    },
+    {
+      "code": "36",
+      "dest": "EL TARAF",
+      "nom_complet": "El Tarf",
+      "type": "Wilaya",
+      "region": "Est",
+      "tarif_ht": 36000,
+      "tarif_ttc": 42840
+    },
+    {
+      "code": "45",
+      "dest": "NAAMA",
+      "nom_complet": "NAAMA",
+      "type": "Wilaya",
+      "region": "Sud-Ouest",
+      "tarif_ht": 38000,
+      "tarif_ttc": 45220
+    },
+    {
+      "code": "55",
+      "dest": "TOUGGOURT",
+      "nom_complet": "TOUGGOURT",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 38000,
+      "tarif_ttc": 45220
+    },
+    {
+      "code": "39",
+      "dest": "EL OUED",
+      "nom_complet": "EL OUED",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 40000,
+      "tarif_ttc": 47600
+    },
+    {
+      "code": "30",
+      "dest": "OURGLA",
+      "nom_complet": "Ouargla",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 48000,
+      "tarif_ttc": 57120
+    },
+    {
+      "code": "30-Hub",
+      "dest": "HASSI MESOUD",
+      "nom_complet": "Hassi Messaoud (Ouargla)",
+      "type": "Hub Pétrolier",
+      "region": "Sud",
+      "tarif_ht": 55000,
+      "tarif_ttc": 65450
+    },
+    {
+      "code": "58",
+      "dest": "EL MENIA",
+      "nom_complet": "El Meniaa",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 55000,
+      "tarif_ttc": 65450
+    },
+    {
+      "code": "08",
+      "dest": "BECHAR",
+      "nom_complet": "BECHAR",
+      "type": "Wilaya",
+      "region": "Sud-Ouest",
+      "tarif_ht": 60000,
+      "tarif_ttc": 71400
+    },
+    {
+      "code": "49",
+      "dest": "TIMIMOUNE",
+      "nom_complet": "TIMIMOUNE",
+      "type": "Wilaya",
+      "region": "Sud",
+      "tarif_ht": 85000,
+      "tarif_ttc": 101150
+    },
+    {
+      "code": "52",
+      "dest": "BENI ABBESE",
+      "nom_complet": "Béni Abbès",
+      "type": "Wilaya",
+      "region": "Sud-Ouest",
+      "tarif_ht": 85000,
+      "tarif_ttc": 101150
+    },
+    {
+      "code": "53",
+      "dest": "IN SALAH",
+      "nom_complet": "IN SALAH",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 90000,
+      "tarif_ttc": 107100
+    },
+    {
+      "code": "01",
+      "dest": "ADRAR",
+      "nom_complet": "ADRAR",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 100000,
+      "tarif_ttc": 119000
+    },
+    {
+      "code": "33-Hub",
+      "dest": "AIN AMINAS",
+      "nom_complet": "In Amenas (Illizi)",
+      "type": "Hub Pétrolier",
+      "region": "Grand Sud",
+      "tarif_ht": 115000,
+      "tarif_ttc": 136850
+    },
+    {
+      "code": "37",
+      "dest": "TINDOUF",
+      "nom_complet": "TINDOUF",
+      "type": "Wilaya",
+      "region": "Sud-Ouest",
+      "tarif_ht": 125000,
+      "tarif_ttc": 148750
+    },
+    {
+      "code": "33",
+      "dest": "ILIZI",
+      "nom_complet": "Illizi",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 130000,
+      "tarif_ttc": 154700
+    },
+    {
+      "code": "11",
+      "dest": "TAMANRASSET",
+      "nom_complet": "TAMANRASSET",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 140000,
+      "tarif_ttc": 166600
+    },
+    {
+      "code": "56",
+      "dest": "DJANET",
+      "nom_complet": "DJANET",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 180000,
+      "tarif_ttc": 214200
+    },
+    {
+      "code": "50",
+      "dest": "BORDJ BADJI M",
+      "nom_complet": "Bordj Badji Mokhtar",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 180000,
+      "tarif_ttc": 214200
+    },
+    {
+      "code": "54",
+      "dest": "IN GUIZZAM",
+      "nom_complet": "In Guezzam",
+      "type": "Wilaya",
+      "region": "Grand Sud",
+      "tarif_ht": 185000,
+      "tarif_ttc": 220150
+    }
+  ]
+}
