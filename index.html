@@ -436,22 +436,22 @@
 
           <!-- ADMIN TOOLBAR & FILTERS -->
           <div id="admin-toolbar" class="hidden pt-3 border-t border-slate-200/80">
-            <!-- 1. KPI Cards (Micro-Gradients & Icons) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- 1. KPI Cards (Strict Single Line, Micro-Gradients & Icons) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
               
               <!-- Card 1: Volume Jour -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3 md:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Volume Jour</span>
-                    <span id="admin-kpi-packages" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800 font-mono inline-flex items-center">
+                <div class="flex items-start justify-between gap-2 min-w-0">
+                  <div class="min-w-0 flex-1">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Volume Jour</span>
+                    <span id="admin-kpi-packages" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono inline-flex items-center">
                       0
                     </span>
-                    <span class="text-[11px] text-slate-400 font-medium block mt-1">Paires programmées</span>
+                    <span class="text-[10px] md:text-[11px] text-slate-400 font-medium block mt-0.5 whitespace-nowrap truncate">Paires programmées</span>
                   </div>
-                  <div class="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shrink-0">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 md:p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shrink-0">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
                       <path d="m3.3 7 8.7 5 8.7-5"/>
                       <path d="M12 22V12"/>
@@ -461,18 +461,18 @@
               </div>
 
               <!-- Card 2: Effectuées -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3 md:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Effectuées</span>
-                    <span id="admin-kpi-delivered" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800 font-mono">
+                <div class="flex items-start justify-between gap-2 min-w-0">
+                  <div class="min-w-0 flex-1">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Effectuées</span>
+                    <span id="admin-kpi-delivered" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono block">
                       0 / 0
                     </span>
-                    <span class="text-[11px] text-emerald-600 font-medium block mt-1">Livraisons terminées</span>
+                    <span class="text-[10px] md:text-[11px] text-emerald-600 font-medium block mt-0.5 whitespace-nowrap truncate">Livraisons terminées</span>
                   </div>
-                  <div class="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/60 shrink-0">
-                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 md:p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/60 shrink-0">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                       <path d="m9 11 3 3L22 4"/>
                     </svg>
@@ -481,18 +481,18 @@
               </div>
 
               <!-- Card 3: Litiges / Écarts -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3 md:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Litiges / Écarts</span>
-                    <span id="admin-kpi-discrepancies" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-amber-600 font-mono">
+                <div class="flex items-start justify-between gap-2 min-w-0">
+                  <div class="min-w-0 flex-1">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Litiges / Écarts</span>
+                    <span id="admin-kpi-discrepancies" class="text-lg md:text-xl font-extrabold tracking-tight text-amber-600 whitespace-nowrap truncate mt-1 font-mono block">
                       0
                     </span>
-                    <span class="text-[11px] text-slate-400 font-medium block mt-1">Réserves constatées</span>
+                    <span class="text-[10px] md:text-[11px] text-slate-400 font-medium block mt-0.5 whitespace-nowrap truncate">Réserves constatées</span>
                   </div>
-                  <div class="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100/60 shrink-0">
-                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 md:p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100/60 shrink-0">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
                       <path d="M12 9v4"/>
                       <path d="M12 17h.01"/>
@@ -502,18 +502,18 @@
               </div>
 
               <!-- Card 4: Taux Succès -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3 md:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-purple-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Taux Succès</span>
-                    <span id="admin-kpi-rate" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800 font-mono">
+                <div class="flex items-start justify-between gap-2 min-w-0">
+                  <div class="min-w-0 flex-1">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Taux Succès</span>
+                    <span id="admin-kpi-rate" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono block">
                       0%
                     </span>
-                    <span class="text-[11px] text-purple-600 font-medium block mt-1">Conformité globale</span>
+                    <span class="text-[10px] md:text-[11px] text-purple-600 font-medium block mt-0.5 whitespace-nowrap truncate">Conformité globale</span>
                   </div>
-                  <div class="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100/60 shrink-0">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 md:p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100/60 shrink-0">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="19" x2="5" y1="5" y2="19"/>
                       <circle cx="6.5" cy="6.5" r="2.5"/>
                       <circle cx="17.5" cy="17.5" r="2.5"/>
@@ -524,26 +524,26 @@
 
             </div>
 
-            <!-- 2. The Unified "Action Bar" (Filters + Search) -->
-            <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-xl border border-slate-200/60 p-2 rounded-2xl shadow-sm mb-6">
+            <!-- 2. The Unified "Action Bar" (Search & Dropdowns) -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-xl border border-slate-200/60 p-2 rounded-2xl shadow-sm mb-6 min-w-0 w-full">
               
               <!-- Search Bar (Left) -->
-              <div class="w-full md:flex-1 min-w-0 flex items-center bg-slate-50 rounded-xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+              <div class="w-full md:flex-1 min-w-0 flex items-center bg-slate-50 rounded-xl px-3 md:px-4 py-2 md:py-2.5 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
                 <svg class="w-4 h-4 text-slate-400 shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"/>
                   <path d="m21 21-4.3-4.3"/>
                 </svg>
-                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Rechercher un magasin, chauffeur..." class="w-full min-w-0 bg-transparent border-none p-0 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-0">
+                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Rechercher un magasin, chauffeur..." class="text-xs md:text-sm w-full bg-transparent outline-none placeholder-slate-400 whitespace-nowrap truncate border-none p-0 focus:ring-0">
               </div>
 
               <!-- Dropdowns (Right) -->
-              <div class="flex items-center gap-2 w-full md:w-auto shrink-0">
+              <div class="flex items-center gap-2 w-full md:w-auto shrink-0 min-w-0">
                 <!-- Chauffeurs Dropdown Pill -->
-                <div class="relative flex-1 md:flex-initial max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-3 py-2 transition-colors flex items-center">
-                  <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-transparent border-none text-slate-600 font-medium focus:ring-0 cursor-pointer pr-7 text-xs sm:text-sm appearance-none outline-none truncate">
+                <div class="relative flex-1 md:flex-initial min-w-0 max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 transition-colors flex items-center">
+                  <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="text-xs md:text-sm font-medium text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-full whitespace-nowrap truncate pr-7 appearance-none outline-none">
                     <option value="ALL">Tous les Chauffeurs</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m6 9 6 6 6-6"/>
                     </svg>
@@ -551,11 +551,11 @@
                 </div>
 
                 <!-- Boutiques Dropdown Pill -->
-                <div class="relative flex-1 md:flex-initial max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-3 py-2 transition-colors flex items-center">
-                  <select id="admin-filter-boutique" onchange="handleAdminFilterChange()" class="w-full bg-transparent border-none text-slate-600 font-medium focus:ring-0 cursor-pointer pr-7 text-xs sm:text-sm appearance-none outline-none truncate">
+                <div class="relative flex-1 md:flex-initial min-w-0 max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 transition-colors flex items-center">
+                  <select id="admin-filter-boutique" onchange="handleAdminFilterChange()" class="text-xs md:text-sm font-medium text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-full whitespace-nowrap truncate pr-7 appearance-none outline-none">
                     <option value="ALL">Toutes les Boutiques</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m6 9 6 6 6-6"/>
                     </svg>
@@ -567,19 +567,19 @@
           </div>
 
           <!-- 3. iOS Segmented Control (Non Livré / Livré) -->
-          <div class="inline-flex w-full md:w-auto bg-slate-100/80 backdrop-blur-md p-1 rounded-[1.25rem] shadow-inner mb-6 mx-auto md:mx-0">
-            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="flex-1 md:w-40 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold bg-white text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] transition-all cursor-default min-h-[44px]">
+          <div class="inline-flex w-full md:w-auto bg-slate-100/80 backdrop-blur-md p-1 rounded-[1.25rem] shadow-inner mb-6 mx-auto md:mx-0 min-w-0">
+            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all bg-white font-bold text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] cursor-default min-h-[40px]">
               <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
-              <span>Non Livré</span> (<span id="count-pending">0</span>)
+              <span class="whitespace-nowrap">Non Livré</span> (<span id="count-pending">0</span>)
             </button>
-            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="flex-1 md:w-40 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all cursor-pointer min-h-[44px]">
+            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all font-semibold text-slate-500 hover:text-slate-700 cursor-pointer min-h-[40px]">
               <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
               </svg>
-              <span>Livré</span> (<span id="count-delivered">0</span>)
+              <span class="whitespace-nowrap">Livré</span> (<span id="count-delivered">0</span>)
             </button>
             <span id="filter-all" class="hidden"></span>
             <span id="count-all" class="hidden">0</span>
@@ -4808,8 +4808,8 @@ const LOCAL_DELIVERY_DATA = [
 
       // Update 2-tab segmented filter styling ("Non Livré" left, "Livré" right)
       const isPendingActive = (AppState.activeManifestFilter === 'PENDING');
-      const activeTabClass = "flex-1 md:w-40 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold bg-white text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] transition-all cursor-default min-h-[44px]";
-      const inactiveTabClass = "flex-1 md:w-40 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all cursor-pointer min-h-[44px]";
+      const activeTabClass = "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all bg-white font-bold text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] cursor-default min-h-[40px]";
+      const inactiveTabClass = "flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all font-semibold text-slate-500 hover:text-slate-700 cursor-pointer min-h-[40px]";
 
       if (DOM.filterPending) {
         DOM.filterPending.className = isPendingActive ? activeTabClass : inactiveTabClass;
