@@ -495,6 +495,25 @@
             <span id="count-scheduled" class="hidden">0</span>
           </div>
 
+          <!-- Simple, Silent Dropdown Filter: Commandes en Attente -->
+          <div class="flex items-center gap-2 pt-1">
+            <div class="relative w-full">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-filter text-xs text-[#3076BB]"></i>
+              </div>
+              <select id="filter-commandes-dropdown" onchange="handleCommandesFilterChange(this.value)" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs sm:text-sm font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#3076BB] transition cursor-pointer appearance-none">
+                <option value="ALL">📦 Toutes les Commandes</option>
+                <option value="PENDING" selected>⏳ Commandes en Attente (Non Livré)</option>
+                <option value="UNASSIGNED">⚠️ Commandes en Attente d'Affectation (Sans Chauffeur)</option>
+                <option value="ASSIGNED">🚚 Commandes Affectées (En Tournée)</option>
+                <option value="DELIVERED">✅ Commandes Livrées</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Manifest Delivery Cards Container -->
@@ -566,35 +585,9 @@
         </div>
       </div>
 
-      <!-- NATIVE DRAG-AND-DROP ROUTE BUILDER WORKSPACE -->
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        
-        <!-- PENDING ORDERS (Draggable elements column) -->
-        <div class="xl:col-span-4 flex flex-col space-y-3">
-          <div class="glass-panel rounded-2xl p-4 border border-slate-200/80 bg-white/90 shadow-sm flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-              <h3 class="text-sm font-bold text-slate-800">Commandes en Attente</h3>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="pending-orders-count" class="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">0</span>
-              <span class="text-[11px] text-slate-400 font-medium">À affecter</span>
-            </div>
-          </div>
-
-          <!-- Drag Source Container -->
-          <div id="pending-orders" class="space-y-3 overflow-y-auto max-h-[750px] pr-1">
-            <!-- Pending draggable orders rendered dynamically by renderPendingOrders() -->
-          </div>
-        </div>
-
-        <!-- FLEET TRUCKS (Drop Zones) -->
-        <div class="xl:col-span-8">
-          <div id="fleet-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <!-- Rendered dynamically by renderFleetDashboard() -->
-          </div>
-        </div>
-
+      <!-- CSS GRID: 4 TRUCKS (grid-cols-1 lg:grid-cols-2, mobile first) -->
+      <div id="fleet-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <!-- Rendered dynamically by renderFleetDashboard() -->
       </div>
 
     </section>
@@ -4692,10 +4685,37 @@ const LOCAL_DELIVERY_DATA = [
       }
 
       let filtered = dayDeliveries;
-      if (AppState.activeManifestFilter === "PENDING") {
+      const cmdFilter = AppState.commandesFilter || (AppState.activeManifestFilter === "Delivered" ? "DELIVERED" : (AppState.activeManifestFilter === "ALL" ? "ALL" : "PENDING"));
+
+      if (cmdFilter === "PENDING") {
         filtered = dayDeliveries.filter(x => !isItemDelivered(x));
-      } else if (AppState.activeManifestFilter === "Delivered") {
+      } else if (cmdFilter === "UNASSIGNED") {
+        filtered = dayDeliveries.filter(x => {
+          if (isItemDelivered(x)) return false;
+          const rawDriver = String(x.chauffeur || x.driver || "").trim();
+          const isUnassigned = !rawDriver || /non assign[ée]|non spécifié|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+          const noTruck = !x.truck_id && (!x.matricule || x.matricule === '' || /non spécifié/i.test(x.matricule));
+          return isUnassigned || noTruck;
+        });
+      } else if (cmdFilter === "ASSIGNED") {
+        filtered = dayDeliveries.filter(x => {
+          if (isItemDelivered(x)) return false;
+          const rawDriver = String(x.chauffeur || x.driver || "").trim();
+          const isAssignedDriver = rawDriver && !/non assign[ée]|non spécifié|sans chauffeur|unassigned|^none$|^null$|^\-$|^\/$/i.test(rawDriver);
+          const hasTruck = Boolean(x.truck_id) || (x.matricule && !/non spécifié/i.test(x.matricule));
+          return isAssignedDriver || hasTruck;
+        });
+      } else if (cmdFilter === "DELIVERED") {
         filtered = dayDeliveries.filter(isItemDelivered);
+      } else {
+        // "ALL"
+        filtered = dayDeliveries;
+      }
+
+      // Synchronize dropdown UI if present
+      const cmdDropdown = document.getElementById('filter-commandes-dropdown');
+      if (cmdDropdown && cmdDropdown.value !== cmdFilter) {
+        cmdDropdown.value = cmdFilter;
       }
 
       // High-performance DOM renderer using DocumentFragment to eliminate repaints
@@ -6148,8 +6168,32 @@ const LOCAL_DELIVERY_DATA = [
 
     function setManifestFilter(status) {
       AppState.activeManifestFilter = status;
+      if (status === 'Delivered') {
+        AppState.commandesFilter = 'DELIVERED';
+      } else if (status === 'PENDING') {
+        AppState.commandesFilter = 'PENDING';
+      } else {
+        AppState.commandesFilter = 'ALL';
+      }
       renderDailyManifest();
     }
+
+    /**
+     * Silent dropdown filter for Commandes en Attente / Statut.
+     * Updates the delivery list instantly without reloading the page.
+     */
+    function handleCommandesFilterChange(val) {
+      AppState.commandesFilter = val;
+      if (val === 'DELIVERED') {
+        AppState.activeManifestFilter = 'Delivered';
+      } else if (val === 'ALL') {
+        AppState.activeManifestFilter = 'ALL';
+      } else {
+        AppState.activeManifestFilter = 'PENDING';
+      }
+      renderDailyManifest();
+    }
+    window.handleCommandesFilterChange = handleCommandesFilterChange;
 
     function jumpToNextDelivery() {
       const allDates = [...new Set(AppState.deliveries.map(d => d.date))].filter(Boolean).sort();
@@ -7057,7 +7101,7 @@ const LOCAL_DELIVERY_DATA = [
         const assignedCardsHtml = assignedDeliveries.map(ord => renderDraggableOrderHtml(ord, true)).join('');
 
         return `
-          <div data-truck-id="${v.id}" class="truck-dropzone flex flex-col sm:flex-row bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200/90 overflow-hidden mb-4 transition-all duration-300">
+          <div class="flex flex-col sm:flex-row bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200/90 overflow-hidden mb-4 transition-all duration-300">
             
             <!-- Truck Image Container (Fixed height on mobile, flex adapt on desktop) -->
             <div class="w-full sm:w-1/3 h-48 sm:h-auto relative shrink-0 bg-slate-50 flex items-center justify-center p-4 border-b sm:border-b-0 sm:border-r border-slate-100 overflow-hidden">
@@ -7160,25 +7204,15 @@ const LOCAL_DELIVERY_DATA = [
                 </div>
               </div>
 
-              <!-- Designated Drop Target: Assigned Orders List -->
-              <div class="pt-2">
-                <div class="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5">
-                  <span class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    <i class="fa-solid fa-boxes-packing text-blue-500"></i> Tournée Affectée
-                  </span>
-                  <span class="truck-assigned-count text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                    ${assignedDeliveries.length} ${assignedDeliveries.length <= 1 ? 'commande' : 'commandes'}
-                  </span>
+              ${assignedDeliveries.length > 0 ? `
+                <!-- Assigned Tour Summary Badge -->
+                <div class="pt-2">
+                  <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold shadow-2xs">
+                    <i class="fa-solid fa-boxes-packing text-blue-500"></i>
+                    <span>Tournée : <strong>${assignedDeliveries.length}</strong> ${assignedDeliveries.length <= 1 ? 'commande affectée' : 'commandes affectées'}</span>
+                  </div>
                 </div>
-                <div class="assigned-orders-list space-y-2 min-h-[50px] max-h-[160px] overflow-y-auto p-1.5 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 transition-colors" data-truck-id="${v.id}">
-                  ${assignedDeliveries.length === 0 ? `
-                    <div class="empty-assigned-placeholder h-full py-2 flex items-center justify-center text-center text-slate-400 text-[11px] font-medium pointer-events-none select-none">
-                      <i class="fa-solid fa-arrow-down-to-bracket mr-1.5 text-blue-400"></i>
-                      <span>Glissez une commande ici</span>
-                    </div>
-                  ` : assignedCardsHtml}
-                </div>
-              </div>
+              ` : ''}
 
               <!-- Action Buttons Footer -->
               <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row flex-wrap gap-2.5 w-full">
@@ -7214,10 +7248,6 @@ const LOCAL_DELIVERY_DATA = [
           </div>
         `;
       }).join('');
-
-      // Initialize Native HTML5 Drag and Drop Route Builder
-      attachTruckDropZoneEvents();
-      renderPendingOrders();
     }
 
     // =================================================================
