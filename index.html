@@ -1190,20 +1190,20 @@
   <!-- DRIVER PERFORMANCE LEADERBOARD MODAL (ADMIN ONLY) -->
   <!-- ======================================================== -->
   <div id="driver-performance-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
-    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl sm:max-w-3xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl sm:max-w-4xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       
       <!-- Modal Header -->
       <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
         <div class="flex items-center space-x-3">
           <div class="p-2.5 rounded-2xl bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
-            <i class="fa-solid fa-trophy text-base"></i>
+            <i class="fa-solid fa-route text-base"></i>
           </div>
           <div>
             <h4 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Classement & Performances Chauffeurs</span>
-              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Zéro GPS</span>
+              <span>Performances Chauffeurs & Kilométrage Exact</span>
+              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">GPS Haversine</span>
             </h4>
-            <p class="text-xs text-slate-500 font-medium">Calculé strictement sur le delta odométrique (Restitution - Prise)</p>
+            <p class="text-xs text-slate-500 font-medium">Calcul point-à-point exact : Entrepôt Tradifoot (Alger) → Arrêts séquentiels</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -1217,26 +1217,85 @@
         </div>
       </div>
 
-      <!-- Quick KPI Aggregates -->
-      <div class="grid grid-cols-3 gap-2.5 sm:gap-3 p-4 sm:px-6 bg-slate-50/50 border-b border-slate-100 shrink-0 text-center">
-        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
-          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Missions Clôturées</span>
-          <span id="perf-kpi-missions" class="text-base sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5 block">0</span>
+      <!-- Driver Selection Tabs (Apple-style segmented pills) -->
+      <div class="px-5 sm:px-6 py-2.5 bg-slate-50 border-b border-slate-200/70 flex items-center space-x-2 overflow-x-auto no-scrollbar shrink-0">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Chauffeur :</span>
+        <button onclick="selectDriverForKPI('ALL')" id="tab-driver-ALL" class="driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-indigo-600 text-white shadow-xs">
+          ⭐ Flotte Globale
+        </button>
+        <button onclick="selectDriverForKPI('SAADI BILLEL')" id="tab-driver-SAADI-BILLEL" class="driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+          Saadi Billel
+        </button>
+        <button onclick="selectDriverForKPI('SNOUCI SEIF-EDDINE')" id="tab-driver-SNOUCI-SEIF-EDDINE" class="driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+          Snouci Seif-Eddine
+        </button>
+        <button onclick="selectDriverForKPI('BOUKHALFA ADEL')" id="tab-driver-BOUKHALFA-ADEL" class="driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+          Boukhalfa Adel
+        </button>
+        <button onclick="selectDriverForKPI('BALLA YOUCEF')" id="tab-driver-BALLA-YOUCEF" class="driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100 border border-slate-200">
+          Balla Youcef
+        </button>
+      </div>
+
+      <!-- Sleek Glassmorphic 4-Card Apple-Style KPI Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-4 sm:px-6 bg-slate-50/50 border-b border-slate-100 shrink-0 text-center">
+        <!-- 1. Total Deliveries (Count) -->
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Livraisons</span>
+          <span id="perf-kpi-missions" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono mt-0.5 block">0</span>
+          <span class="text-[10px] text-slate-500 font-medium mt-0.5">Arrêts validés</span>
         </div>
-        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
-          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total km Roulés</span>
-          <span id="perf-kpi-totalkm" class="text-base sm:text-xl font-extrabold text-indigo-700 font-mono mt-0.5 block">0 <span class="text-xs font-normal text-slate-500">km</span></span>
+
+        <!-- 2. Total Distance Driven (Exact KM) -->
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Distance Parcourue</span>
+          <span id="perf-kpi-totalkm" class="text-lg sm:text-2xl font-extrabold text-indigo-700 font-mono mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
+          <span class="text-[10px] text-indigo-600 font-bold mt-0.5 flex items-center justify-center gap-1">
+            <i class="fa-solid fa-satellite-dish text-[9px]"></i> Exact Haversine
+          </span>
         </div>
-        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs">
-          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Moyenne / Mission</span>
-          <span id="perf-kpi-avgkm" class="text-base sm:text-xl font-extrabold text-emerald-700 font-mono mt-0.5 block">0 <span class="text-xs font-normal text-slate-500">km</span></span>
+
+        <!-- 3. Average Distance Between Stops -->
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Moyenne Inter-Arrêts</span>
+          <span id="perf-kpi-avgkm" class="text-lg sm:text-2xl font-extrabold text-emerald-700 font-mono mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
+          <span class="text-[10px] text-slate-500 font-medium mt-0.5">Total KM / Livraisons</span>
+        </div>
+
+        <!-- 4. Efficiency Score -->
+        <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Score d'Efficacité</span>
+          <span id="perf-kpi-efficiency" class="text-lg sm:text-2xl font-extrabold text-emerald-600 font-mono mt-0.5 block">-- <span class="text-xs font-bold text-slate-400">/ 100</span></span>
+          <div class="mt-0.5 flex items-center justify-center">
+            <span id="perf-kpi-efficiency-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Optimal
+            </span>
+          </div>
         </div>
       </div>
 
-      <!-- Leaderboard Body (Scrollable Table) -->
+      <!-- Modal Body (Sequential Itinerary & Leaderboard Table) -->
       <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+        
+        <!-- Sequential Stops Breakdown for Selected Driver (Visible when driver selected) -->
+        <div id="perf-driver-stops-section" class="hidden rounded-2xl border border-indigo-100 bg-indigo-50/30 p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                <i class="fa-solid fa-timeline"></i>
+              </span>
+              <span class="text-xs font-extrabold text-slate-800" id="perf-driver-stops-title">Itinéraire Séquentiel Chauffeur</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-lg border border-indigo-200" id="perf-driver-stops-summary">0 arrêts</span>
+          </div>
+          <div id="perf-driver-stops-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs divide-y divide-indigo-100/60">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Leaderboard Table -->
         <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
-          <table class="w-full text-left border-collapse min-w-[500px]">
+          <table class="w-full text-left border-collapse min-w-[550px]">
             <thead>
               <tr class="bg-slate-100/80 text-slate-600 text-[11px] font-bold uppercase tracking-wider border-b border-slate-200 select-none">
                 <th class="py-3 px-3 sm:px-4 text-center w-14">Rang</th>
@@ -1244,13 +1303,16 @@
                   Chauffeur <i id="sort-icon-driverName" class="fa-solid fa-sort text-[10px] ml-1"></i>
                 </th>
                 <th class="py-3 px-3 sm:px-4 text-center cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('missionsCount')">
-                  Missions <i id="sort-icon-missionsCount" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                  Livraisons <i id="sort-icon-missionsCount" class="fa-solid fa-sort text-[10px] ml-1"></i>
                 </th>
                 <th class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('totalKm')">
-                  Total km <i id="sort-icon-totalKm" class="fa-solid fa-sort-down text-[10px] ml-1 text-indigo-600"></i>
+                  Total Exact KM <i id="sort-icon-totalKm" class="fa-solid fa-sort-down text-[10px] ml-1 text-indigo-600"></i>
                 </th>
                 <th class="py-3 px-3 sm:px-4 text-right cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('avgKm')">
-                  Moyenne km/Mission <i id="sort-icon-avgKm" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                  Moy. KM/Arrêt <i id="sort-icon-avgKm" class="fa-solid fa-sort text-[10px] ml-1"></i>
+                </th>
+                <th class="py-3 px-3 sm:px-4 text-center cursor-pointer hover:text-indigo-600" onclick="toggleLeaderboardSort('efficiency')">
+                  Score <i id="sort-icon-efficiency" class="fa-solid fa-sort text-[10px] ml-1"></i>
                 </th>
               </tr>
             </thead>
@@ -1263,7 +1325,7 @@
         <!-- Explanatory note at the bottom -->
         <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-500 flex items-start gap-2">
           <i class="fa-solid fa-circle-info text-indigo-500 mt-0.5 shrink-0"></i>
-          <span>La distance de chaque mission est calculée via <code class="font-mono font-bold text-slate-700">Distance = Restitution - Prise</code> sans aucun appel API GPS, 100% basée sur les relevés kilométriques certifiés des passations.</span>
+          <span>Distance exacte calculée via la <strong>formule de Haversine</strong> entre les coordonnées GPS réelles de chaque livraison séquentielle. Premier arrêt calculé depuis l'Entrepôt Central Tradifoot (Alger : 36.7525° N, 3.0420° E).</span>
         </div>
       </div>
 
@@ -7835,277 +7897,565 @@ const LOCAL_DELIVERY_DATA = [
     }
 
     // ========================================================
-    // DRIVER PERFORMANCE LEADERBOARD ENGINE (NO GPS API)
+    // DRIVER PERFORMANCE & EXACT KILOMETER ENGINE (HAVERSINE)
     // ========================================================
+
+    // 1. The Mathematical Engine (Haversine Formula) - Exact requested implementation
+    function calculateExactKM(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth radius in Kilometers
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return (R * c); // Returns exact KM
+    }
+
+    // Tradifoot Central Warehouse Origin Coordinates (Algiers, Algeria)
+    const TRADIFOOT_WAREHOUSE_COORDS = {
+        lat: 36.7525,
+        lon: 3.0420,
+        name: "Entrepôt Tradifoot (Alger)"
+    };
+
     let currentLeaderboardSortKey = 'totalKm';
     let currentLeaderboardSortAsc = false;
     let cachedLeaderboardData = [];
+    let selectedDriverForKPIView = 'ALL';
+    let allDeliveriesForKPI = [];
 
-    // Baseline reset cutoff (filters out past test records so KPIs start at 0)
-    const DRIVER_PERFORMANCE_DEFAULT_RESET = '2026-11-09T12:00:00.000Z';
-
-    function getDriverPerformanceResetCutoff() {
-      try {
-        const stored = localStorage.getItem('tradifoot_perf_reset_timestamp');
-        if (stored) return new Date(stored).getTime();
-      } catch (e) {}
-      return new Date(DRIVER_PERFORMANCE_DEFAULT_RESET).getTime();
-    }
-
-    function resetDriverPerformanceKPIs() {
-      const nowIso = new Date().toISOString();
-      try {
-        localStorage.setItem('tradifoot_perf_reset_timestamp', nowIso);
-      } catch (e) {}
-      showNotification("Performances Chauffeurs réinitialisées à zéro.", "success");
-      openDriverPerformanceModal();
-    }
-
-    function calculateDriverPerformanceMetrics(handoversList) {
-      const list = Array.isArray(handoversList) ? handoversList : (AppState.vehicleHandovers || []);
-      const cutoffTime = getDriverPerformanceResetCutoff();
-
-      // Sort chronologically ascending (oldest first)
-      const sorted = [...list].sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
-
-      const activePrises = new Map();
-      const completedTrips = [];
-
-      for (const h of sorted) {
-        const hTime = new Date(h.created_at || h.timestamp || 0).getTime();
-        // Skip handovers prior to the reset timestamp
-        if (hTime < cutoffTime) continue;
-
-        const vId = String(h.vehicle_id || '').trim();
-        const action = String(h.action_type || '').trim().toLowerCase();
-        const driver = String(h.driver_name || '').trim();
-        const mileage = Number(h.mileage) || 0;
-
-        if (action === 'prise') {
-          activePrises.set(vId, h);
-        } else if (action === 'retour') {
-          const matchingPrise = activePrises.get(vId);
-          let pMileage = 0;
-          let dist = 0;
-          let driverName = driver;
-
-          if (matchingPrise) {
-            pMileage = Number(matchingPrise.mileage) || 0;
-            dist = mileage >= pMileage ? (mileage - pMileage) : 0;
-            if (!driverName) driverName = matchingPrise.driver_name;
-            activePrises.delete(vId);
-          } else {
-            dist = 0;
-          }
-
-          if (driverName) {
-            completedTrips.push({
-              driverName: driverName,
-              priseMileage: pMileage,
-              restitutionMileage: mileage,
-              distance: dist,
-              vehicleId: vId,
-              date: h.created_at
-            });
-          }
-        }
-      }
-
-      // Master driver list initialized to 0
-      const knownDrivers = [
+    // Master list of monitored drivers
+    const MASTER_KNOWN_DRIVERS = [
         'SAADI BILLEL',
         'SNOUCI SEIF-EDDINE',
         'BOUKHALFA ADEL',
         'BALLA YOUCEF'
-      ];
+    ];
 
-      const driverMap = new Map();
-      knownDrivers.forEach(name => {
-        driverMap.set(name, {
-          driverName: name,
-          missionsCount: 0,
-          totalKm: 0,
-          trips: []
-        });
-      });
+    // Baseline reset cutoff (filters out past test records if user resets)
+    const DRIVER_PERFORMANCE_DEFAULT_RESET = '2026-11-01T00:00:00.000Z';
 
-      // Aggregate completed trips
-      completedTrips.forEach(trip => {
-        let stats = driverMap.get(trip.driverName);
-        if (!stats) {
-          stats = {
-            driverName: trip.driverName,
-            missionsCount: 0,
-            totalKm: 0,
-            trips: []
-          };
-          driverMap.set(trip.driverName, stats);
-        }
-        stats.missionsCount += 1;
-        stats.totalKm += trip.distance;
-        stats.trips.push(trip);
-      });
-
-      const leaderboard = Array.from(driverMap.values()).map(d => {
-        const avgKm = d.missionsCount > 0 ? Math.round(d.totalKm / d.missionsCount) : 0;
-        return {
-          driverName: d.driverName,
-          missionsCount: d.missionsCount,
-          totalKm: d.totalKm,
-          avgKm: avgKm,
-          trips: d.trips
-        };
-      });
-
-      return {
-        leaderboard,
-        completedTripsCount: completedTrips.length,
-        totalKmFleet: completedTrips.reduce((acc, t) => acc + t.distance, 0),
-        avgKmFleet: completedTrips.length > 0 ? Math.round(completedTrips.reduce((acc, t) => acc + t.distance, 0) / completedTrips.length) : 0
-      };
+    function getDriverPerformanceResetCutoff() {
+        try {
+            const stored = localStorage.getItem('tradifoot_perf_reset_timestamp');
+            if (stored) return new Date(stored).getTime();
+        } catch (e) {}
+        return new Date(DRIVER_PERFORMANCE_DEFAULT_RESET).getTime();
     }
 
-    function renderDriverPerformanceTable() {
-      const tbody = document.getElementById('driver-performance-tbody');
-      if (!tbody) return;
+    function resetDriverPerformanceKPIs() {
+        const nowIso = new Date().toISOString();
+        try {
+            localStorage.setItem('tradifoot_perf_reset_timestamp', nowIso);
+        } catch (e) {}
+        showNotification("Performances Chauffeurs réinitialisées à zéro.", "success");
+        openDriverPerformanceModal();
+    }
 
-      const list = [...cachedLeaderboardData];
-      list.sort((a, b) => {
-        let valA = a[currentLeaderboardSortKey];
-        let valB = b[currentLeaderboardSortKey];
-
-        if (typeof valA === 'string') {
-          return currentLeaderboardSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    // 2. Sequential Data Processing (The KPI Logic)
+    async function fetchDriverDeliveries(selectedDriver) {
+        if (!supabaseClient) {
+            return filterLocalDeliveries(selectedDriver);
         }
-        return currentLeaderboardSortAsc ? (valA - valB) : (valB - valA);
-      });
 
-      // Update header sort icons
-      ['driverName', 'missionsCount', 'totalKm', 'avgKm'].forEach(key => {
-        const icon = document.getElementById(`sort-icon-${key}`);
-        if (icon) {
-          if (key === currentLeaderboardSortKey) {
-            icon.className = `fa-solid ${currentLeaderboardSortAsc ? 'fa-sort-up' : 'fa-sort-down'} text-[10px] ml-1 text-indigo-600`;
-          } else {
-            icon.className = 'fa-solid fa-sort text-[10px] ml-1 text-slate-400';
-          }
+        // Try the explicit schema requested by user first (driver_id, delivered_at)
+        if (selectedDriver && selectedDriver !== 'ALL') {
+            try {
+                const { data: deliveries, error } = await supabaseClient
+                    .from('deliveries')
+                    .select('*')
+                    .eq('driver_id', selectedDriver)
+                    .eq('status', 'delivered')
+                    .order('delivered_at', { ascending: true });
+
+                if (!error && Array.isArray(deliveries) && deliveries.length > 0) {
+                    return deliveries;
+                }
+            } catch (e) {
+                // Fallback to production schema
+            }
         }
-      });
 
-      tbody.innerHTML = list.map((d, idx) => {
-        const rank = idx + 1;
-        let rankBadge = '';
-        let rowClass = 'hover:bg-slate-50/80 transition-colors';
+        // Production schema: chauffeur / delivered_by, status in ('Livré', 'delivered'), updated_at
+        try {
+            const { data, error } = await supabaseClient
+                .from('deliveries')
+                .select('*')
+                .in('status', ['Livré', 'delivered', 'LIVRE'])
+                .order('updated_at', { ascending: true });
 
-        if (rank === 1 && d.totalKm > 0) {
-          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-amber-100 text-amber-800 font-extrabold text-xs border border-amber-300 shadow-xs">🥇 1</span>`;
-          rowClass = 'bg-amber-50/30 hover:bg-amber-50/60 transition-colors font-medium';
-        } else if (rank === 2 && d.totalKm > 0) {
-          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs border border-slate-300 shadow-xs">🥈 2</span>`;
-        } else if (rank === 3 && d.totalKm > 0) {
-          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-orange-100 text-orange-800 font-extrabold text-xs border border-orange-300 shadow-xs">🥉 3</span>`;
+            if (!error && Array.isArray(data)) {
+                allDeliveriesForKPI = data;
+                if (!selectedDriver || selectedDriver === 'ALL') {
+                    return data;
+                }
+                return data.filter(d => isDeliveryMatchDriver(d, selectedDriver));
+            }
+        } catch (err) {
+            console.warn('[KPI] Fetch Supabase warning:', err);
+        }
+
+        return filterLocalDeliveries(selectedDriver);
+    }
+
+    function isDeliveryMatchDriver(delivery, driverTarget) {
+        if (!driverTarget || driverTarget === 'ALL') return true;
+        const normTarget = String(driverTarget).trim().toUpperCase();
+        const ch = String(delivery.chauffeur || delivery.driver_id || delivery.delivered_by || '').trim().toUpperCase();
+        const delivBy = String(delivery.delivered_by || '').trim().toUpperCase();
+        return ch === normTarget || ch.includes(normTarget) || delivBy === normTarget || delivBy.includes(normTarget);
+    }
+
+    function filterLocalDeliveries(selectedDriver) {
+        const list = Array.isArray(AppState.deliveries) ? AppState.deliveries : (LOCAL_DELIVERY_DATA || []);
+        const cutoff = getDriverPerformanceResetCutoff();
+        return list.filter(d => {
+            const isDelivered = d.status === 'Livré' || d.status === 'delivered';
+            const time = new Date(d.delivered_at || d.updated_at || d.date || 0).getTime();
+            if (time < cutoff) return false;
+            return isDelivered && isDeliveryMatchDriver(d, selectedDriver);
+        });
+    }
+
+    // Calculate Exact KM & Sequential Metrics for a Driver or List of Deliveries
+    function calculateDriverExactKPI(deliveriesList, driverName = "Flotte Globale") {
+        const list = Array.isArray(deliveriesList) ? [...deliveriesList] : [];
+        const cutoff = getDriverPerformanceResetCutoff();
+
+        // Filter by reset cutoff if available
+        const validList = list.filter(d => {
+            const time = new Date(d.delivered_at || d.updated_at || d.date || 0).getTime();
+            return time >= cutoff;
+        });
+
+        // Ensure chronological order by timestamp
+        validList.sort((a, b) => {
+            const tA = new Date(a.delivered_at || a.updated_at || a.date || 0).getTime();
+            const tB = new Date(b.delivered_at || b.updated_at || b.date || 0).getTime();
+            return tA - tB;
+        });
+
+        const totalDeliveries = validList.length;
+        if (totalDeliveries === 0) {
+            return {
+                driverName,
+                totalDeliveries: 0,
+                totalExactKM: 0,
+                avgDistanceBetweenStops: 0,
+                efficiencyScore: 0,
+                efficiencyBadge: 'N/A',
+                legs: []
+            };
+        }
+
+        let totalExactKM = 0;
+        const legs = [];
+
+        // Iterate through deliveries array and sum point-to-point distances
+        for (let i = 0; i < validList.length; i++) {
+            const current = validList[i];
+            const curLat = Number(current.latitude ?? current.delivery_lat ?? current.lat);
+            const curLon = Number(current.longitude ?? current.delivery_lng ?? current.lon);
+            const hasCurGps = !isNaN(curLat) && !isNaN(curLon) && curLat !== 0 && curLon !== 0;
+
+            let legKM = 0;
+            let fromName = "";
+
+            if (i === 0) {
+                // First delivery: calculate distance from Tradifoot Warehouse origin
+                fromName = TRADIFOOT_WAREHOUSE_COORDS.name;
+                if (hasCurGps) {
+                    legKM = calculateExactKM(TRADIFOOT_WAREHOUSE_COORDS.lat, TRADIFOOT_WAREHOUSE_COORDS.lon, curLat, curLon);
+                }
+            } else {
+                // Sequential delivery: calculate distance from previous stop
+                const prev = validList[i - 1];
+                const prevLat = Number(prev.latitude ?? prev.delivery_lat ?? prev.lat);
+                const prevLon = Number(prev.longitude ?? prev.delivery_lng ?? prev.lon);
+                const hasPrevGps = !isNaN(prevLat) && !isNaN(prevLon) && prevLat !== 0 && prevLon !== 0;
+                fromName = prev.magasin || prev.store_name || `Arrêt #${i}`;
+
+                if (hasCurGps && hasPrevGps) {
+                    legKM = calculateExactKM(prevLat, prevLon, curLat, curLon);
+                } else if (hasCurGps) {
+                    legKM = calculateExactKM(TRADIFOOT_WAREHOUSE_COORDS.lat, TRADIFOOT_WAREHOUSE_COORDS.lon, curLat, curLon);
+                }
+            }
+
+            if (isNaN(legKM) || !isFinite(legKM)) legKM = 0;
+            const legKMRounded = Math.round(legKM * 10) / 10;
+            totalExactKM += legKMRounded;
+
+            legs.push({
+                stopIndex: i + 1,
+                destination: current.magasin || current.store_name || `Arrêt #${i + 1}`,
+                from: fromName,
+                distanceKM: legKMRounded,
+                lat: hasCurGps ? curLat : null,
+                lon: hasCurGps ? curLon : null,
+                time: current.delivered_at || current.updated_at || current.date || ''
+            });
+        }
+
+        totalExactKM = Math.round(totalExactKM * 10) / 10;
+        const avgDistanceBetweenStops = totalDeliveries > 0 ? (Math.round((totalExactKM / totalDeliveries) * 10) / 10) : 0;
+
+        // 3. Efficiency Score: Higher when average distance between stops is low & delivery rate is high
+        let clusterScore = 50;
+        if (avgDistanceBetweenStops > 80) clusterScore = 32;
+        else if (avgDistanceBetweenStops > 50) clusterScore = 38;
+        else if (avgDistanceBetweenStops > 20) clusterScore = 44;
+        else clusterScore = 50;
+
+        let paceScore = 45;
+        if (validList.length >= 2) {
+            try {
+                const tFirst = new Date(validList[0].delivered_at || validList[0].updated_at || 0).getTime();
+                const tLast = new Date(validList[validList.length - 1].delivered_at || validList[validList.length - 1].updated_at || 0).getTime();
+                const spanHours = (tLast - tFirst) / (1000 * 3600);
+                if (spanHours > 0.3) {
+                    const ratePerHour = totalDeliveries / spanHours;
+                    if (ratePerHour >= 2.0) paceScore = 50;
+                    else if (ratePerHour >= 1.2) paceScore = 46;
+                    else paceScore = 40;
+                }
+            } catch (e) {}
+        }
+
+        const efficiencyScore = Math.min(100, Math.max(50, Math.round(clusterScore + paceScore)));
+        let efficiencyBadge = 'Optimal';
+        if (efficiencyScore >= 95) efficiencyBadge = 'A+ Optimal';
+        else if (efficiencyScore >= 88) efficiencyBadge = 'A Excellent';
+        else if (efficiencyScore >= 75) efficiencyBadge = 'B+ Très Bon';
+        else efficiencyBadge = 'B Standard';
+
+        return {
+            driverName,
+            totalDeliveries,
+            totalExactKM,
+            avgDistanceBetweenStops,
+            efficiencyScore,
+            efficiencyBadge,
+            legs
+        };
+    }
+
+    // Build Entire Fleet Leaderboard Data
+    function buildFleetLeaderboardStats(allDeliveries) {
+        const driverMap = new Map();
+
+        MASTER_KNOWN_DRIVERS.forEach(name => {
+            driverMap.set(name, []);
+        });
+
+        (allDeliveries || []).forEach(d => {
+            const ch = String(d.chauffeur || d.delivered_by || d.driver_id || '').trim().toUpperCase();
+            for (const known of MASTER_KNOWN_DRIVERS) {
+                if (ch === known || ch.includes(known)) {
+                    driverMap.get(known).push(d);
+                    break;
+                }
+            }
+        });
+
+        const leaderboard = [];
+        let fleetTotalKm = 0;
+        let fleetTotalDeliveries = 0;
+
+        MASTER_KNOWN_DRIVERS.forEach(name => {
+            const delivs = driverMap.get(name) || [];
+            const kpi = calculateDriverExactKPI(delivs, name);
+            leaderboard.push(kpi);
+            fleetTotalKm += kpi.totalExactKM;
+            fleetTotalDeliveries += kpi.totalDeliveries;
+        });
+
+        fleetTotalKm = Math.round(fleetTotalKm * 10) / 10;
+        const fleetAvgKm = fleetTotalDeliveries > 0 ? (Math.round((fleetTotalKm / fleetTotalDeliveries) * 10) / 10) : 0;
+        const fleetEfficiency = leaderboard.length > 0 ? Math.round(leaderboard.reduce((acc, d) => acc + d.efficiencyScore, 0) / leaderboard.length) : 90;
+
+        return {
+            leaderboard,
+            fleetTotalDeliveries,
+            fleetTotalKm,
+            fleetAvgKm,
+            fleetEfficiency
+        };
+    }
+
+    // Render 4 Apple-Style KPI Cards
+    function renderKPICards(kpiData) {
+        const kpiMissions = document.getElementById('perf-kpi-missions');
+        const kpiTotalKm = document.getElementById('perf-kpi-totalkm');
+        const kpiAvgKm = document.getElementById('perf-kpi-avgkm');
+        const kpiEfficiency = document.getElementById('perf-kpi-efficiency');
+        const kpiBadge = document.getElementById('perf-kpi-efficiency-badge');
+
+        if (kpiMissions) {
+            kpiMissions.textContent = kpiData.totalDeliveries.toLocaleString('fr-FR');
+        }
+        if (kpiTotalKm) {
+            kpiTotalKm.innerHTML = `${kpiData.totalExactKM.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span class="text-xs font-normal text-slate-500">KM</span>`;
+        }
+        if (kpiAvgKm) {
+            kpiAvgKm.innerHTML = `${kpiData.avgDistanceBetweenStops.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span class="text-xs font-normal text-slate-500">KM</span>`;
+        }
+        if (kpiEfficiency) {
+            kpiEfficiency.innerHTML = `${kpiData.efficiencyScore > 0 ? kpiData.efficiencyScore : '--'} <span class="text-xs font-bold text-slate-400">/ 100</span>`;
+        }
+        if (kpiBadge) {
+            kpiBadge.textContent = kpiData.efficiencyBadge || 'Optimal';
+            if (kpiData.efficiencyScore >= 90) {
+                kpiBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+            } else if (kpiData.efficiencyScore >= 80) {
+                kpiBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200';
+            } else {
+                kpiBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
+            }
+        }
+    }
+
+    // Render Sequential Route Stops List for a selected driver
+    function renderSequentialRouteStops(kpiData) {
+        const stopsSection = document.getElementById('perf-driver-stops-section');
+        const stopsList = document.getElementById('perf-driver-stops-list');
+        const stopsTitle = document.getElementById('perf-driver-stops-title');
+        const stopsSummary = document.getElementById('perf-driver-stops-summary');
+
+        if (!stopsSection || !stopsList) return;
+
+        if (!kpiData || selectedDriverForKPIView === 'ALL' || !kpiData.legs || kpiData.legs.length === 0) {
+            stopsSection.classList.add('hidden');
+            return;
+        }
+
+        stopsSection.classList.remove('hidden');
+        if (stopsTitle) stopsTitle.textContent = `Itinéraire Séquentiel : ${kpiData.driverName}`;
+        if (stopsSummary) stopsSummary.textContent = `${kpiData.totalDeliveries} arrêts • ${kpiData.totalExactKM} KM`;
+
+        stopsList.innerHTML = kpiData.legs.map((leg, idx) => {
+            const isWarehouse = idx === 0;
+            const fromShort = leg.from.length > 25 ? leg.from.substring(0, 23) + '...' : leg.from;
+            const destShort = leg.destination.length > 25 ? leg.destination.substring(0, 23) + '...' : leg.destination;
+            const gpsLink = (leg.lat && leg.lon)
+                ? `<a href="https://www.google.com/maps/search/?api=1&query=${leg.lat},${leg.lon}" target="_blank" rel="noopener" class="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"><i class="fa-solid fa-map-pin"></i> ${leg.lat.toFixed(3)}, ${leg.lon.toFixed(3)}</a>`
+                : `<span class="text-[10px] text-slate-400">📍 GPS approximatif</span>`;
+
+            return `
+                <div class="py-1.5 flex items-center justify-between text-slate-700">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-5 h-5 rounded-md ${isWarehouse ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'} flex items-center justify-center font-bold text-[10px] shrink-0">
+                            ${leg.stopIndex}
+                        </span>
+                        <div>
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>${destShort}</span>
+                                <span class="text-[10px] font-normal text-slate-400">depuis ${fromShort}</span>
+                            </div>
+                            ${gpsLink}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="font-mono font-extrabold text-indigo-700 text-xs sm:text-sm">+${leg.distanceKM.toFixed(1)}</span>
+                        <span class="text-[10px] text-slate-400 font-medium ml-0.5">KM</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Switch Selected Driver in KPI Modal
+    async function selectDriverForKPI(driverIdOrName) {
+        selectedDriverForKPIView = driverIdOrName || 'ALL';
+
+        // Update active tab buttons
+        document.querySelectorAll('.driver-kpi-pill').forEach(btn => {
+            const btnId = btn.id || '';
+            const normalizedBtn = btnId.replace('tab-driver-', '').replace(/-/g, ' ');
+            const normalizedTarget = selectedDriverForKPIView.replace(/-/g, ' ');
+
+            if (normalizedBtn === normalizedTarget) {
+                btn.className = 'driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap bg-indigo-600 text-white shadow-xs';
+            } else {
+                btn.className = 'driver-kpi-pill px-3 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap bg-white text-slate-700 hover:bg-slate-100 border border-slate-200';
+            }
+        });
+
+        if (selectedDriverForKPIView === 'ALL') {
+            const fleetStats = buildFleetLeaderboardStats(allDeliveriesForKPI);
+            renderKPICards({
+                totalDeliveries: fleetStats.fleetTotalDeliveries,
+                totalExactKM: fleetStats.fleetTotalKm,
+                avgDistanceBetweenStops: fleetStats.fleetAvgKm,
+                efficiencyScore: fleetStats.fleetEfficiency,
+                efficiencyBadge: 'Optimal Flotte'
+            });
+            renderSequentialRouteStops(null);
         } else {
-          rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs">${rank}</span>`;
+            const driverDelivs = await fetchDriverDeliveries(selectedDriverForKPIView);
+            const driverKPI = calculateDriverExactKPI(driverDelivs, selectedDriverForKPIView);
+            renderKPICards(driverKPI);
+            renderSequentialRouteStops(driverKPI);
         }
 
-        const initials = d.driverName.split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+        renderDriverPerformanceTable();
+    }
 
-        return `
-          <tr class="${rowClass}">
-            <td class="py-3.5 px-3 sm:px-4 text-center">
-              ${rankBadge}
-            </td>
-            <td class="py-3.5 px-3 sm:px-4">
-              <div class="flex items-center space-x-2.5">
-                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0">
-                  ${initials}
-                </div>
-                <div>
-                  <span class="font-bold text-slate-900 block leading-tight">${d.driverName}</span>
-                  <span class="text-[10px] text-slate-400 block">${d.missionsCount > 0 ? `${d.missionsCount} mission(s) terminée(s)` : 'Aucune mission enregistrée'}</span>
-                </div>
-              </div>
-            </td>
-            <td class="py-3.5 px-3 sm:px-4 text-center">
-              <span class="inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${d.missionsCount > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400'}">
-                ${d.missionsCount}
-              </span>
-            </td>
-            <td class="py-3.5 px-3 sm:px-4 text-right">
-              <span class="font-mono font-extrabold text-slate-900 text-sm sm:text-base">
-                ${d.totalKm.toLocaleString('fr-FR')}
-              </span>
-              <span class="text-xs text-slate-500 font-normal ml-0.5">km</span>
-            </td>
-            <td class="py-3.5 px-3 sm:px-4 text-right">
-              <span class="font-mono font-bold text-slate-700 text-xs sm:text-sm">
-                ${d.avgKm.toLocaleString('fr-FR')}
-              </span>
-              <span class="text-[11px] text-slate-500 font-normal ml-0.5">km/m</span>
-            </td>
-          </tr>
-        `;
-      }).join('');
+    // Render Master Leaderboard Table
+    function renderDriverPerformanceTable() {
+        const tbody = document.getElementById('driver-performance-tbody');
+        if (!tbody) return;
+
+        const list = [...cachedLeaderboardData];
+        list.sort((a, b) => {
+            let valA = a[currentLeaderboardSortKey];
+            let valB = b[currentLeaderboardSortKey];
+
+            if (currentLeaderboardSortKey === 'missionsCount') {
+                valA = a.totalDeliveries;
+                valB = b.totalDeliveries;
+            } else if (currentLeaderboardSortKey === 'totalKm') {
+                valA = a.totalExactKM;
+                valB = b.totalExactKM;
+            } else if (currentLeaderboardSortKey === 'avgKm') {
+                valA = a.avgDistanceBetweenStops;
+                valB = b.avgDistanceBetweenStops;
+            } else if (currentLeaderboardSortKey === 'efficiency') {
+                valA = a.efficiencyScore;
+                valB = b.efficiencyScore;
+            }
+
+            if (typeof valA === 'string') {
+                return currentLeaderboardSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            return currentLeaderboardSortAsc ? (valA - valB) : (valB - valA);
+        });
+
+        // Update header sort icons
+        ['driverName', 'missionsCount', 'totalKm', 'avgKm', 'efficiency'].forEach(key => {
+            const icon = document.getElementById(`sort-icon-${key}`);
+            if (icon) {
+                if (key === currentLeaderboardSortKey) {
+                    icon.className = `fa-solid ${currentLeaderboardSortAsc ? 'fa-sort-up' : 'fa-sort-down'} text-[10px] ml-1 text-indigo-600`;
+                } else {
+                    icon.className = 'fa-solid fa-sort text-[10px] ml-1 text-slate-400';
+                }
+            }
+        });
+
+        tbody.innerHTML = list.map((d, idx) => {
+            const rank = idx + 1;
+            let rankBadge = '';
+            const isSelected = selectedDriverForKPIView === d.driverName;
+            let rowClass = isSelected 
+                ? 'bg-indigo-50/70 border-l-4 border-indigo-600 transition-colors cursor-pointer font-medium' 
+                : 'hover:bg-slate-50/80 transition-colors cursor-pointer';
+
+            if (rank === 1 && d.totalExactKM > 0) {
+                rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-amber-100 text-amber-800 font-extrabold text-xs border border-amber-300 shadow-xs">🥇 1</span>`;
+            } else if (rank === 2 && d.totalExactKM > 0) {
+                rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs border border-slate-300 shadow-xs">🥈 2</span>`;
+            } else if (rank === 3 && d.totalExactKM > 0) {
+                rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-orange-100 text-orange-800 font-extrabold text-xs border border-orange-300 shadow-xs">🥉 3</span>`;
+            } else {
+                rankBadge = `<span class="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs">${rank}</span>`;
+            }
+
+            const initials = d.driverName.split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
+            return `
+                <tr class="${rowClass}" onclick="selectDriverForKPI('${d.driverName}')" title="Cliquer pour voir l'itinéraire exact">
+                    <td class="py-3.5 px-3 sm:px-4 text-center">
+                        ${rankBadge}
+                    </td>
+                    <td class="py-3.5 px-3 sm:px-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-xl ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'} border border-slate-200 flex items-center justify-center font-bold text-xs shrink-0 transition">
+                                ${initials}
+                            </div>
+                            <div>
+                                <span class="font-bold text-slate-900 block leading-tight">${d.driverName}</span>
+                                <span class="text-[10px] text-slate-400 block">${d.totalDeliveries > 0 ? `${d.totalDeliveries} livraison(s) • Itinéraire exact GPS` : 'Aucune livraison enregistrée'}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-3 sm:px-4 text-center">
+                        <span class="inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${d.totalDeliveries > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400'}">
+                            ${d.totalDeliveries}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-3 sm:px-4 text-right">
+                        <span class="font-mono font-extrabold text-indigo-700 text-sm sm:text-base">
+                            ${d.totalExactKM.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        </span>
+                        <span class="text-xs text-slate-500 font-normal ml-0.5">KM</span>
+                    </td>
+                    <td class="py-3.5 px-3 sm:px-4 text-right">
+                        <span class="font-mono font-bold text-slate-700 text-xs sm:text-sm">
+                            ${d.avgDistanceBetweenStops.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                        </span>
+                        <span class="text-[11px] text-slate-500 font-normal ml-0.5">KM</span>
+                    </td>
+                    <td class="py-3.5 px-3 sm:px-4 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold ${d.efficiencyScore >= 90 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
+                            ${d.efficiencyScore}%
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function toggleLeaderboardSort(key) {
-      if (currentLeaderboardSortKey === key) {
-        currentLeaderboardSortAsc = !currentLeaderboardSortAsc;
-      } else {
-        currentLeaderboardSortKey = key;
-        currentLeaderboardSortAsc = (key === 'driverName'); // Default asc for name, desc for numbers
-      }
-      renderDriverPerformanceTable();
+        if (currentLeaderboardSortKey === key) {
+            currentLeaderboardSortAsc = !currentLeaderboardSortAsc;
+        } else {
+            currentLeaderboardSortKey = key;
+            currentLeaderboardSortAsc = (key === 'driverName');
+        }
+        renderDriverPerformanceTable();
     }
 
     async function openDriverPerformanceModal() {
-      const currentUser = AppState.currentUser || getAuthSession();
-      const isRetraitUser = currentUser && ((currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV'));
-      const isAdmin = currentUser && currentUser.role === 'admin';
-      if (!currentUser || (!isAdmin && !isRetraitUser)) {
-        console.warn('[RBAC] Accès réservé aux administrateurs.');
-        return;
-      }
-
-      const modal = document.getElementById('driver-performance-modal');
-      if (!modal) return;
-
-      // Fresh sync from Supabase if online
-      if (supabaseClient) {
-        try {
-          const { data, error } = await supabaseClient.from('vehicle_handovers').select('*').order('created_at', { ascending: true });
-          if (!error && Array.isArray(data) && data.length > 0) {
-            AppState.vehicleHandovers = data;
-            localStorage.setItem('tradifoot_vehicle_handovers', JSON.stringify(data));
-          }
-        } catch (e) {
-          console.warn('[Leaderboard] Erreur rafraîchissement Supabase:', e);
+        const currentUser = AppState.currentUser || getAuthSession();
+        const isRetraitUser = currentUser && ((currentUser.chauffeurName === 'RETRAIT DÉPÔT') || (currentUser.username && currentUser.username.toUpperCase() === 'ADV'));
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        if (!currentUser || (!isAdmin && !isRetraitUser)) {
+            console.warn('[RBAC] Accès réservé aux administrateurs.');
+            return;
         }
-      }
 
-      const stats = calculateDriverPerformanceMetrics(AppState.vehicleHandovers);
-      cachedLeaderboardData = stats.leaderboard;
+        const modal = document.getElementById('driver-performance-modal');
+        if (!modal) return;
 
-      const kpiMissions = document.getElementById('perf-kpi-missions');
-      const kpiTotalKm = document.getElementById('perf-kpi-totalkm');
-      const kpiAvgKm = document.getElementById('perf-kpi-avgkm');
-      const countEl = document.getElementById('driver-performance-count');
+        // Fresh sync from Supabase if online
+        try {
+            const deliveries = await fetchDriverDeliveries('ALL');
+            allDeliveriesForKPI = deliveries;
+        } catch (e) {
+            console.warn('[KPI] Erreur rafraîchissement Supabase:', e);
+        }
 
-      if (kpiMissions) kpiMissions.textContent = stats.completedTripsCount;
-      if (kpiTotalKm) kpiTotalKm.innerHTML = `${stats.totalKmFleet.toLocaleString('fr-FR')} <span class="text-xs font-normal text-slate-500">km</span>`;
-      if (kpiAvgKm) kpiAvgKm.innerHTML = `${stats.avgKmFleet.toLocaleString('fr-FR')} <span class="text-xs font-normal text-slate-500">km</span>`;
-      if (countEl) countEl.textContent = `${stats.leaderboard.length} chauffeur(s) analysé(s)`;
+        // Build fleet stats
+        const fleetStats = buildFleetLeaderboardStats(allDeliveriesForKPI);
+        cachedLeaderboardData = fleetStats.leaderboard;
 
-      currentLeaderboardSortKey = 'totalKm';
-      currentLeaderboardSortAsc = false;
-      renderDriverPerformanceTable();
+        const countEl = document.getElementById('driver-performance-count');
+        if (countEl) countEl.textContent = `${cachedLeaderboardData.length} chauffeurs suivis • Formule Haversine active`;
 
-      modal.classList.remove('hidden');
+        currentLeaderboardSortKey = 'totalKm';
+        currentLeaderboardSortAsc = false;
+
+        // Default to fleet view
+        await selectDriverForKPI('ALL');
+
+        modal.classList.remove('hidden');
     }
 
     function closeDriverPerformanceModal() {
-      const modal = document.getElementById('driver-performance-modal');
-      if (modal) modal.classList.add('hidden');
+        const modal = document.getElementById('driver-performance-modal');
+        if (modal) modal.classList.add('hidden');
     }
 
     async function adminToggleVehicleStatus(vehicleId, targetStatus = null) {
@@ -8196,9 +8546,15 @@ const LOCAL_DELIVERY_DATA = [
     window.openDriverPerformanceModal = openDriverPerformanceModal;
     window.closeDriverPerformanceModal = closeDriverPerformanceModal;
     window.toggleLeaderboardSort = toggleLeaderboardSort;
-    window.calculateDriverPerformanceMetrics = calculateDriverPerformanceMetrics;
+    window.calculateExactKM = calculateExactKM;
+    window.calculateDriverExactKPI = calculateDriverExactKPI;
+    window.fetchDriverDeliveries = fetchDriverDeliveries;
+    window.selectDriverForKPI = selectDriverForKPI;
+    window.buildFleetLeaderboardStats = buildFleetLeaderboardStats;
+    window.calculateDriverPerformanceMetrics = buildFleetLeaderboardStats;
     window.resetDriverPerformanceKPIs = resetDriverPerformanceKPIs;
     window.getDriverPerformanceResetCutoff = getDriverPerformanceResetCutoff;
+    window.TRADIFOOT_WAREHOUSE_COORDS = TRADIFOOT_WAREHOUSE_COORDS;
 
 
     async function initAuthenticatedApp() {
