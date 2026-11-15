@@ -6970,9 +6970,6 @@ const LOCAL_DELIVERY_DATA = [
         const isMyTruck = isEnTournee && Boolean(currentChauffeur) && isSameDriver(v.current_driver, currentChauffeur);
 
         // 1. Status Badge & Driver Tag Logic
-        const isMaintenance = normStatus === 'maintenance';
-        const isEnTournee = normStatus === 'en_tournee';
-        const isDisponible = normStatus === 'disponible';
         const currentDriverName = String(v.current_driver || '').trim();
 
         // Fuel level percentage
