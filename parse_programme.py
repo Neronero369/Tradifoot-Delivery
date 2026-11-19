@@ -77,27 +77,36 @@ def build_delivery_key(date_str, store_str, quantite, occurrence=None):
 def normalize_date_to_iso(val, fallback=""):
     """
     Converts date representations (datetime, date, DD/MM/YYYY, etc.) to YYYY-MM-DD.
+    Automatically guards against two-digit year parsing errors (e.g. 2016 -> 2026).
     """
+    res = ""
     if isinstance(val, (datetime, date)):
-        return val.strftime("%Y-%m-%d")
-    s = str(val or "").strip()
-    if not s:
-        return fallback or datetime.today().strftime("%Y-%m-%d")
+        if hasattr(val, "year") and val.year == 2016:
+            val = val.replace(year=2026)
+        res = val.strftime("%Y-%m-%d")
+    else:
+        s = str(val or "").strip()
+        if not s:
+            res = fallback or datetime.today().strftime("%Y-%m-%d")
+        else:
+            # Priority 1: Standard date formats
+            for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%Y-%m-%d", "%Y/%m/%d"):
+                try:
+                    res = datetime.strptime(s[:10], fmt).strftime("%Y-%m-%d")
+                    break
+                except ValueError:
+                    pass
 
-    # Priority 1: Standard date formats
-    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%Y-%m-%d", "%Y/%m/%d"):
-        try:
-            return datetime.strptime(s[:10], fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            pass
+            if not res:
+                # Priority 2: ISO formatted timestamps
+                try:
+                    res = datetime.fromisoformat(s[:19]).strftime("%Y-%m-%d")
+                except Exception:
+                    res = s[:10]
 
-    # Priority 2: ISO formatted timestamps
-    try:
-        return datetime.fromisoformat(s[:19]).strftime("%Y-%m-%d")
-    except Exception:
-        pass
-
-    return s[:10]
+    if res and res.startswith("2016-"):
+        res = "2026-" + res[5:]
+    return res
 
 
 def fetch_existing_delivery_ids(supabase_url=None, api_key=None):
@@ -323,7 +332,9 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
                 chauffeur = "RETRAIT DÉPÔT"
             else:
                 chauffeur = driver_name.upper() if driver_name else ""
-                if chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
+                if chauffeur in ("AUTER", "AUTRE", "AUTRES"):
+                    chauffeur = "Autre"
+                elif chauffeur in ("NONE", "NULL", "-", "/", "NON SPÉCIFIÉ", "NON SPECIFIE", "NON ASSIGNÉ", "NON ASSIGNE", "SANS CHAUFFEUR"):
                     chauffeur = ""
 
             # Column 4: Livraison -> date (DD/MM/YYYY to YYYY-MM-DD)
@@ -358,6 +369,8 @@ def parse_delivery_excel(file_path, skip_existing=True, existing_ids=None):
                             mat_val = cand_s
 
             materiel = mat_val if mat_val and mat_val.lower() != 'nan' and mat_val.lower() not in ("none", "null", "-", "/") else None
+            if materiel and materiel.upper() in ("AUTER", "AUTRE", "AUTRES"):
+                materiel = "Autre"
 
             # Column 6: Wilaya -> destination province (case-sensitive check and fallbacks)
             raw_wilaya = ""

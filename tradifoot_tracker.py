@@ -216,7 +216,11 @@ def extract_routes_from_programs(programs, index_path=None):
 
         for d in p.get("destinations", []):
             raw_deliv_date = str(d.get("delivery_date") or "").strip()
+            if raw_deliv_date.startswith("2016-"):
+                raw_deliv_date = "2026-" + raw_deliv_date[5:]
             deliv_date = raw_deliv_date if re.match(r'^\d{4}-\d{2}-\d{2}$', raw_deliv_date) else fallback_date
+            if deliv_date.startswith("2016-"):
+                deliv_date = "2026-" + deliv_date[5:]
 
             qty = d.get("quantity", 0)
             store_clean = (d.get("store") or "").strip().upper()
@@ -226,8 +230,12 @@ def extract_routes_from_programs(programs, index_path=None):
             driver = re.sub(r"\s+", " ", d.get("driver") or "Non spécifié").strip().upper()
             if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
                 continue
+            if driver in ("AUTER", "AUTRE", "AUTRES"):
+                driver = "Autre"
             vehicle = d.get("vehicle") or "Camion Porteur"
-            if not vehicle or vehicle == "/":
+            if vehicle.upper() in ("AUTER", "AUTRE", "AUTRES"):
+                vehicle = "Autre"
+            elif not vehicle or vehicle == "/":
                 vehicle = "Camion Porteur"
 
             store_name = re.sub(r'[^A-Z0-9]', '', store_clean.upper())
@@ -505,6 +513,10 @@ def parse_delivery_file(fpath):
             if "bahlouli adel" in driver.lower() or "bahlouli" in driver.lower():
                 continue
             vehicle = str(r[col_vehicle]).strip().upper() if col_vehicle is not None and r[col_vehicle] else ''
+            if vehicle in ('AUTER', 'AUTRE', 'AUTRES'):
+                vehicle = 'Autre'
+            if driver in ('AUTER', 'AUTRE', 'AUTRES'):
+                driver = 'Autre'
             if driver and 'TOTAL' not in driver:
                 drivers_in_prog.add(driver)
             if vehicle and 'TOTAL' not in vehicle:
@@ -514,9 +526,13 @@ def parse_delivery_file(fpath):
             if col_deliv_date is not None and r[col_deliv_date]:
                 v_date = r[col_deliv_date]
                 if isinstance(v_date, (datetime.datetime, datetime.date)):
+                    if hasattr(v_date, 'year') and v_date.year == 2016:
+                        v_date = v_date.replace(year=2026)
                     deliv_date_str = v_date.strftime("%Y-%m-%d")
                 else:
                     deliv_date_str = str(v_date)[:10]
+                    if deliv_date_str.startswith("2016-"):
+                        deliv_date_str = "2026-" + deliv_date_str[5:]
 
             destinations.append({
                 "store": store_name,
