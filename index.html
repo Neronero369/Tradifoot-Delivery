@@ -213,7 +213,10 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-[#f8fafc] text-slate-800 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden">
+<body class="min-h-screen flex flex-col bg-[#f4f7fb] text-slate-900 font-sans antialiased tracking-tight selection:bg-blue-600 selection:text-white overflow-x-hidden">
+
+  <!-- Ambient Background Decorator Layer -->
+  <div class="fixed inset-0 -z-10 pointer-events-none bg-[#f4f7fb]" style="background-image: radial-gradient(at 0% 0%, rgba(11, 31, 63, 0.04) 0px, transparent 45%), radial-gradient(at 100% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 45%), radial-gradient(at 50% 100%, rgba(203, 213, 225, 0.25) 0px, transparent 100%);"></div>
 
   <!-- SVG GRADIENTS FOR ICONS & PROGRESS -->
   <svg class="sr-only" width="0" height="0">
@@ -284,8 +287,8 @@
   <div id="main-app" class="hidden flex flex-col min-h-screen transition-all duration-300">
 
     <!-- TOP NAVIGATION HEADER (Authoritative Tradifoot Deep Navy Tone) -->
-    <header class="bg-[#0E2340] text-white border-b border-[#1B417E]/40 sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3 shadow-md shadow-slate-900/15 shrink-0">
-      <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+    <header class="bg-[#0E2340]/95 backdrop-blur-xl text-white border-b border-[#1B417E]/40 sticky top-0 z-20 px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 shadow-md shadow-slate-900/15 shrink-0">
+      <div class="w-full max-w-[1440px] mx-auto flex items-center justify-between gap-3">
         
         <!-- Brand & Identity -->
         <div class="flex items-center space-x-3 min-w-0">
@@ -337,10 +340,10 @@
     </header>
 
     <!-- RESPONSIVE WORKSPACE -->
-    <main id="manifest-view" class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all duration-300">
+    <main id="manifest-view" class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 lg:py-6 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start transition-all duration-300">
 
       <!-- LEFT PANEL: THE INTERACTIVE CALENDAR -->
-      <section id="calendar-section" class="lg:col-span-5 xl:col-span-5 flex flex-col glass-panel rounded-2xl md:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-fluent transition-all duration-300">
+      <section id="calendar-section" class="lg:col-span-5 xl:col-span-4 flex flex-col glass-panel rounded-2xl md:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-fluent transition-all duration-300">
         
         <!-- Calendar Controls Header -->
         <div class="flex items-center justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-slate-200/80">
@@ -365,14 +368,14 @@
             </div>
             <div>
               <span class="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Total Mois</span>
-              <span id="month-total-deliveries" class="font-bold text-slate-900 text-sm">0</span>
+              <span id="month-total-deliveries" class="font-bold text-slate-900 text-sm tabular-nums">0</span>
               <span class="text-slate-600 font-medium">expéditions</span>
             </div>
           </div>
           <div class="text-right">
             <span class="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Volume Prévu</span>
             <div class="inline-flex items-center justify-end">
-              <span id="month-total-units" class="font-extrabold text-[#1B417E] text-sm font-mono">0</span>
+              <span id="month-total-units" class="font-extrabold text-[#1B417E] text-sm font-mono tabular-nums">0</span>
               <span class="inline-flex items-center text-slate-500 ml-1" title="Paires"><svg class="w-3.5 h-3.5 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h5.43a1 1 0 0 1 .86.5l1.06 1.82a3 3 0 0 0 1.9 1.4l4.68 1.12A4 4 0 0 1 21 16.73v2.27a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1"/><path d="m14 13 1-2M8 18v-1a4 4 0 0 0-4-4H3M10 12l1.5-3"/></svg></span>
             </div>
           </div>
@@ -400,23 +403,25 @@
       </section>
 
       <!-- RIGHT PANEL: DAILY MANIFEST & ROUTE ACTIONS -->
-      <section id="manifest-section" class="lg:col-span-7 xl:col-span-7 flex flex-col glass-panel rounded-2xl md:rounded-3xl overflow-hidden shadow-fluent transition-all duration-300">
+      <section id="manifest-section" class="lg:col-span-7 xl:col-span-8 flex flex-col glass-panel rounded-2xl md:rounded-3xl overflow-visible shadow-fluent transition-all duration-300">
         
-        <!-- Manifest Header & Horizon Progress -->
-        <div class="p-3.5 sm:p-5 border-b border-slate-200/80 space-y-3.5 bg-slate-50/50">
+        <!-- Manifest Header Controls & Filters -->
+        <div class="p-4 sm:p-5 lg:p-6 border-b border-slate-200/80 space-y-4 bg-slate-50/50">
           
+          <!-- Date Title & Progress Ring Header Row -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-2">
-                <h3 id="manifest-date-title" class="text-base sm:text-lg font-bold text-slate-900 capitalize tracking-tight">Programme du Jour</h3>
-                <span id="manifest-count-badge" class="px-2.5 py-0.5 rounded-full bg-[#EBF3FA] text-[#1B417E] border border-[#3076BB]/30 text-xs font-bold font-mono">0</span>
+                <h3 id="manifest-date-title" class="text-base sm:text-lg lg:text-xl font-extrabold text-slate-900 tracking-tight">--</h3>
+                <span id="manifest-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EBF3FA] text-[#1B417E] border border-[#3076BB]/30 tabular-nums">0</span>
               </div>
+              <p class="text-xs text-slate-500 font-medium mt-0.5">Expéditions et tournées planifiées</p>
             </div>
 
-            <!-- SVG Circular Completion Ring -->
-            <div class="flex items-center space-x-3 bg-white px-3 py-2 rounded-2xl border border-slate-200/80 shadow-2xs self-start sm:self-auto">
-              <div class="relative w-10 h-10 flex items-center justify-center">
-                <svg class="w-10 h-10 -rotate-90 transform" viewBox="0 0 36 36">
+            <!-- Sleek Circular Progress Ring -->
+            <div class="flex items-center space-x-3 bg-white/90 p-2 sm:px-3 sm:py-2 rounded-2xl border border-slate-200/80 shadow-2xs shrink-0 self-start sm:self-auto">
+              <div class="relative w-9 h-9 flex items-center justify-center shrink-0">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <path class="text-slate-200" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                   <path id="progress-circle" stroke-dasharray="100, 100" stroke-dashoffset="100" stroke="url(#tradifoot-progress-grad)" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
@@ -426,31 +431,31 @@
               </div>
               <div>
                 <div class="flex items-baseline space-x-1">
-                  <span id="progress-percent" class="text-sm font-bold text-slate-900 font-mono">0%</span>
+                  <span id="progress-percent" class="text-sm font-bold text-slate-900 font-mono tabular-nums">0%</span>
                   <span class="text-[10px] text-slate-400 font-medium">réalisé</span>
                 </div>
-                <p id="progress-text" class="text-[11px] text-slate-500 font-semibold">0 / 0 livraisons</p>
+                <p id="progress-text" class="text-[11px] text-slate-500 font-semibold tabular-nums">0 / 0 livraisons</p>
               </div>
             </div>
           </div>
 
-          <!-- ADMIN TOOLBAR & FILTERS -->
-          <div id="admin-toolbar" class="hidden pt-3 border-t border-slate-200/80">
+          <!-- ADMIN TOOLBAR (KPI Cards) -->
+          <div id="admin-toolbar" class="hidden">
             <!-- 1. KPI Cards (Strict Single Line, Micro-Gradients & Icons) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3.5 mb-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-5">
               
               <!-- Card 1: Volume Jour -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-2.5 md:p-3.5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3.5 lg:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-blue-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
                 <div class="flex items-center justify-between gap-2 min-w-0">
                   <div class="min-w-0 flex-1">
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight whitespace-nowrap truncate block">Volume Jour</span>
-                    <span id="admin-kpi-packages" class="text-base md:text-lg font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-0.5 font-mono inline-flex items-center">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Volume Jour</span>
+                    <span id="admin-kpi-packages" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono tabular-nums inline-flex items-center">
                       0
                     </span>
                   </div>
-                  <div class="p-1.5 md:p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shrink-0">
-                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 lg:p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shrink-0">
+                    <svg class="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
                       <path d="m3.3 7 8.7 5 8.7-5"/>
                       <path d="M12 22V12"/>
@@ -460,17 +465,17 @@
               </div>
 
               <!-- Card 2: Effectuées -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-2.5 md:p-3.5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3.5 lg:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-emerald-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
                 <div class="flex items-center justify-between gap-2 min-w-0">
                   <div class="min-w-0 flex-1">
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight whitespace-nowrap truncate block">Effectuées</span>
-                    <span id="admin-kpi-delivered" class="text-base md:text-lg font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-0.5 font-mono block">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Effectuées</span>
+                    <span id="admin-kpi-delivered" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono tabular-nums block">
                       0 / 0
                     </span>
                   </div>
-                  <div class="p-1.5 md:p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/60 shrink-0">
-                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 lg:p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/60 shrink-0">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                       <path d="m9 11 3 3L22 4"/>
                     </svg>
@@ -479,17 +484,17 @@
               </div>
 
               <!-- Card 3: Litiges / Écarts -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-2.5 md:p-3.5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3.5 lg:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-amber-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
                 <div class="flex items-center justify-between gap-2 min-w-0">
                   <div class="min-w-0 flex-1">
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight whitespace-nowrap truncate block">Litiges / Écarts</span>
-                    <span id="admin-kpi-discrepancies" class="text-base md:text-lg font-extrabold tracking-tight text-amber-600 whitespace-nowrap truncate mt-0.5 font-mono block">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Litiges / Écarts</span>
+                    <span id="admin-kpi-discrepancies" class="text-lg md:text-xl font-extrabold tracking-tight text-amber-600 whitespace-nowrap truncate mt-1 font-mono tabular-nums block">
                       0
                     </span>
                   </div>
-                  <div class="p-1.5 md:p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100/60 shrink-0">
-                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 lg:p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100/60 shrink-0">
+                    <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
                       <path d="M12 9v4"/>
                       <path d="M12 17h.01"/>
@@ -499,17 +504,17 @@
               </div>
 
               <!-- Card 4: Taux Succès -->
-              <div class="bg-white border border-slate-100 rounded-2xl p-2.5 md:p-3.5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
+              <div class="bg-white border border-slate-100 rounded-2xl p-3.5 lg:p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] relative overflow-hidden group hover:shadow-md transition-all min-w-0">
                 <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-purple-50/40 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform"></div>
                 <div class="flex items-center justify-between gap-2 min-w-0">
                   <div class="min-w-0 flex-1">
-                    <span class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight whitespace-nowrap truncate block">Taux Succès</span>
-                    <span id="admin-kpi-rate" class="text-base md:text-lg font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-0.5 font-mono block">
+                    <span class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap truncate block">Taux Succès</span>
+                    <span id="admin-kpi-rate" class="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 whitespace-nowrap truncate mt-1 font-mono tabular-nums block">
                       0%
                     </span>
                   </div>
-                  <div class="p-1.5 md:p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100/60 shrink-0">
-                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <div class="p-2 lg:p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100/60 shrink-0">
+                    <svg class="w-4 h-4 text-purple-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="19" x2="5" y1="5" y2="19"/>
                       <circle cx="6.5" cy="6.5" r="2.5"/>
                       <circle cx="17.5" cy="17.5" r="2.5"/>
@@ -519,74 +524,68 @@
               </div>
 
             </div>
+          </div>
 
-            <!-- 2. The Unified "Action Bar" (Search & Dropdowns) -->
-            <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-xl border border-slate-200/60 p-2 rounded-2xl shadow-sm mb-6 min-w-0 w-full">
-              
-              <!-- Search Bar (Left) -->
-              <div class="w-full md:flex-1 min-w-0 flex items-center bg-slate-50 rounded-xl px-3 md:px-4 py-2 md:py-2.5 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
-                <svg class="w-4 h-4 text-slate-400 shrink-0 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- THE UNIFIED ACTION BAR (Search + Filters + Segmented Tabs) -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white/90 backdrop-blur-xl border border-slate-200/70 p-2.5 rounded-2xl shadow-sm min-w-0 w-full">
+            
+            <!-- Left cluster (Search + Dropdowns) -->
+            <div id="admin-search-filters" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 min-w-0">
+              <!-- Search input wrapper -->
+              <div class="flex-1 min-w-[220px] flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-xl px-3.5 py-2 focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400 transition-all">
+                <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"/>
                   <path d="m21 21-4.3-4.3"/>
                 </svg>
-                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Rechercher un magasin, chauffeur..." class="text-xs md:text-sm w-full bg-transparent outline-none placeholder-slate-400 whitespace-nowrap truncate border-none p-0 focus:ring-0">
+                <input type="text" id="admin-filter-store" oninput="handleAdminFilterChange()" placeholder="Rechercher un magasin, chauffeur..." class="text-xs lg:text-sm w-full bg-transparent outline-none placeholder-slate-400 whitespace-nowrap truncate border-none p-0 focus:ring-0">
               </div>
 
-              <!-- Dropdowns (Right) -->
-              <div class="flex items-center gap-2 w-full md:w-auto shrink-0 min-w-0">
+              <!-- Select pills (Chauffeurs / Boutiques) -->
+              <div id="admin-dropdown-pills" class="flex items-center gap-2 shrink-0">
                 <!-- Chauffeurs Dropdown Pill -->
-                <div class="relative flex-1 md:flex-initial min-w-0 max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 transition-colors flex items-center">
-                  <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="text-xs md:text-sm font-medium text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-full whitespace-nowrap truncate pr-7 appearance-none outline-none">
-                    <option value="ALL">Tous les Chauffeurs</option>
+                <div class="relative min-w-[170px] max-w-[220px]">
+                  <select id="admin-filter-chauffeur" onchange="handleAdminFilterChange()" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-xl px-3 py-2 text-xs lg:text-sm font-medium text-slate-700 truncate cursor-pointer focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all">
+                    <option value="ALL">Tous les chauffeurs</option>
+                    <option value="UNASSIGNED">Non assigné</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"/>
-                    </svg>
-                  </div>
                 </div>
 
                 <!-- Boutiques Dropdown Pill -->
-                <div class="relative flex-1 md:flex-initial min-w-0 max-w-full md:max-w-[190px] bg-slate-100/50 hover:bg-slate-100 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 transition-colors flex items-center">
-                  <select id="admin-filter-boutique" onchange="handleAdminFilterChange()" class="text-xs md:text-sm font-medium text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-full whitespace-nowrap truncate pr-7 appearance-none outline-none">
-                    <option value="ALL">Toutes les Boutiques</option>
+                <div class="relative min-w-[170px] max-w-[220px]">
+                  <select id="admin-filter-boutique" onchange="handleAdminFilterChange()" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200/60 rounded-xl px-3 py-2 text-xs lg:text-sm font-medium text-slate-700 truncate cursor-pointer focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all">
+                    <option value="ALL">Toutes les boutiques</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m6 9 6 6 6-6"/>
-                    </svg>
-                  </div>
                 </div>
               </div>
-
             </div>
-          </div>
 
-          <!-- 3. iOS Segmented Control (Non Livré / Livré) -->
-          <div class="inline-flex w-full md:w-auto bg-slate-100/80 backdrop-blur-md p-1 rounded-[1.25rem] shadow-inner mb-6 mx-auto md:mx-0 min-w-0">
-            <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all bg-white font-bold text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] cursor-default min-h-[40px]">
-              <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span class="whitespace-nowrap">Non Livré</span> (<span id="count-pending">0</span>)
-            </button>
-            <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 md:px-4 rounded-xl text-xs md:text-sm whitespace-nowrap truncate min-w-0 transition-all font-semibold text-slate-500 hover:text-slate-700 cursor-pointer min-h-[40px]">
-              <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
-              </svg>
-              <span class="whitespace-nowrap">Livré</span> (<span id="count-delivered">0</span>)
-            </button>
-            <span id="filter-all" class="hidden"></span>
-            <span id="count-all" class="hidden">0</span>
-            <span id="count-transit" class="hidden">0</span>
-            <span id="count-scheduled" class="hidden">0</span>
+            <!-- Right cluster (iOS Segmented Control for Non Livré / Livré) -->
+            <div class="inline-flex shrink-0 bg-slate-100/90 p-1 rounded-xl border border-slate-200/50">
+              <button onclick="setManifestFilter('PENDING')" id="filter-pending" class="flex items-center justify-center gap-1.5 py-2 px-3 lg:px-4 rounded-xl text-xs lg:text-sm whitespace-nowrap truncate min-w-0 transition-all bg-white font-bold text-blue-600 shadow-[0_3px_8px_rgba(0,0,0,0.08)] cursor-default min-h-[38px]">
+                <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span class="whitespace-nowrap">Non Livré</span> (<span id="count-pending" class="tabular-nums">0</span>)
+              </button>
+              <button onclick="setManifestFilter('Delivered')" id="filter-delivered" class="flex items-center justify-center gap-1.5 py-2 px-3 lg:px-4 rounded-xl text-xs lg:text-sm whitespace-nowrap truncate min-w-0 transition-all font-semibold text-slate-500 hover:text-slate-700 cursor-pointer min-h-[38px]">
+                <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/>
+                </svg>
+                <span class="whitespace-nowrap">Livré</span> (<span id="count-delivered" class="tabular-nums">0</span>)
+              </button>
+              <span id="filter-all" class="hidden"></span>
+              <span id="count-all" class="hidden">0</span>
+              <span id="count-transit" class="hidden">0</span>
+              <span id="count-scheduled" class="hidden">0</span>
+            </div>
+
           </div>
 
         </div>
 
-        <!-- Manifest Delivery Cards Container -->
-        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 min-h-[360px]"></div>
+        <!-- Manifest Delivery Cards Grid Container -->
+        <div id="manifest-cards-container" class="flex-1 overflow-y-auto p-4 lg:p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5 items-stretch content-start min-h-[360px]"></div>
 
         <!-- Manifest Summary Footer -->
         <div id="manifest-footer" class="p-3.5 sm:p-4 border-t border-slate-200/80 bg-white/70 shrink-0 flex items-center justify-between text-xs text-slate-500 font-medium">
@@ -604,7 +603,7 @@
     <!-- ======================================================== -->
     <!-- FLEET MANAGEMENT (PARC AUTO) WORKSPACE CONTAINER -->
     <!-- ======================================================== -->
-    <section id="fleet-view" class="hidden flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6 space-y-6 transition-all duration-300">
+    <section id="fleet-view" class="hidden flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 lg:py-6 space-y-5 transition-all duration-300">
       
       <!-- Fleet Header & Control Bar -->
       <div class="glass-panel rounded-2xl md:rounded-3xl p-4 sm:p-6 shadow-fluent flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-200/80 bg-white/80">
@@ -655,7 +654,7 @@
       </div>
 
       <!-- CSS GRID: 4 TRUCKS (grid-cols-1 lg:grid-cols-2, mobile first) -->
-      <div id="fleet-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <div id="fleet-cards-grid" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-5 items-stretch">
         <!-- Rendered dynamically by renderFleetDashboard() -->
       </div>
 
@@ -664,8 +663,8 @@
   </div>
 
   <!-- DELIVERY DETAILS MODAL -->
-  <div id="detail-modal" class="fixed inset-0 z-50 bg-[#0E2340]/70 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
-    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-lg shadow-fluent-modal overflow-hidden transform transition-all max-h-[90vh] flex flex-col bg-white">
+  <div id="detail-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="relative z-50 glass-panel border border-slate-200 rounded-3xl w-full max-w-lg shadow-fluent-modal overflow-hidden transform transition-all max-h-[90vh] flex flex-col bg-white">
       <div class="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
         <div class="flex items-center space-x-3">
           <div class="p-2.5 rounded-2xl bg-[#EBF3FA] text-[#3076BB] border border-[#3076BB]/30">
@@ -690,8 +689,8 @@
   </div>
 
   <!-- PROOF OF DELIVERY (PoD) & DISCREPANCY / RETURN MODAL -->
-  <div id="pod-camera-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
-    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+  <div id="pod-camera-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="relative z-50 glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       <!-- Modal Header -->
       <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60 shrink-0">
         <div class="flex items-center space-x-3">
@@ -936,7 +935,7 @@
   </div>
 
   <!-- FULLSCREEN PHOTO VIEWER MODAL -->
-  <div id="pod-image-viewer-modal" class="fixed inset-0 z-50 bg-[#0E2340]/85 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-300" onclick="closePhotoViewer()">
+  <div id="pod-image-viewer-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6 transition-all duration-300" onclick="closePhotoViewer()">
     <div class="relative max-w-3xl max-h-[92vh] w-full flex flex-col items-center justify-center" onclick="event.stopPropagation()">
       <div class="w-full flex items-center justify-between pb-3 text-white">
         <span class="text-xs font-bold flex items-center gap-2" id="pod-viewer-title">
@@ -964,7 +963,7 @@
   <!-- ======================================================== -->
   <!-- MODAL: PHYSICAL QR CODE SCANNER CHECK-IN -->
   <!-- ======================================================== -->
-  <div id="qr-scanner-modal" class="fixed inset-0 z-50 bg-[#0E2340]/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+  <div id="qr-scanner-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
     <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-md shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col">
       
       <!-- Modal Header -->
@@ -1028,7 +1027,7 @@
   <!-- ======================================================== -->
   <!-- MODAL: DRIVER VEHICLE HANDOVER (PRISE DE VÉHICULE & INSPECTION) -->
   <!-- ======================================================== -->
-  <div id="handover-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+  <div id="handover-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
     <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       
       <!-- Modal Header -->
@@ -1239,7 +1238,7 @@
   <!-- ======================================================== -->
   <!-- MODAL: VEHICLE HANDOVER HISTORY (HISTORIQUE DES PASSATIONS) -->
   <!-- ======================================================== -->
-  <div id="vehicle-history-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+  <div id="vehicle-history-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
     <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       
       <!-- Modal Header -->
@@ -1277,8 +1276,8 @@
   <!-- ======================================================== -->
   <!-- DRIVER PERFORMANCE LEADERBOARD MODAL (ADMIN ONLY) -->
   <!-- ======================================================== -->
-  <div id="driver-performance-modal" class="fixed inset-0 z-50 bg-[#0E2340]/75 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
-    <div class="glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl sm:max-w-4xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
+  <div id="driver-performance-modal" class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4 transition-all duration-300">
+    <div class="relative z-50 glass-panel border border-slate-200 rounded-3xl w-full max-w-2xl sm:max-w-4xl shadow-fluent-modal overflow-hidden transform transition-all bg-white flex flex-col max-h-[92vh]">
       
       <!-- Modal Header -->
       <div class="px-5 sm:px-6 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70 shrink-0">
@@ -1330,14 +1329,14 @@
         <!-- 1. Total Deliveries (Count) -->
         <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
           <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Total Livraisons</span>
-          <span id="perf-kpi-missions" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono mt-0.5 block">0</span>
+          <span id="perf-kpi-missions" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono tabular-nums mt-0.5 block">0</span>
           <span class="text-[10px] text-slate-500 font-medium mt-0.5">Arrêts validés</span>
         </div>
 
         <!-- 2. Total Distance Driven (Exact KM) -->
         <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
           <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Distance Parcourue</span>
-          <span id="perf-kpi-totalkm" class="text-lg sm:text-2xl font-extrabold text-indigo-700 font-mono mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
+          <span id="perf-kpi-totalkm" class="text-lg sm:text-2xl font-extrabold text-indigo-700 font-mono tabular-nums mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
           <span class="text-[10px] text-indigo-600 font-bold mt-0.5 flex items-center justify-center gap-1">
             <i class="fa-solid fa-satellite-dish text-[9px]"></i> Exact Haversine
           </span>
@@ -1346,14 +1345,14 @@
         <!-- 3. Average Distance Between Stops -->
         <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
           <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Moyenne Inter-Arrêts</span>
-          <span id="perf-kpi-avgkm" class="text-lg sm:text-2xl font-extrabold text-emerald-700 font-mono mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
+          <span id="perf-kpi-avgkm" class="text-lg sm:text-2xl font-extrabold text-emerald-700 font-mono tabular-nums mt-0.5 block">0.0 <span class="text-xs font-normal text-slate-500">KM</span></span>
           <span class="text-[10px] text-slate-500 font-medium mt-0.5">Total KM / Livraisons</span>
         </div>
 
         <!-- 4. Efficiency Score -->
         <div class="p-3 bg-white rounded-2xl border border-slate-200/70 shadow-xs flex flex-col justify-between">
           <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Score d'Efficacité</span>
-          <span id="perf-kpi-efficiency" class="text-lg sm:text-2xl font-extrabold text-emerald-600 font-mono mt-0.5 block">-- <span class="text-xs font-bold text-slate-400">/ 100</span></span>
+          <span id="perf-kpi-efficiency" class="text-lg sm:text-2xl font-extrabold text-emerald-600 font-mono tabular-nums mt-0.5 block">-- <span class="text-xs font-bold text-slate-400">/ 100</span></span>
           <div class="mt-0.5 flex items-center justify-center">
             <span id="perf-kpi-efficiency-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               Optimal
@@ -1436,6 +1435,196 @@
     window.supabaseClient = supabaseClient;
 
 const LOCAL_DELIVERY_DATA = [
+  {
+    "id": "LIV-2026-11-24-SKECHERSBOUMERDES-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSBOUMERDES-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSBOUMERDES-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS BOUMERDES",
+    "destination": "SKECHERS BOUMERDES",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSROUIBA-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSROUIBA-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSROUIBA-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS ROUIBA",
+    "destination": "SKECHERS ROUIBA",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSBABEZZOUAR-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSBABEZZOUAR-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSBABEZZOUAR-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS BAB EZZOUAR",
+    "destination": "SKECHERS BAB EZZOUAR",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-FOOTLANDBIRKHADEM-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-FOOTLANDBIRKHADEM-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-FOOTLANDBIRKHADEM-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "FOOTLAND BIRKHADEM",
+    "destination": "FOOTLAND BIRKHADEM",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 30,
+    "quantity": 30,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSBIRKHADEM-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSBIRKHADEM-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSBIRKHADEM-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS BIRKHADEM",
+    "destination": "SKECHERS BIRKHADEM",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSSIDIYAHIA-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSSIDIYAHIA-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSSIDIYAHIA-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS SIDI YAHIA",
+    "destination": "SKECHERS SIDI YAHIA",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSBENMHIDI-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSBENMHIDI-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSBENMHIDI-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS BEN MHIDI",
+    "destination": "SKECHERS BEN MHIDI",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 30,
+    "quantity": 30,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSDRARIA-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSDRARIA-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSDRARIA-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS DRARIA",
+    "destination": "SKECHERS DRARIA",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-FOOTLANDSIEGE-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-FOOTLANDSIEGE-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-FOOTLANDSIEGE-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "FOOTLAND SIEGE",
+    "destination": "FOOTLAND SIEGE",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 30,
+    "quantity": 30,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
+  {
+    "id": "LIV-2026-11-24-SKECHERSGARDENCITY-BOUKHALFAADEL-1",
+    "delivery_id": "LIV-2026-11-24-SKECHERSGARDENCITY-BOUKHALFAADEL-1",
+    "delivery_key": "LIV-2026-11-24-SKECHERSGARDENCITY-BOUKHALFAADEL-1",
+    "date": "2026-11-24",
+    "magasin": "SKECHERS GARDEN CITY",
+    "destination": "SKECHERS GARDEN CITY",
+    "chauffeur": "BOUKHALFA ADEL",
+    "driver": "BOUKHALFA ADEL",
+    "matricule": "MERCEDES",
+    "vehicle": "MERCEDES",
+    "materiel": "MERCEDES",
+    "quantite": 78,
+    "quantity": 78,
+    "status": "Non Livré",
+    "completed": false,
+    "wilaya": "ALGER",
+    "Wilaya": "ALGER"
+  },
   {
     "id": "LIV-2026-11-16-FOOTLANDROUIBA-SAADIBILLEL-1",
     "delivery_id": "LIV-2026-11-16-FOOTLANDROUIBA-SAADIBILLEL-1",
@@ -3388,8 +3577,8 @@ const LOCAL_DELIVERY_DATA = [
     "materiel": "MERCEDES 1",
     "quantite": 678,
     "quantity": 678,
-    "status": "Non Livré",
-    "completed": false,
+    "status": "Livré",
+    "completed": true,
     "wilaya": "SETIF",
     "Wilaya": "SETIF"
   },
@@ -5184,6 +5373,11 @@ const LOCAL_DELIVERY_DATA = [
 
     function populateAdminChauffeurs() {
       if (!DOM.adminFilterChauffeur) return;
+      const pillsContainer = document.getElementById("admin-dropdown-pills");
+      if (pillsContainer) {
+        if (AppState.currentUser && AppState.currentUser.role === "admin") pillsContainer.classList.remove("hidden");
+        else pillsContainer.classList.add("hidden");
+      }
       const prevVal = DOM.adminFilterChauffeur.value;
 
       const authorizedChauffeurs = AUTHORIZED_ACCOUNTS
@@ -5572,12 +5766,12 @@ const LOCAL_DELIVERY_DATA = [
         const variance = isCompleted ? (recueQty - qty) : 0;
         const varianceStr = variance > 0 ? `+${variance}` : `${variance}`;
 
-        const cardClasses = `p-4 sm:p-5 rounded-2xl border transition-all duration-300 flex-shrink-0 flex flex-col justify-between ${
+        const cardClasses = `p-4 lg:p-5 rounded-2xl border transition-all duration-200 flex flex-col justify-between h-full w-full ${
           isReserve
-            ? "bg-amber-50/40 border-amber-200/90 shadow-[0_4px_20px_-4px_rgba(29,78,216,0.05)] hover:-translate-y-1 hover:shadow-[0_8px_25px_-5px_rgba(29,78,216,0.1)]"
+            ? "bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 border-amber-200/90 shadow-[0_4px_20px_-4px_rgba(217,119,6,0.08)] hover:shadow-[0_10px_28px_-6px_rgba(217,119,6,0.14)] hover:-translate-y-0.5"
             : (isCompleted 
-                ? "bg-emerald-50/40 border-emerald-200/90 shadow-[0_4px_20px_-4px_rgba(29,78,216,0.05)] hover:-translate-y-1 hover:shadow-[0_8px_25px_-5px_rgba(29,78,216,0.1)]" 
-                : "bg-gradient-to-br from-white via-white to-blue-50/60 border-blue-100/50 shadow-[0_4px_20px_-4px_rgba(29,78,216,0.05)] hover:-translate-y-1 hover:shadow-[0_8px_25px_-5px_rgba(29,78,216,0.1)]")
+                ? "bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/30 border-emerald-200/90 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.08)] hover:shadow-[0_10px_28px_-6px_rgba(16,185,129,0.14)] hover:-translate-y-0.5" 
+                : "bg-gradient-to-br from-white via-white to-blue-50/50 border-blue-100/70 shadow-[0_4px_20px_-4px_rgba(29,78,216,0.06)] hover:shadow-[0_10px_28px_-6px_rgba(29,78,216,0.12)] hover:-translate-y-0.5")
         }`;
 
         const isRetrait = isRetraitDepot(item);
@@ -5587,27 +5781,27 @@ const LOCAL_DELIVERY_DATA = [
         if (!isCompleted) {
           if (isRetrait) {
             statusBadge = `
-              <span class="inline-flex items-center gap-1.5 text-purple-800 font-bold text-xs bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs">
+              <span class="inline-flex items-center gap-1.5 text-purple-800 font-bold text-xs bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200 shadow-2xs shrink-0 whitespace-nowrap">
                 <span>📦</span> À Récupérer
               </span>
             `;
           } else {
             statusBadge = `
-              <span class="inline-flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs">
-                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Non Livré
+              <span class="inline-flex items-center gap-1.5 text-amber-800 font-bold text-xs bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs shrink-0 whitespace-nowrap">
+                <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span> Non Livré
               </span>
             `;
           }
         } else if (isReserve) {
           statusBadge = `
-            <span class="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300 shadow-2xs">
-              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-[11px]"></i> Livré avec réserve [${varianceStr}]
+            <span class="inline-flex items-center gap-1.5 text-amber-900 font-bold text-xs bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300 shadow-2xs shrink-0 whitespace-nowrap tabular-nums">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-[11px] shrink-0"></i> Livré avec réserve [${varianceStr}]
             </span>
           `;
         } else {
           statusBadge = `
-            <span class="inline-flex items-center gap-1.5 text-[#1B417E] font-bold text-xs bg-[#EBF3FA] px-2.5 py-1 rounded-full border border-[#3076BB]/40 shadow-2xs">
-              <span class="w-2 h-2 rounded-full bg-[#3076BB]"></span> ${isRetrait ? "Retiré (Dépôt)" : "Livré"}
+            <span class="inline-flex items-center gap-1.5 text-[#1B417E] font-bold text-xs bg-[#EBF3FA] px-2.5 py-1 rounded-full border border-[#3076BB]/40 shadow-2xs shrink-0 whitespace-nowrap">
+              <span class="w-2 h-2 rounded-full bg-[#3076BB] shrink-0"></span> ${isRetrait ? "Retiré (Dépôt)" : "Livré"}
             </span>
           `;
         }
@@ -5637,12 +5831,12 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         cardsHtml += `
-          <div class="swipe-card-wrapper relative overflow-hidden rounded-2xl shadow-[0_4px_20px_-4px_rgba(29,78,216,0.05)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_25px_-5px_rgba(29,78,216,0.1)] ${isSwipeable ? 'swipeable-card' : ''}" data-delivery-id="${item.id}">
+          <div class="swipe-card-wrapper h-full flex flex-col justify-between relative overflow-hidden rounded-2xl ${isSwipeable ? 'swipeable-card' : ''}" data-delivery-id="${item.id}">
             ${isSwipeable ? `
-              <!-- Static Green Reveal Layer (iOS style call / archive slider) -->
+              <!-- Static Green Reveal Layer -->
               <div class="swipe-action-bg absolute inset-0 bg-[#3076BB] rounded-2xl flex items-center justify-between px-6 text-white font-extrabold select-none z-0 pointer-events-none">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl shadow-xs">
+                  <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-white text-xl shadow-xs shrink-0">
                     <i class="fa-solid fa-check"></i>
                   </div>
                   <span class="text-sm sm:text-base font-black tracking-wider uppercase">Glisser pour livrer</span>
@@ -5654,147 +5848,142 @@ const LOCAL_DELIVERY_DATA = [
               </div>
             ` : ""}
 
-            <!-- Sliding Front Layer -->
+            <!-- Sliding Front Layer (3 Strict Architectural Zones) -->
             <div class="swipe-card-front ${cardClasses} relative z-10 w-full h-full" style="touch-action: pan-y;">
-              <div>
-                <!-- 1. Header: Date & Status Badges (Clean, No Technical ID) -->
-                <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-                  <div class="flex flex-col items-start min-w-0">
-                    ${delivDate ? `
-                      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
-                        <i class="fa-regular fa-calendar text-slate-400 text-xs shrink-0"></i>
-                        <span>${delivDate}</span>
-                      </span>
-                    ` : ""}
-                    ${formattedTime ? `
-                      <div class="text-xs text-gray-500 mt-0.5 font-medium">⏱ ${formattedTime}</div>
-                    ` : ""}
-                  </div>
-                  <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
-                    ${Boolean(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || item.recouvrement_url || item.photo_recouvrement_url) ? `
-                      <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs">
-                        💰 Recouvrement
-                      </span>
-                    ` : ""}
-                    ${item.photo_url ? `
-                      <button type="button" onclick="event.stopPropagation(); openPhotoViewer('${item.photo_url}', 'Bon de Livraison (BL)')" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#1B417E] bg-[#EBF3FA] hover:bg-[#DEECF8] px-2 py-0.5 rounded-full border border-[#3076BB]/30 transition" title="Voir le Bon de Livraison">
-                        <i class="fa-solid fa-camera text-[10px]"></i> BL
-                      </button>
-                    ` : ""}
-                    ${statusBadge}
-                  </div>
-                </div>
-
-                <!-- 2. Magasin & Wilaya (High Contrast, Large, Ultra-Readable for Drivers) -->
-                <div class="mt-3 flex justify-between items-center w-full gap-2">
-                  <h4 class="text-lg sm:text-xl font-extrabold text-slate-800 tracking-tight leading-snug break-words">
-                    ${storeName}
-                  </h4>
-                  <span class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-200 px-2 py-1 rounded-md shadow-sm shrink-0">
-                    <svg class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
-                    </svg>
-                    ${item.Wilaya || item.wilaya || 'N/A'}
-                  </span>
-                </div>
-
-                <!-- 3. Quantité & Discrepancy details -->
-                <div class="mt-3 py-2 px-3 rounded-xl ${isReserve ? 'bg-amber-50/70 border-amber-200' : 'bg-white/60 backdrop-blur-sm border border-slate-100/50'} border flex items-center justify-between">
-                  <span class="text-lg sm:text-xl font-black ${isReserve ? 'text-amber-950' : 'text-[#1B417E]'} font-mono flex items-center">
-                    ${isReserve ? `${recueQty}` : Number(qty).toLocaleString()}
-                    <span class="inline-flex items-center ${isReserve ? 'text-amber-700' : 'text-[#3076BB]'} ml-1.5" title="Paires">
-                      ${SNEAKER_ICON_LG}
+              
+              <!-- Zone 1: Top Row (Date + Status Pill) -->
+              <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100/80">
+                <div class="flex items-center gap-2 min-w-0">
+                  ${delivDate ? `
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate tabular-nums">
+                      <i class="fa-regular fa-calendar text-slate-400 text-xs shrink-0"></i>
+                      <span>${delivDate}</span>
                     </span>
-                  </span>
-                  ${isReserve ? `
-                    <span class="text-xs font-bold ${variance > 0 ? 'text-blue-800 bg-blue-100 border-blue-300' : 'text-amber-900 bg-amber-100 border-amber-300'} font-mono px-2 py-0.5 rounded-md border">
-                      ${recueQty} (Prévu: ${qty}) [${varianceStr}]
+                  ` : ""}
+                  ${formattedTime ? `
+                    <span class="inline-flex items-center gap-1 text-[11px] text-slate-400 font-medium tabular-nums">
+                      <i class="fa-regular fa-clock text-slate-400 text-[10px] shrink-0"></i>
+                      <span>${formattedTime}</span>
                     </span>
                   ` : ""}
                 </div>
+                <div class="shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
+                  ${Boolean(item.a_recouvrement === true || Number(item.montant_recouvrement) > 0 || item.recouvrement_url || item.photo_recouvrement_url) ? `
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs shrink-0">
+                      💰 Recouvrement
+                    </span>
+                  ` : ""}
+                  ${item.photo_url ? `
+                    <button type="button" onclick="event.stopPropagation(); openPhotoViewer('${item.photo_url}', 'Bon de Livraison (BL)')" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#1B417E] bg-[#EBF3FA] hover:bg-[#DEECF8] px-2.5 py-0.5 rounded-full border border-[#3076BB]/30 transition shrink-0" title="Voir le Bon de Livraison">
+                      <i class="fa-solid fa-camera text-[10px] shrink-0"></i> BL
+                    </button>
+                  ` : ""}
+                  ${statusBadge}
+                </div>
+              </div>
+
+              <!-- Zone 2: Middle Body (Store Name + Location Pill + Volume Bar) -->
+              <div class="py-3 space-y-2.5 flex-1 min-w-0 flex flex-col justify-center">
+                <!-- Store Name & Location Pill -->
+                <div class="flex items-center justify-between gap-2 w-full min-w-0">
+                  <h4 class="text-base lg:text-lg font-extrabold text-slate-800 tracking-tight leading-snug truncate min-w-0 flex-1" title="${escapeHtmlSafe(storeName)}">
+                    ${escapeHtmlSafe(storeName)}
+                  </h4>
+                  <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100/90 border border-slate-200/70 px-2.5 py-1 rounded-lg shadow-2xs shrink-0 truncate max-w-[140px]" title="${escapeHtmlSafe(item.Wilaya || item.wilaya || 'N/A')}">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="truncate">${escapeHtmlSafe(item.Wilaya || item.wilaya || 'N/A')}</span>
+                  </span>
+                </div>
+
+                <!-- Volume Bar -->
+                <div class="py-2 px-3 rounded-xl ${isReserve ? 'bg-amber-50/80 border-amber-200' : 'bg-white/80 backdrop-blur-sm border border-slate-100/80 shadow-2xs'} border flex items-center justify-between">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span class="text-base lg:text-lg font-black ${isReserve ? 'text-amber-950' : 'text-[#1B417E]'} font-mono tabular-nums">
+                      ${isReserve ? `${recueQty}` : Number(qty).toLocaleString('fr-FR')}
+                    </span>
+                    <span class="inline-flex items-center ${isReserve ? 'text-amber-700' : 'text-[#3076BB]'} shrink-0" title="Paires">
+                      ${SNEAKER_ICON_LG}
+                    </span>
+                  </div>
+                  ${isReserve ? `
+                    <span class="text-xs font-bold ${variance > 0 ? 'text-blue-800 bg-blue-100 border-blue-300' : 'text-amber-900 bg-amber-100 border-amber-300'} font-mono tabular-nums px-2 py-0.5 rounded-md border shrink-0">
+                      ${recueQty} (Prévu: ${qty}) [${varianceStr}]
+                    </span>
+                  ` : `
+                    <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Quantité</span>
+                  `}
+                </div>
 
                 ${isReserve ? `
-                  <!-- Discrepancy Warning Banner in Card Body -->
-                  <div class="mt-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-200/90 text-xs text-amber-900 space-y-1">
-                    <div class="font-bold flex items-center gap-1.5 leading-snug">
-                      <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs shrink-0"></i>
-                      <span>⚠️ Motif: ${item.motif_reserve || "Non spécifié"}${item.remarque_chauffeur ? ` — "${item.remarque_chauffeur}"` : ""}</span>
-                    </div>
+                  <!-- Discrepancy details banner -->
+                  <div class="p-2.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-center gap-1.5 min-w-0">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-xs shrink-0"></i>
+                    <span class="truncate">Motif: ${escapeHtmlSafe(item.motif_reserve || "Non spécifié")}${item.remarque_chauffeur ? ` — "${escapeHtmlSafe(item.remarque_chauffeur)}"` : ""}</span>
                   </div>
                 ` : ""}
+              </div>
 
+              <!-- Zone 3: Footer Row (Driver + Truck + Action Button) -->
+              <div class="pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3 min-w-0">
+                <!-- Driver & Vehicle Info -->
                 ${isRetrait ? `
-                  <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center gap-1.5">
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 text-[11px] font-bold border border-purple-200 shadow-2xs">
-                      <i class="fa-solid fa-warehouse text-purple-600 text-[10px]"></i> RETRAIT DÉPÔT (Client)
+                  <div class="min-w-0 flex-1">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 text-[11px] font-bold border border-purple-200/80 shadow-2xs">
+                      <i class="fa-solid fa-warehouse text-purple-600 text-[10px] shrink-0"></i>
+                      <span class="truncate">RETRAIT DÉPÔT</span>
                     </span>
                   </div>
                 ` : (!isChauffeur ? `
-                  <div class="mt-2 text-xs text-slate-700 font-medium truncate flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1.5 truncate">
-                      ${isUnassigned ? `
-                        <i class="fa-solid fa-user-tie text-[#3076BB] text-xs"></i>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">
-                          <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-600"></i> Non assigné
-                        </span>
-                      ` : `
-                        <i class="fa-solid fa-user-tie text-[#3076BB] text-xs"></i>
-                        <strong>${driverName}</strong>
-                      `}
+                  <div class="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
+                    <div class="inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold truncate">
+                      <i class="fa-solid fa-user-tie text-[#3076BB] text-xs shrink-0"></i>
+                      <span class="truncate">${escapeHtmlSafe(driverName)}</span>
                     </div>
-                    <div class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 shrink-0">
-                      <i class="fa-solid fa-truck text-slate-400 text-[10px]"></i>
-                      <span class="truncate max-w-[130px] font-mono text-[11px] text-slate-700 font-semibold">${item.materiel || 'Véhicule non spécifié'}</span>
+                    <div class="inline-flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate font-mono tabular-nums">
+                      <i class="fa-solid fa-truck text-slate-400 text-[10px] shrink-0"></i>
+                      <span class="truncate">${escapeHtmlSafe(matricule)}</span>
                     </div>
                   </div>
                 ` : `
-                  <div class="mt-2 text-xs text-slate-600 font-medium truncate flex items-center gap-1.5">
-                    <i class="fa-solid fa-truck text-slate-400 text-xs"></i>
-                    <span class="truncate font-mono text-slate-700 font-semibold">${item.materiel || 'Véhicule non spécifié'}</span>
+                  <div class="min-w-0 flex-1 inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium truncate font-mono tabular-nums">
+                    <i class="fa-solid fa-truck text-slate-400 text-xs shrink-0"></i>
+                    <span class="truncate text-slate-700 font-semibold">${escapeHtmlSafe(matricule)}</span>
                   </div>
                 `)}
 
-              </div>
-
-              <!-- 4. Massive Action Area -->
-              <div class="mt-4 pt-3 border-t border-slate-100">
-                ${isCompleted ? `
-                  <div class="w-full py-3.5 px-4 rounded-xl ${isReserve ? "bg-amber-100/90 text-amber-900 border border-amber-300" : "bg-[#EBF3FA] text-[#1B417E] border border-[#3076BB]/40"} font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 cursor-default opacity-95 select-none min-h-[50px] shadow-2xs">
-                    <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-circle-check text-[#3076BB]"} text-base"></i>
-                    <span>${isReserve ? `Livré avec réserve (${varianceStr} p.)` : (isRetrait ? "Retrait Validé ✓" : "Livré ✓")}</span>
-                  </div>
-                ` : (isRetrait ? `
-                  <button type="button" data-action="validate-retrait" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-purple-600/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[50px]" title="Valider le retrait client">
-                    <i class="fa-solid fa-box-archive text-base pointer-events-none"></i>
-                    <span>VALIDER RETRAIT</span>
-                  </button>
-                ` : (isChauffeur ? `
-                  <div class="w-full flex items-center justify-between gap-2.5">
-                    <!-- Mobile / Tablet Swipe Prompt (Prevents accidental clicks while driving) -->
-                    <div class="flex-1 py-3 px-3.5 rounded-xl bg-slate-50 border border-slate-200/90 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 select-none min-h-[48px] pointer-events-none">
-                      <i class="fa-solid fa-angles-right text-[#3076BB] text-sm animate-pulse"></i>
-                      <span class="tracking-wide text-slate-700 font-semibold">Glisser pour livrer</span>
+                <!-- Action Button & Secondary Details Button -->
+                <div class="shrink-0 flex items-center gap-1.5">
+                  ${isCompleted ? `
+                    <div class="py-2 px-3 rounded-xl ${isReserve ? "bg-amber-100/90 text-amber-900 border border-amber-300" : "bg-[#EBF3FA] text-[#1B417E] border border-[#3076BB]/40"} font-bold text-xs sm:text-sm inline-flex items-center gap-1.5 cursor-default select-none shadow-2xs whitespace-nowrap">
+                      <i class="fa-solid ${isReserve ? "fa-triangle-exclamation text-amber-600" : "fa-circle-check text-[#3076BB]"} text-xs shrink-0"></i>
+                      <span>${isReserve ? `Réserve (${varianceStr})` : (isRetrait ? "Retrait Validé" : "Livré")}</span>
                     </div>
-                    <!-- Desktop Click Fallback -->
-                    <button type="button" data-action="toggle-delivery" data-id="${item.id}" class="hidden md:inline-flex py-3 px-4 rounded-xl bg-[#3076BB] hover:bg-[#25629F] active:bg-[#1E5083] text-white font-black text-sm tracking-wide shadow-sm shadow-[#3076BB]/30 transition-all items-center justify-center gap-2 min-h-[48px] shrink-0" title="Valider la livraison">
-                      <i class="fa-solid fa-check text-base pointer-events-none"></i>
+                  ` : (isRetrait ? `
+                    <button type="button" data-action="validate-retrait" data-id="${item.id}" class="py-2 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-xs sm:text-sm tracking-wide shadow-sm shadow-purple-600/30 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 whitespace-nowrap min-h-[38px]" title="Valider le retrait client">
+                      <i class="fa-solid fa-box-archive text-xs pointer-events-none shrink-0"></i>
+                      <span>Valider Retrait</span>
+                    </button>
+                  ` : (isChauffeur ? `
+                    <button type="button" data-action="toggle-delivery" data-id="${item.id}" class="inline-flex py-2 px-3.5 rounded-xl bg-[#3076BB] hover:bg-[#25629F] active:bg-[#1E5083] text-white font-bold text-xs sm:text-sm tracking-wide shadow-sm shadow-[#3076BB]/30 transition-all items-center gap-1.5 min-h-[38px] shrink-0 whitespace-nowrap" title="Valider la livraison">
+                      <i class="fa-solid fa-check text-xs pointer-events-none shrink-0"></i>
                       <span>LIVRER</span>
                     </button>
-                  </div>
-                ` : (isAdmin && isUnassigned ? `
-                  <button type="button" data-action="admin-close-delivery" data-id="${item.id}" class="w-full py-3.5 px-4 rounded-xl bg-[#1B417E] hover:bg-[#16335C] active:bg-[#0E2340] text-white font-black text-sm sm:text-base tracking-wide shadow-md shadow-[#1B417E]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 min-h-[52px]">
-                    <i class="fa-solid fa-clipboard-check text-base pointer-events-none"></i>
-                    <span>Clôturer / Livré</span>
-                  </button>
-                ` : "")))}
+                  ` : (isAdmin && isUnassigned ? `
+                    <button type="button" data-action="admin-close-delivery" data-id="${item.id}" class="py-2 px-3.5 rounded-xl bg-[#1B417E] hover:bg-[#16335C] active:bg-[#0E2340] text-white font-bold text-xs sm:text-sm tracking-wide shadow-sm shadow-[#1B417E]/25 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 whitespace-nowrap min-h-[38px]">
+                      <i class="fa-solid fa-clipboard-check text-xs pointer-events-none shrink-0"></i>
+                      <span>Clôturer</span>
+                    </button>
+                  ` : "")))}
 
-                <!-- Secondary Details Link (Understated, No Accidental Tap) -->
-                <div class="mt-2 flex justify-end">
-                  <button type="button" data-action="view-details" data-id="${item.id}" title="Détails" aria-label="Détails" class="text-slate-400 hover:text-blue-600 flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 transition min-h-[36px] min-w-[36px]">
-                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                  <button type="button" data-action="view-details" data-id="${item.id}" title="Détails" aria-label="Détails" class="text-slate-400 hover:text-blue-600 inline-flex items-center justify-center p-2 rounded-xl hover:bg-slate-100/80 transition min-h-[38px] min-w-[38px] shrink-0">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs pointer-events-none"></i>
                   </button>
                 </div>
+
               </div>
+
             </div>
           </div>
         `;
@@ -7824,10 +8013,10 @@ const LOCAL_DELIVERY_DATA = [
         }
 
         return `
-          <div class="flex flex-col sm:flex-row bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200/90 overflow-hidden mb-4 transition-all duration-300">
+          <div class="h-full flex flex-col sm:flex-row bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200/90 overflow-hidden transition-all duration-300">
             
-            <!-- Truck Image Container (Fixed height on mobile, flex adapt on desktop) -->
-            <div class="w-full sm:w-1/3 h-48 sm:h-auto relative shrink-0 bg-slate-50 flex items-center justify-center p-4 border-b sm:border-b-0 sm:border-r border-slate-100 overflow-hidden">
+            <!-- Truck Image Container -->
+            <div class="w-full sm:w-44 lg:w-48 h-44 sm:h-auto shrink-0 bg-slate-50 flex items-center justify-center p-3 sm:p-4 border-b sm:border-b-0 sm:border-r border-slate-100 overflow-hidden relative">
               ${vehicleImg ? `
                 <img src="${vehicleImg}" alt="${vehicleDetails.brand}" class="w-full h-full object-contain mix-blend-multiply drop-shadow-md transition-transform duration-300 hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');" loading="lazy" />
                 <div class="hidden w-full h-full items-center justify-center text-4xl text-slate-300">
@@ -7841,7 +8030,7 @@ const LOCAL_DELIVERY_DATA = [
             </div>
 
             <!-- Truck Information Container (Matricule & Details) -->
-            <div class="w-full sm:w-2/3 p-4 sm:p-5 flex flex-col justify-between gap-3 min-w-0">
+            <div class="w-full sm:flex-1 p-4 lg:p-5 flex flex-col justify-between gap-3 min-w-0">
               
               <!-- Card Header: Brand, Matricule & Status Badge -->
               <div class="flex flex-col gap-2 w-full">
